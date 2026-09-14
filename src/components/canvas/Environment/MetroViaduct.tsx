@@ -5,7 +5,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   MarathahalliDemoSnapshot,
   OSMPolylineFeature,
-  isNammaMetroMainlineWay
+  isNammaMetroMainlineWay,
+  isNammaMetroPierSupport
 } from '../../../data/marathahalliDemo';
 import { loadMarathahalliSnapshot } from '../../../services/marathahalliSnapshot';
 
@@ -172,7 +173,32 @@ function buildMetroTrackData(snapshot: MarathahalliDemoSnapshot): MetroTrackData
   };
 }
 
-function sourcePierFrames(trackData: MetroTrackData) {
+function nearestCenterlineFrame(trackData: MetroTrackData, point: LocalPoint) {
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+  trackData.centerline.forEach((candidate, index) => {
+    const distance = distanceBetween(point, candidate);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = index;
+    }
+  });
+  const tangent = getTangent(trackData.centerline, nearestIndex);
+  return {
+    point,
+    angle: Math.atan2(tangent[0], tangent[1])
+  };
+}
+
+function sourcePierFrames(trackData: MetroTrackData, sourceSupports: LocalPoint[]) {
+  if (sourceSupports.length) {
+    return sourceSupports
+      .filter(([x, z]) => !(Math.abs(z) < 42 && Math.abs(x) < 14))
+      .map((point) => nearestCenterlineFrame(trackData, point));
+  }
+
+  // Keep a deterministic modelled fallback for an older or incomplete source
+  // snapshot. The current extract uses the source support nodes above.
   const length = trackData.centerCurve.getLength();
   const frames: { point: LocalPoint; angle: number }[] = [];
 
@@ -182,8 +208,7 @@ function sourcePierFrames(trackData: MetroTrackData) {
 
     // Keep the junction's below-grade carriageway and its mapped pedestrian
     // crossing open. The source alignment still spans this clear zone; only
-    // the support station is skipped because OSM does not publish individual
-    // pier foundations.
+    // the support station is skipped because this fallback has no pier nodes.
     if (Math.abs(point.z) < 42 && Math.abs(point.x) < 14) continue;
 
     const tangent = trackData.centerCurve.getTangentAt(progress).normalize();
@@ -219,9 +244,20 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     () => (snapshot ? buildMetroTrackData(snapshot) : null),
     [snapshot]
   );
+  const sourceMetroSupportFeatures = useMemo(
+    () => (snapshot
+      ? snapshot.bridgeSupports.filter((support) => isNammaMetroPierSupport(
+        support,
+        snapshot.railways.filter(isNammaMetroMainlineWay)
+      ))
+      : []),
+    [snapshot]
+  );
   const pierFrames = useMemo(
-    () => (trackData ? sourcePierFrames(trackData) : []),
-    [trackData]
+    () => (trackData
+      ? sourcePierFrames(trackData, sourceMetroSupportFeatures.map((support) => support.position))
+      : []),
+    [sourceMetroSupportFeatures, trackData]
   );
   const parapetPaths = useMemo(
     () => (trackData ? trackData.trackPaths.flatMap((path) => [

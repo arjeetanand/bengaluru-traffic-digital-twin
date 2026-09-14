@@ -441,7 +441,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
 
   return (
     <group name="MarathahalliFootpathNetwork">
-      {segments.filter((seg) => seg.sourcePath).map((seg) => seg.sourcePath ? (
+      {segments.map((seg) => seg.sourcePath ? (
         <SourceMappedFootpathAuditSegment key={seg.id} segment={seg} auditMode={auditMode} />
       ) : (
         <FootpathSegmentMesh key={seg.id} segment={seg} auditMode={auditMode} isNight={isNight} />

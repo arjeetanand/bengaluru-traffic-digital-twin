@@ -23,8 +23,6 @@ import { WestCorridorBuildings } from './Environment/WestCorridorBuildings';
 import { EastCorridorBuildings } from './Environment/EastCorridorBuildings';
 import { Buildings } from './Environment/Buildings';
 import { Google3DTiles } from './Environment/Google3DTiles';
-import { GoogleMaps3DMarkers } from './Environment/GoogleMaps3DMarkers';
-import { GoogleMapsStore } from '../../data/GoogleMapsStoreRegistry';
 import { RainParticles } from './Environment/RainParticles';
 import { TrafficSystem } from './traffic/TrafficSystem';
 import { SourceCorridorTraffic } from './traffic/SourceCorridorTraffic';
@@ -45,8 +43,6 @@ interface SceneProps {
   signalStatus: SignalStatus;
   congestionRatio: number;
   vehicleCount: number;
-  selectedStoreId?: string;
-  onSelectStore?: (store: GoogleMapsStore) => void;
   onInspectJunction: () => void;
 }
 
@@ -63,8 +59,6 @@ export const Scene: React.FC<SceneProps> = ({
   signalStatus,
   congestionRatio,
   vehicleCount,
-  selectedStoreId,
-  onSelectStore,
   onInspectJunction
 }) => {
   const [googleTilesFailed, setGoogleTilesFailed] = React.useState(false);
@@ -254,13 +248,6 @@ export const Scene: React.FC<SceneProps> = ({
               isNight={isNight}
             />
           )}
-
-          {/* ── 3D Google Maps Prominent Store Pins & Billboard Badges (Real Lat/Long) ── */}
-          <GoogleMaps3DMarkers
-            selectedStoreId={selectedStoreId}
-            onSelectStore={onSelectStore || (() => {})}
-            isNight={isNight}
-          />
 
           {/* ── Surrounding Commercial Landmarks / Google 3D Tiles ── */}
           {buildingMode === 'google-tiles' ? (

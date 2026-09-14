@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   TrafficFlowData,
   SimulationMode,
@@ -42,6 +42,12 @@ export const App: React.FC = () => {
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const [isJunctionModalOpen, setIsJunctionModalOpen] = useState(false);
 
+  // Keep polling stable across mode changes and share any already-running
+  // request when a toggle/reset happens at the same time as the interval.
+  const forceDemoRef = useRef(forceDemo);
+  forceDemoRef.current = forceDemo;
+  const pendingTrafficRequestsRef = useRef(new Map<boolean, Promise<void>>());
+
   // ── Prominent Google Maps Stores Explorer State ──
   const [selectedStore, setSelectedStore] = useState<GoogleMapsStore | undefined>(undefined);
   const [isStoreDrawerOpen, setIsStoreDrawerOpen] = useState(false);
@@ -53,26 +59,56 @@ export const App: React.FC = () => {
   const signalStatus = useTrafficSignals({ simSpeedMultiplier: mode.simSpeed });
 
   // ── Live Traffic Fetch Routine ──
-  const loadTraffic = useCallback(async (forced: boolean = forceDemo) => {
-    try {
-      const result = await fetchTrafficFlow(forced);
-      setFlowData(result.data);
-      setUsage(result.usage);
-      if (result.notice) {
-        setNotice(result.notice);
-      }
-    } catch (e) {
-      console.warn('Traffic fetch encountered error, fallback active', e);
-      setFlowData(getBakedDemoTrafficData());
+  const loadTraffic = useCallback((forced: boolean): Promise<void> => {
+    const pendingRequest = pendingTrafficRequestsRef.current.get(forced);
+    if (pendingRequest) {
+      return pendingRequest;
     }
-  }, [forceDemo]);
 
-  // Initial load and periodic 180s live interval
+    const request = (async () => {
+      try {
+        const result = await fetchTrafficFlow(forced);
+
+        // A slower request from the previous mode must not overwrite the
+        // mode the user has already selected.
+        if (forceDemoRef.current !== forced) {
+          return;
+        }
+
+        setFlowData(result.data);
+        setUsage(result.usage);
+        if (result.notice) {
+          setNotice(result.notice);
+        }
+      } catch (e) {
+        // Preserve the existing fallback behavior, but only apply it if this
+        // request still belongs to the active traffic mode.
+        if (forceDemoRef.current !== forced) {
+          return;
+        }
+
+        console.warn('Traffic fetch encountered error, fallback active', e);
+        setFlowData(getBakedDemoTrafficData());
+      }
+    })();
+
+    pendingTrafficRequestsRef.current.set(forced, request);
+    void request.finally(() => {
+      if (pendingTrafficRequestsRef.current.get(forced) === request) {
+        pendingTrafficRequestsRef.current.delete(forced);
+      }
+    });
+
+    return request;
+  }, []);
+
+  // Initial load and periodic 180s polling. The interval remains mounted when
+  // the source toggle changes, so it cannot create a second live poller.
   useEffect(() => {
-    loadTraffic();
+    void loadTraffic(forceDemoRef.current);
 
     const interval = setInterval(() => {
-      loadTraffic();
+      void loadTraffic(forceDemoRef.current);
     }, SIMULATION_CONFIG.tomtom.fetchIntervalMs);
 
     return () => clearInterval(interval);
@@ -125,7 +161,9 @@ export const App: React.FC = () => {
 
   const handleToggleDemo = () => {
     const nextDemoState = !forceDemo;
+    forceDemoRef.current = nextDemoState;
     setForceDemo(nextDemoState);
+    void loadTraffic(nextDemoState);
   };
 
   const handleResetUsage = () => {
@@ -133,9 +171,8 @@ export const App: React.FC = () => {
     setUsage(freshUsage);
     setNotice('TomTom API local usage counter reset to 0');
     // Demo mode is intentionally offline. Resetting its local quota must not
-    // unexpectedly spend a live request; the forceDemo transition effect will
-    // fetch exactly once when the user explicitly switches to live mode.
-    if (!forceDemo) loadTraffic(false);
+    // spend a live request; live mode refreshes once, reusing any pending poll.
+    if (!forceDemo) void loadTraffic(false);
   };
 
   return (
@@ -154,11 +191,6 @@ export const App: React.FC = () => {
         signalStatus={signalStatus}
         congestionRatio={flowData.congestionRatio}
         vehicleCount={mode.vehicleCount}
-        selectedStoreId={selectedStore?.id}
-        onSelectStore={(store) => {
-          setSelectedStore(store);
-          setIsStoreDrawerOpen(true);
-        }}
         onInspectJunction={() => setIsJunctionModalOpen(true)}
       />
 

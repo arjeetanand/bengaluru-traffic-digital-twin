@@ -107,6 +107,43 @@ export interface OSMPointFeature {
   position: [number, number];
 }
 
+function pointToSegmentDistance(
+  point: [number, number],
+  start: [number, number],
+  end: [number, number]
+) {
+  const vx = end[0] - start[0];
+  const vz = end[1] - start[1];
+  const wx = point[0] - start[0];
+  const wz = point[1] - start[1];
+  const lengthSquared = vx * vx + vz * vz;
+  const progress = lengthSquared > 0
+    ? Math.max(0, Math.min(1, (wx * vx + wz * vz) / lengthSquared))
+    : 0;
+  return Math.hypot(
+    point[0] - (start[0] + progress * vx),
+    point[1] - (start[1] + progress * vz)
+  );
+}
+
+/**
+ * The August 2026 OSM extract includes individually tagged concrete pier
+ * nodes along the current Namma Metro Phase 2A corridor. They are not
+ * members of the railway ways, so match them to the source track geometry by
+ * distance instead of guessing a regular pier grid. The 14m threshold keeps
+ * nearby ORR bridge supports out of the metro layer.
+ */
+export function isNammaMetroPierSupport(
+  support: OSMPointFeature,
+  metroWays: OSMPolylineFeature[],
+  maxDistance = 14
+) {
+  if (support.tags['bridge:support'] !== 'pier') return false;
+  return metroWays.some((way) => way.geometry.slice(1).some((point, index) => (
+    pointToSegmentDistance(support.position, way.geometry[index], point) <= maxDistance
+  )));
+}
+
 export interface OSMTurnRestriction {
   id: string;
   restriction: string;

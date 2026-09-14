@@ -10,6 +10,8 @@ import {
   isNammaMetroSourceWay,
   isMarathahalliSkywalkDeck,
   isMarathahalliSkywalkStair,
+  isNammaMetroMainlineWay,
+  isNammaMetroPierSupport,
   isVarthurViaductFootway,
   isVarthurViaductWay
 } from '../../../data/marathahalliDemo';
@@ -273,7 +275,12 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [snapshot]
   );
   const sourceBridgeSupportFeatures = useMemo(
-    () => snapshot?.bridgeSupports || [],
+    () => (snapshot
+      ? snapshot.bridgeSupports.filter((support) => !isNammaMetroPierSupport(
+        support,
+        snapshot.railways.filter(isNammaMetroMainlineWay)
+      ))
+      : []),
     [snapshot]
   );
   const sourceBridgeSurfaceGeometry = useMemo(
@@ -326,7 +333,15 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [buildingLimit, showBuildings, snapshot]
   );
   const buildingOutlineGeometry = useMemo(
-    () => (snapshot && showBuildings ? createBuildingOutlineGeometry(snapshot.buildings, buildingLimit) : null),
+    () => (snapshot && showBuildings
+      ? createBuildingOutlineGeometry(
+        snapshot.buildings,
+        // The corridor overview needs every source footprint to read as a
+        // continuous city fabric. Keep solid extrusions capped for frame time,
+        // but use inexpensive line geometry for all 7,533 source outlines.
+        buildingLimit >= 2500 ? Number.POSITIVE_INFINITY : buildingLimit
+      )
+      : null),
     [buildingLimit, showBuildings, snapshot]
   );
   const namedAreaGeometry = useMemo(
@@ -522,10 +537,29 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
         ))}
 
         {snapshot.signals.map((signal) => (
-          <mesh key={`signal-${signal.id}`} position={[signal.position[0], 1.2, signal.position[1]]}>
-            <sphereGeometry args={[0.7, 10, 8]} />
-            <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={isNight ? 2.2 : 0.45} />
-          </mesh>
+          <group
+            key={`signal-${signal.id}`}
+            position={[signal.position[0], 0, signal.position[1]]}
+          >
+            {/* A source signal node is rendered as a compact physical post;
+                the former 0.7m beacon sphere could fill the person camera. */}
+            <mesh position={[0, 2.0, 0]}>
+              <cylinderGeometry args={[0.08, 0.11, 4.0, 8]} />
+              <meshStandardMaterial color="#334155" roughness={0.72} metalness={0.35} />
+            </mesh>
+            <mesh position={[0, 4.08, 0]}>
+              <boxGeometry args={[0.42, 0.92, 0.32]} />
+              <meshStandardMaterial color="#111827" roughness={0.7} metalness={0.25} />
+            </mesh>
+            <mesh position={[0, 4.08, 0.19]}>
+              <sphereGeometry args={[0.12, 10, 8]} />
+              <meshStandardMaterial
+                color="#ef4444"
+                emissive="#ef4444"
+                emissiveIntensity={isNight ? 2.2 : 0.45}
+              />
+            </mesh>
+          </group>
         ))}
 
         {snapshot.crossings.map((crossing) => (

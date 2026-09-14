@@ -5,6 +5,17 @@ const datasetPath = path.join(process.cwd(), 'public', 'data', 'marathahalli-dem
 const dataset = JSON.parse(await readFile(datasetPath, 'utf8'));
 const errors = [];
 const warnings = [];
+const CURRENT_NO_U_TURN_RELATION_ID = 'relation/18922642';
+const SOURCE_JOIN_TOLERANCE_METRES = 1.5;
+const uTurnValidation = {
+  relationId: CURRENT_NO_U_TURN_RELATION_ID,
+  status: 'not-run',
+  movementSemantics: {
+    sourceRelation: 'OSM_MAPPED_NO_U_TURN',
+    modelledScenario: 'MODELLED_ONLY',
+    legalPermission: 'NOT_ASSERTED'
+  }
+};
 
 const requiredCollections = [
   'buildings', 'roads', 'footways', 'shops', 'places', 'signals', 'crossings', 'busStops', 'trees', 'bridgeSupports', 'railways'
@@ -29,6 +40,14 @@ function checkGeometry(geometry, label) {
     return;
   }
   geometry.forEach((position, index) => checkPosition(position, `${label}[${index}]`));
+}
+
+function distanceBetween(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right) ||
+    ![left[0], left[1], right[0], right[1]].every((value) => Number.isFinite(value))) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Math.hypot(left[0] - right[0], left[1] - right[1]);
 }
 
 if (![1, 2].includes(dataset.schemaVersion)) errors.push('unsupported schemaVersion');
@@ -126,9 +145,11 @@ for (const metroWayId of ['way/1551136768', 'way/1551136770']) {
 if (dataset.schemaVersion >= 2) {
   if (!Array.isArray(dataset.turnRestrictions)) {
     errors.push('turnRestrictions collection is missing');
+    uTurnValidation.status = 'failed';
   } else {
     const restrictionIds = new Set();
     const sourceWayIds = new Set(dataset.roads.map((feature) => feature.id));
+    const sourceWaysById = new Map(dataset.roads.map((feature) => [feature.id, feature]));
     for (const restriction of dataset.turnRestrictions) {
       if (!restriction.id || !restriction.restriction || !Array.isArray(restriction.members)) {
         errors.push('turn restriction is missing id, restriction, or members');
@@ -151,10 +172,83 @@ if (dataset.schemaVersion >= 2) {
     if (dataset.stats?.turnRestrictions !== dataset.turnRestrictions.length) {
       errors.push('stats.turnRestrictions does not match the serialized collection');
     }
-    if (!dataset.turnRestrictions.some((restriction) => restriction.restriction === 'no_u_turn')) {
-      warnings.push('no no_u_turn relation is present in the clipped snapshot');
+
+    const currentNoUTurn = dataset.turnRestrictions.find((restriction) => restriction.id === CURRENT_NO_U_TURN_RELATION_ID);
+    if (!currentNoUTurn) {
+      errors.push(`current source no_u_turn relation ${CURRENT_NO_U_TURN_RELATION_ID} is missing`);
+      uTurnValidation.status = 'failed';
+    } else if (currentNoUTurn.restriction !== 'no_u_turn') {
+      errors.push(`${CURRENT_NO_U_TURN_RELATION_ID} must remain restriction=no_u_turn`);
+      uTurnValidation.status = 'failed';
+    } else {
+      const roleMembers = new Map();
+      for (const role of ['from', 'via', 'to']) {
+        const matches = currentNoUTurn.members.filter((member) => member.role === role);
+        if (matches.length !== 1) {
+          errors.push(`${CURRENT_NO_U_TURN_RELATION_ID} must have exactly one ${role} way member`);
+          continue;
+        }
+        const [member] = matches;
+        if (member.type !== 'way') {
+          errors.push(`${CURRENT_NO_U_TURN_RELATION_ID} ${role} member must be a way`);
+          continue;
+        }
+        const sourceWay = sourceWaysById.get(member.ref);
+        if (!sourceWay) {
+          errors.push(`${CURRENT_NO_U_TURN_RELATION_ID} ${role} member ${member.ref} is missing from serialized roads`);
+          continue;
+        }
+        if (!Array.isArray(sourceWay.geometry) || sourceWay.geometry.length < 2) {
+          errors.push(`${CURRENT_NO_U_TURN_RELATION_ID} ${role} member ${member.ref} has no usable source geometry`);
+          continue;
+        }
+        roleMembers.set(role, { member, sourceWay });
+      }
+
+      if (roleMembers.size === 3) {
+        const fromWay = roleMembers.get('from').sourceWay;
+        const viaWay = roleMembers.get('via').sourceWay;
+        const toWay = roleMembers.get('to').sourceWay;
+        const joins = [
+          {
+            label: 'from.end → via.start',
+            left: fromWay.geometry.at(-1),
+            right: viaWay.geometry[0]
+          },
+          {
+            label: 'via.end → to.start',
+            left: viaWay.geometry.at(-1),
+            right: toWay.geometry[0]
+          }
+        ].map((join) => ({
+          label: join.label,
+          distanceMetres: distanceBetween(join.left, join.right),
+          toleranceMetres: SOURCE_JOIN_TOLERANCE_METRES
+        }));
+
+        uTurnValidation.sourceWaySequence = ['from', 'via', 'to'].map((role) => ({
+          role,
+          id: roleMembers.get(role).member.ref,
+          name: roleMembers.get(role).sourceWay.name || roleMembers.get(role).sourceWay.tags?.name || null
+        }));
+        uTurnValidation.joins = joins;
+
+        for (const join of joins) {
+          if (join.distanceMetres > SOURCE_JOIN_TOLERANCE_METRES) {
+            errors.push(`${CURRENT_NO_U_TURN_RELATION_ID} ${join.label} source geometry gap is ${join.distanceMetres.toFixed(2)}m (max ${SOURCE_JOIN_TOLERANCE_METRES}m)`);
+          }
+        }
+
+        uTurnValidation.status = joins.every((join) => join.distanceMetres <= SOURCE_JOIN_TOLERANCE_METRES)
+          ? 'passed'
+          : 'failed';
+      } else {
+        uTurnValidation.status = 'failed';
+      }
     }
   }
+} else {
+  uTurnValidation.status = 'not-applicable';
 }
 
 const snapshotStats = dataset.stats || {};
@@ -182,5 +276,6 @@ if (errors.length) {
 
 console.log(JSON.stringify({
   stats: dataset.stats,
-  warnings
+  warnings,
+  uTurnValidation
 }, null, 2));
