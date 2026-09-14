@@ -7,7 +7,7 @@ const errors = [];
 const warnings = [];
 
 const requiredCollections = [
-  'buildings', 'roads', 'footways', 'shops', 'signals', 'crossings', 'busStops', 'trees', 'railways'
+  'buildings', 'roads', 'footways', 'shops', 'places', 'signals', 'crossings', 'busStops', 'trees', 'railways'
 ];
 
 function finite(value, label) {
@@ -69,7 +69,9 @@ for (const collection of requiredCollections) {
 if (dataset.roads.length < 100) warnings.push(`only ${dataset.roads.length} road ways are in the clipped snapshot`);
 if (dataset.footways.length < 50) warnings.push(`only ${dataset.footways.length} footway ways are in the clipped snapshot`);
 if (dataset.shops.length < 20) warnings.push(`only ${dataset.shops.length} POIs are in the clipped snapshot`);
-warnings.push('Oracle Tech Hub and the Innovative Multiplex GPS point need a wider source extract before they can be labeled source-backed.');
+for (const landmark of dataset.coverage?.landmarks || []) {
+  if (!landmark.sourceBacked) warnings.push(`${landmark.name} is not source-backed in this snapshot`);
+}
 
 if (errors.length) {
   console.error('Marathahalli demo validation failed');

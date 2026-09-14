@@ -32,6 +32,11 @@ const createOrrWalkAnchor = (
   target: getOrrWalkPoint(targetZ, semanticOffset)
 });
 
+// Source-backed anchors from the widened OSM extract. These are kept in the
+// same local metre projection as the junction scene so the corridor view and
+// person mode share one coordinate contract.
+const ORACLE_HUB_LOCAL: [number, number, number] = [-745, WALK_EYE_HEIGHT, -1732];
+
 const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
   overview: {
     position: CAMERA_DEFAULT_POSITION,
@@ -62,8 +67,8 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     target: [0, 1, 0]
   },
   multiplex: {
-    position: [12, 16, -185],
-    target: [-52, 12, -185]
+    position: [-190, 26, -405],
+    target: [-286, 12, -535]
   },
   kalamandir: {
     position: [-10, 22, 382],
@@ -82,6 +87,17 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     // underpass, surface table, ROB and metro remain readable together.
     position: [145, 96, 150],
     target: [8, 5, 18]
+  },
+  corridor: {
+    // Full source corridor: Oracle Tech Hub → Marathahalli junction →
+    // Kalamandir/Spice Garden. The camera is deliberately high enough to
+    // keep the 2.1 km north-south route in one navigable frame.
+    position: [1500, 2400, 1700],
+    target: [-120, 0, -720]
+  },
+  oraclehub: {
+    position: [-470, 150, -1450],
+    target: ORACLE_HUB_LOCAL
   }
 };
 
@@ -96,30 +112,33 @@ const WALK_STARTS: Record<CameraPreset, CameraView> = {
   cinematic: createOrrWalkAnchor(-38, 5, -26.5),
   flyover: { position: [125, 1.7, 8], target: [175, 1.7, 0] },
   ground: createOrrWalkAnchor(-38, 5, -26.5),
-  multiplex: createOrrWalkAnchor(-175, -215, -26.5),
+  multiplex: { position: [-220, WALK_EYE_HEIGHT, -535], target: [-275, WALK_EYE_HEIGHT, -535] },
   kalamandir: { position: [22, 1.7, 332.5], target: [46, 1.7, 332.5] },
   brandfactory: { position: [15, 1.7, 58], target: [48, 1.7, 58] },
   spicegarden: { position: [220, 1.7, 15], target: [260, 1.7, -10] },
-  crossover: createOrrWalkAnchor(-38, 5, -26.5)
+  crossover: createOrrWalkAnchor(-38, 5, -26.5),
+  corridor: { position: [-24, WALK_EYE_HEIGHT, -260], target: [-24, WALK_EYE_HEIGHT, -252] },
+  oraclehub: { position: [-470, WALK_EYE_HEIGHT, -1740], target: [-500, WALK_EYE_HEIGHT, -1740] }
 };
 
 // A bounded inspection envelope keeps WASD navigation inside the modeled
 // corridor while leaving the authored HAL/ORR/Spice Garden extents reachable.
 export const MARATHAHALLI_WALK_BOUNDS = {
-  minX: -430,
-  maxX: 470,
-  minZ: -390,
-  maxZ: 470
+  minX: -1000,
+  maxX: 1000,
+  minZ: -1900,
+  maxZ: 520
 };
 
 // Coarse, named landmark footprints prevent the person camera from walking
 // through the largest authored showrooms. OSM massing remains a visual layer;
 // these are navigation guardrails, not a survey-grade collision map.
 export const MARATHAHALLI_WALK_OBSTACLES: WalkObstacle[] = [
-  { minX: -75, maxX: -27, minZ: -214, maxZ: -156 }, // Innovative Multiplex
+  { minX: -314, maxX: -258, minZ: -565, maxZ: -505 }, // Innovative Multiplex
   { minX: 33, maxX: 64, minZ: 32, maxZ: 85 },       // Brand Factory / outlet row
   { minX: 29, maxX: 67, minZ: 310, maxZ: 371 },     // Kalamandir / Nalli frontage
-  { minX: -58, maxX: -17, minZ: 87, maxZ: 130 }    // Krishna Summit block
+  { minX: -58, maxX: -17, minZ: 87, maxZ: 130 },    // Krishna Summit block
+  { minX: -980, maxX: -480, minZ: -1900, maxZ: -1580 } // Oracle Tech Hub campus
 ];
 
 const isInsideObstacle = (x: number, z: number, padding = 1.2) =>

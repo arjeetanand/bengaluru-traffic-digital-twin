@@ -38,12 +38,17 @@ export interface MarathahalliDemoSnapshot {
     maxLon: number;
   };
   clipMarginDegrees: number;
-  coverage: { name: string; note: string };
+  coverage: {
+    name: string;
+    note: string;
+    landmarks?: { name: string; sourceBacked: boolean }[];
+  };
   stats: Record<string, number>;
   buildings: OSMPolylineFeature[];
   roads: OSMPolylineFeature[];
   footways: OSMPolylineFeature[];
   shops: OSMPointFeature[];
+  places: OSMPolylineFeature[];
   signals: OSMPointFeature[];
   crossings: OSMPointFeature[];
   busStops: OSMPointFeature[];

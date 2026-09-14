@@ -36,7 +36,9 @@ export type CameraPreset =
   | 'kalamandir'
   | 'brandfactory'
   | 'spicegarden'
-  | 'crossover';
+  | 'crossover'
+  | 'corridor'
+  | 'oraclehub';
 
 export type CameraMode = 'walk' | 'overview';
 

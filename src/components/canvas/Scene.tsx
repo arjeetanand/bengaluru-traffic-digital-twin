@@ -75,7 +75,10 @@ export const Scene: React.FC<SceneProps> = ({
   const hemiGroundColor = isNight ? '#020617' : (isRaining ? '#1e293b' : '#334155');
   const hemiIntensity = isNight ? 0.2 : (isRaining ? 0.6 : 0.85);
 
-  const fogDensity = isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY);
+  const isLongCorridorView = cameraPreset === 'corridor';
+  const fogDensity = isLongCorridorView
+    ? (isNight ? 0.00018 : (isRaining ? 0.00034 : 0.00012))
+    : (isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY));
   const fogColor = isNight ? '#030712' : (isRaining ? '#334155' : '#a9b8c8');
 
   return (
@@ -83,7 +86,7 @@ export const Scene: React.FC<SceneProps> = ({
       <Canvas
         dpr={[1, 1.5]}
         shadows={{ type: THREE.PCFSoftShadowMap }}
-        camera={{ position: CAMERA_DEFAULT_POSITION, fov: 50, near: 0.5, far: 1200 }}
+        camera={{ position: CAMERA_DEFAULT_POSITION, fov: 50, near: 0.5, far: 6000 }}
         gl={{
           antialias: true,
           toneMapping: THREE.ACESFilmicToneMapping,
@@ -141,7 +144,12 @@ export const Scene: React.FC<SceneProps> = ({
           </mesh>
         }>
           {/* Source-backed roads, footways, crossings, signals and shop POIs. */}
-          <OsmSnapshotLayer isNight={isNight} showBuildings buildingLimit={500} />
+          <OsmSnapshotLayer
+            isNight={isNight}
+            showBuildings
+            buildingLimit={500}
+            labelDistanceFactor={cameraPreset === 'corridor' ? 2400 : (cameraPreset === 'oraclehub' ? 260 : 65)}
+          />
 
           {/* ── 3D Stylized Realistic Ground & Underpass Network ── */}
           <JunctionRoads

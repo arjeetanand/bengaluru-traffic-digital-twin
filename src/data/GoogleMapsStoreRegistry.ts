@@ -265,7 +265,7 @@ export function getStoreCameraFraming(store: GoogleMapsStore): {
     case 'brand_factory_mall':
       return { position: [2, 18, 55], target: [48, 14, 57.5] };
     case 'innovative_multiplex':
-      return { position: [-16, 22, -145], target: [-52, 12, -185] };
+      return { position: [-190, 26, -405], target: [-286, 12, -535] };
     case 'tanishq_hal':
       return { position: [-70.2, 15, 25], target: [-70.2, 9, -7.0] };
     case 'max_fashion':

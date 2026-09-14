@@ -8,11 +8,11 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
   return (
     <group name="WestSideCorridor_MultiplexToNorth">
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 1. INNOVATIVE MULTIPLEX (South End, Z = -175 to -215, X = -45)       */}
+      {/* 1. INNOVATIVE MULTIPLEX (source-aligned west corridor footprint)       */}
       {/* Real Architecture: 2003 pioneer 9-screen multiplex, red brick,       */}
       {/* slanted glass pyramid roof, curved marquee, parking forecourt         */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[-52, 0, -185]} name="InnovativeMultiplex_Real">
+      <group position={[-286, 0, -535]} name="InnovativeMultiplex_Real">
         {/* Main 9-Screen Theater Auditorium Block */}
         <mesh position={[0, 11, 0]} castShadow receiveShadow>
           <boxGeometry args={[44, 22, 52]} />

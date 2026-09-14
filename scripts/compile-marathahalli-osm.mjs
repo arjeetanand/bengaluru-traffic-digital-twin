@@ -129,6 +129,7 @@ const buildings = ways
   .filter((way) => way.geometry.length >= 3)
   .map((way) => ({
     ...way,
+    name: way.tags.name,
     height: Number(way.tags.height) || Math.max(4, (Number(way.tags['building:levels']) || 1) * 3.2)
   }));
 
@@ -151,6 +152,15 @@ const shops = [
     position: way.centroid
   }))
 ];
+const places = ways
+  .filter((way) => way.tags.name)
+  .filter((way) => !way.tags.highway)
+  .filter((way) => way.tags.landuse || way.tags.amenity || way.tags.building || way.tags.leisure || way.tags.natural || way.tags.shop)
+  .map((way) => ({
+    ...way,
+    name: way.tags.name,
+    height: Number(way.tags.height) || Math.max(1.5, (Number(way.tags['building:levels']) || 1) * 3.2)
+  }));
 const signals = pointFeatures.filter((feature) =>
   feature.tags.highway === 'traffic_signals' || feature.tags.traffic_signals === 'signal'
 );
@@ -161,6 +171,18 @@ const busStops = pointFeatures.filter((feature) =>
   feature.tags.highway === 'bus_stop' || feature.tags.public_transport === 'platform'
 );
 const trees = pointFeatures.filter((feature) => feature.tags.natural === 'tree');
+
+const namedFeatures = [...buildings, ...places, ...pointFeatures];
+const hasNamedFeature = (needle) => namedFeatures.some((feature) =>
+  (feature.name || feature.tags?.name)?.toLowerCase().includes(needle.toLowerCase())
+);
+const landmarkCoverage = [
+  { name: 'Oracle Tech Hub', sourceBacked: hasNamedFeature('Oracle Tech Hub') },
+  { name: 'Innovative Multiplex', sourceBacked: hasNamedFeature('Innovative Multiplex') },
+  { name: 'Kalamandir', sourceBacked: hasNamedFeature('Kalamandir') },
+  { name: 'Spice Garden', sourceBacked: hasNamedFeature('Spice Garden') }
+];
+const missingLandmarks = landmarkCoverage.filter((landmark) => !landmark.sourceBacked).map((landmark) => landmark.name);
 
 const dataset = {
   schemaVersion: 1,
@@ -182,8 +204,11 @@ const dataset = {
   bounds: sourceBounds,
   clipMarginDegrees,
   coverage: {
-    name: 'Marathahalli signal junction OSM snapshot',
-    note: 'This snapshot covers the supplied OSM bounds. Oracle Tech Hub and the Innovative Multiplex GPS point are outside those bounds and remain needs-review anchors until a wider source extract is supplied.'
+    name: 'Oracle Tech Hub → Marathahalli → Kalamandir / Spice Garden OSM snapshot',
+    note: missingLandmarks.length
+      ? `This snapshot covers the supplied OSM bounds. Source-backed landmark gaps remain: ${missingLandmarks.join(', ')}.`
+      : 'This wider snapshot covers the Oracle Tech Hub, Innovative Multiplex, Marathahalli signal junction, Kalamandir and Spice Garden corridor. OSM geometry is source-backed; landmark facade detail remains a modeled layer.',
+    landmarks: landmarkCoverage
   },
   stats: {
     nodes: nodes.size,
@@ -192,6 +217,7 @@ const dataset = {
     roads: roads.length,
     footways: footways.length,
     shops: shops.length,
+    places: places.length,
     signals: signals.length,
     crossings: crossings.length,
     busStops: busStops.length,
@@ -202,6 +228,7 @@ const dataset = {
   roads,
   footways,
   shops,
+  places,
   signals,
   crossings,
   busStops,

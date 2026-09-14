@@ -64,8 +64,8 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundin
       if (cx >= 25 && cx <= 75 && cz >= 35 && cz <= 85) return true;
       // Kalamandir & Nalli Silks zone (East side north, x: 25 to 75, z: 300 to 375)
       if (cx >= 25 && cx <= 75 && cz >= 300 && cz <= 375) return true;
-      // Innovative Multiplex zone (West side south, x: -80 to -20, z: -220 to -150)
-      if (cx >= -80 && cx <= -20 && cz >= -220 && cz <= -150) return true;
+      // Innovative Multiplex zone (source-aligned west corridor footprint)
+      if (cx >= -314 && cx <= -258 && cz >= -565 && cz <= -505) return true;
       // Outlet Row (Nike, Adidas, Puma, Reebok) (East side south, x: 25 to 75, z: -170 to -55)
       if (cx >= 25 && cx <= 75 && cz >= -170 && cz <= -55) return true;
       return false;

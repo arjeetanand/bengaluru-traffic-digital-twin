@@ -442,7 +442,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       // and the render loop restores the fixed eight-metre look-ahead after
       // every first-person turn.
       minDistance={cameraMode === 'walk' ? 0.1 : 1.5}
-      maxDistance={cameraMode === 'walk' ? 1000 : 500}
+      maxDistance={cameraMode === 'walk' ? 1000 : 5000}
       onStart={() => {
         // As soon as user touches/drags mouse or trackpad, immediately yield 100% control
         isTransitioning.current = false;

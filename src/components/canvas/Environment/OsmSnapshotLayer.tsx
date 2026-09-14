@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
+import { Html } from '@react-three/drei';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   MARATHAHALLI_SNAPSHOT_URL,
@@ -11,6 +12,7 @@ interface OsmSnapshotLayerProps {
   isNight?: boolean;
   showBuildings?: boolean;
   buildingLimit?: number;
+  labelDistanceFactor?: number;
 }
 
 function createPolylineGeometry(features: OSMPolylineFeature[]) {
@@ -29,17 +31,86 @@ function createPolylineGeometry(features: OSMPolylineFeature[]) {
   return geometry;
 }
 
+function createRibbonGeometry(
+  features: OSMPolylineFeature[],
+  width: number | ((feature: OSMPolylineFeature) => number),
+  y: number
+) {
+  const positions: number[] = [];
+  for (const feature of features) {
+    for (let index = 1; index < feature.geometry.length; index += 1) {
+      const previous = feature.geometry[index - 1];
+      const current = feature.geometry[index];
+      const dx = current[0] - previous[0];
+      const dz = current[1] - previous[1];
+      const length = Math.hypot(dx, dz);
+      if (length < 0.05) continue;
+      const halfWidth = (typeof width === 'function' ? width(feature) : width) / 2;
+      const nx = -dz / length;
+      const nz = dx / length;
+      const ax = previous[0] + nx * halfWidth;
+      const az = previous[1] + nz * halfWidth;
+      const bx = previous[0] - nx * halfWidth;
+      const bz = previous[1] - nz * halfWidth;
+      const cx = current[0] + nx * halfWidth;
+      const cz = current[1] + nz * halfWidth;
+      const dx2 = current[0] - nx * halfWidth;
+      const dz2 = current[1] - nz * halfWidth;
+      positions.push(
+        ax, y, az, cx, y, cz, bx, y, bz,
+        cx, y, cz, dx2, y, dz2, bx, y, bz
+      );
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function getRoadRibbonWidth(feature: OSMPolylineFeature) {
+  const lanes = Number(feature.tags.lanes);
+  if (Number.isFinite(lanes) && lanes > 0) return Math.min(18, Math.max(3.2, lanes * 3.1));
+  if (['motorway', 'trunk', 'primary'].includes(feature.tags.highway || '')) return 11;
+  if (['secondary', 'tertiary'].includes(feature.tags.highway || '')) return 8;
+  if (feature.tags.highway === 'service') return 4.2;
+  return 5.4;
+}
+
 function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
-  const nearest = [...features]
+  const byDistance = [...features]
     .sort((a, b) => {
       const aDistance = a.centroid[0] ** 2 + a.centroid[1] ** 2;
       const bDistance = b.centroid[0] ** 2 + b.centroid[1] ** 2;
       return aDistance - bDistance;
     })
-    .slice(0, limit);
+  const minX = Math.min(...features.map((feature) => feature.centroid[0]));
+  const maxX = Math.max(...features.map((feature) => feature.centroid[0]));
+  const minZ = Math.min(...features.map((feature) => feature.centroid[1]));
+  const maxZ = Math.max(...features.map((feature) => feature.centroid[1]));
+  const grid = new Map<string, OSMPolylineFeature>();
+
+  for (const feature of byDistance) {
+    const gridX = Math.min(7, Math.max(0, Math.floor(((feature.centroid[0] - minX) / Math.max(1, maxX - minX)) * 8)));
+    const gridZ = Math.min(7, Math.max(0, Math.floor(((feature.centroid[1] - minZ) / Math.max(1, maxZ - minZ)) * 8)));
+    const key = `${gridX}:${gridZ}`;
+    if (!grid.has(key)) grid.set(key, feature);
+  }
+
+  const named = features.filter((feature) => feature.name || feature.tags.name);
+  const representative = [...named, ...grid.values(), ...byDistance];
+  const selected: OSMPolylineFeature[] = [];
+  const selectedIds = new Set<string>();
+  for (const feature of representative) {
+    if (selected.length >= limit || selectedIds.has(feature.id)) continue;
+    selected.push(feature);
+    selectedIds.add(feature.id);
+  }
   const geometries: THREE.BufferGeometry[] = [];
 
-  for (const feature of nearest) {
+  for (const feature of selected) {
     if (feature.geometry.length < 3) continue;
     try {
       const shape = new THREE.Shape();
@@ -70,10 +141,24 @@ function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
   return merged;
 }
 
+function createNamedAreaGeometry(features: OSMPolylineFeature[]) {
+  const sourceNamedAreas = features.filter((feature) => {
+    const name = feature.name?.toLowerCase() || '';
+    return !feature.tags.building && (
+      name.includes('oracle tech hub') ||
+      name.includes('innovative multiplex') ||
+      name.includes('kalamandir') ||
+      name.includes('spice garden')
+    );
+  });
+  return createBuildingGeometry(sourceNamedAreas, sourceNamedAreas.length);
+}
+
 export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   isNight = false,
   showBuildings = false,
-  buildingLimit = 500
+  buildingLimit = 500,
+  labelDistanceFactor = 65
 }) => {
   const [snapshot, setSnapshot] = useState<MarathahalliDemoSnapshot | null>(null);
 
@@ -98,20 +183,35 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     () => (snapshot ? createPolylineGeometry(snapshot.roads) : null),
     [snapshot]
   );
+  const roadSurfaceGeometry = useMemo(
+    () => (snapshot ? createRibbonGeometry(snapshot.roads, getRoadRibbonWidth, 0.075) : null),
+    [snapshot]
+  );
   const footwayGeometry = useMemo(
     () => (snapshot ? createPolylineGeometry(snapshot.footways) : null),
+    [snapshot]
+  );
+  const footwaySurfaceGeometry = useMemo(
+    () => (snapshot ? createRibbonGeometry(snapshot.footways, 1.8, 0.14) : null),
     [snapshot]
   );
   const buildingGeometry = useMemo(
     () => (snapshot && showBuildings ? createBuildingGeometry(snapshot.buildings, buildingLimit) : null),
     [buildingLimit, showBuildings, snapshot]
   );
+  const namedAreaGeometry = useMemo(
+    () => (snapshot && showBuildings ? createNamedAreaGeometry(snapshot.places) : null),
+    [showBuildings, snapshot]
+  );
 
   useEffect(() => () => {
     roadGeometry?.dispose();
+    roadSurfaceGeometry?.dispose();
     footwayGeometry?.dispose();
+    footwaySurfaceGeometry?.dispose();
     buildingGeometry?.dispose();
-  }, [buildingGeometry, footwayGeometry, roadGeometry]);
+    namedAreaGeometry?.dispose();
+  }, [buildingGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, roadGeometry, roadSurfaceGeometry]);
 
   if (!snapshot) return null;
 
@@ -125,6 +225,42 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             metalness={0.05}
             transparent
             opacity={0.48}
+          />
+        </mesh>
+      )}
+
+      {namedAreaGeometry && (
+        <mesh geometry={namedAreaGeometry} position={[0, 0, 0]} renderOrder={1}>
+          <meshStandardMaterial
+            color={isNight ? '#164e63' : '#0f766e'}
+            roughness={0.82}
+            metalness={0.08}
+            transparent
+            opacity={0.68}
+          />
+        </mesh>
+      )}
+
+      {roadSurfaceGeometry && (
+        <mesh geometry={roadSurfaceGeometry} renderOrder={0}>
+          <meshStandardMaterial
+            color={isNight ? '#111827' : '#273449'}
+            roughness={0.94}
+            metalness={0.02}
+            transparent
+            opacity={0.82}
+          />
+        </mesh>
+      )}
+
+      {footwaySurfaceGeometry && (
+        <mesh geometry={footwaySurfaceGeometry} renderOrder={1}>
+          <meshStandardMaterial
+            color={isNight ? '#a16207' : '#cbd5e1'}
+            roughness={0.9}
+            metalness={0.02}
+            transparent
+            opacity={0.78}
           />
         </mesh>
       )}
@@ -182,6 +318,45 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             </mesh>
           </group>
         ))}
+      </group>
+
+      <group name="OSMSourceLandmarkLabels">
+        {['Oracle Tech Hub', 'Innovative Multiplex', 'Kalamandir', 'Spice Garden'].map((label) => {
+          const place = snapshot.places.find((feature) => feature.name?.toLowerCase() === label.toLowerCase())
+            || snapshot.places.find((feature) => feature.name?.toLowerCase().includes(label.toLowerCase()));
+          const point = [...snapshot.shops, ...snapshot.busStops].find((feature) =>
+            feature.name?.toLowerCase() === label.toLowerCase()
+          );
+          if (!place && !point) return null;
+          const position = place?.centroid || point?.position;
+          if (!position) return null;
+          return (
+            <Html
+              key={label}
+              position={[position[0], Math.max(4, place?.height || 4) + 4, position[1]]}
+              center
+              distanceFactor={labelDistanceFactor}
+              zIndexRange={[20, 0]}
+            >
+              <div
+                style={{
+                  background: 'rgba(15, 23, 42, 0.84)',
+                  border: '1px solid rgba(56, 189, 248, 0.55)',
+                  borderRadius: '5px',
+                  color: '#e0f2fe',
+                  fontFamily: 'monospace',
+                  fontSize: '9px',
+                  letterSpacing: '0.35px',
+                  padding: '4px 7px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 3px 12px rgba(2, 6, 23, 0.4)'
+                }}
+              >
+                SOURCE · {label.toUpperCase()}
+              </div>
+            </Html>
+          );
+        })}
       </group>
     </group>
   );
