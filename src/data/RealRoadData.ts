@@ -102,6 +102,20 @@ export function getOrrMedianPointAtZ(zCoord: number): [number, number] {
   return getOrrOffsetPointAtZ(zCoord, ORR_MEDIAN_LATERAL_OFFSET);
 }
 
+// One shared elevation contract keeps the rendered trench, portals and
+// animated underpass traffic on the same pavement surface.
+export const ORR_UNDERPASS_DEPTH = 6.2;
+export const ORR_UNDERPASS_PATH_START_Z = -150;
+export const ORR_UNDERPASS_PATH_END_Z = 150;
+
+export function getOrrUnderpassElevation(zCoord: number): number {
+  const absZ = Math.abs(zCoord);
+  if (absZ <= 35) return -ORR_UNDERPASS_DEPTH;
+  if (absZ >= ORR_UNDERPASS_PATH_END_Z) return 0.05;
+  const progress = (absZ - 35) / (ORR_UNDERPASS_PATH_END_Z - 35);
+  return -ORR_UNDERPASS_DEPTH * (1 - progress) + 0.05 * progress;
+}
+
 /**
  * Build a ribbon section offset from the curved ORR centerline. The caller's
  * lateral sign follows the road frame: positive is west of the northbound

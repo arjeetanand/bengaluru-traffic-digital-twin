@@ -5,6 +5,8 @@ A high-performance, stylized-realistic 3D digital-twin traffic simulator built w
 
 Simulates **1,000–2,000 vehicles** moving at a silky **60 FPS** across Bengaluru's iconic Marathahalli flyover and crossroads junction, driven by live **TomTom Traffic Flow API** data with an intelligent **30% API Quota Safety Guard**, realistic fallback engine, dynamic traffic signal logic, and a docked dark monospace telemetry HUD.
 
+The demo map is source-backed rather than an invented city block: the committed `marathahalli_osm.xml` extract is compiled into a local snapshot covering Oracle Tech Hub → Marathahalli signal → Innovative Multiplex → Kalamandir → Spice Garden. It is an engineering demo, not survey-grade photogrammetry; exact facade and elevation fidelity requires an authorized imagery/3D-tiles source or a field survey.
+
 ---
 
 ## 📸 Key Features
@@ -14,6 +16,13 @@ Simulates **1,000–2,000 vehicles** moving at a silky **60 FPS** across Bengalu
   - At-grade **Outer Ring Road** (6 lanes) intersecting **Old Airport / Varthur Road** (4 lanes) with zebra crossings, yellow stop bars, median greenery, and junction box hatching.
   - Iconic covered pedestrian **Skywalk** (foot-overbridge) spanning the corridor.
   - Roadside commercial buildings, tech-park curtain-wall facades, overhead highway gantry signboards (*Bellandur, Whitefield, HAL, KR Puram*), and BMTC bus shelters.
+- **Source-backed Marathahalli corridor**:
+  - Local OpenStreetMap snapshot with **48,196 nodes, 9,760 ways, 7,533 building footprints, 1,430 roads, 358 footways, 363 shop/restaurant POIs, 63 crossings, 20 bus stops, 41 mapped trees, 11 signals, and 11 railway/viaduct ways**.
+  - Source road ribbons, footpaths, signals, crossings, shops, trees, railways, named landmarks, and four named source labels share one local metre projection.
+  - The mapped ORR bend is reused by the underpass walls, portals, lane markings, traffic splines, metro median, and navigation anchors so those layers do not drift independently.
+- **Optional photorealistic 3D provider**:
+  - The `OSM 3D TWIN` control is the no-key demo path. With a Google Maps Platform key and Map Tiles API enabled, the same scene can stream Google Photorealistic 3D Tiles through [`3d-tiles-renderer`](https://github.com/NASA-AMMOS/3DTilesRendererJS), bounded to a 450 m local region and cached in the browser.
+  - Open-source alternatives worth evaluating for a larger geospatial product are [`CesiumJS`](https://github.com/CesiumGS/cesium) and [`iTowns`](https://github.com/iTowns/itowns); they are integration choices, not additional data silently bundled into this demo.
 - **High-Density 60 FPS Traffic (1,000–2,000 Vehicles)**:
   - 4 specialized `THREE.InstancedMesh` systems (Cars, Bengaluru yellow/green Auto-Rickshaws, BMTC Transit Buses, and Two-Wheelers with helmeted riders).
   - Smooth 3D Catmull-Rom spline lanes (Flyover express, surface through-lanes, free-left slip roads, and turn lanes).
@@ -63,6 +72,8 @@ Simulates **1,000–2,000 vehicles** moving at a silky **60 FPS** across Bengalu
    VITE_TOMTOM_KEY=your_tomtom_api_key_here
    ```
    *(If omitted or blank, the simulator automatically runs in realistic baked DEMO mode).*
+
+   Google Photorealistic 3D Tiles are also optional. Add `VITE_GOOGLE_MAPS_KEY` only when a Google Maps Platform project has the Map Tiles API enabled; the local OSM twin remains the default without it.
 
 3. **Install Dependencies**:
    ```bash
@@ -135,7 +146,10 @@ src/
 │   │   ├── PostProcessing.tsx       # Bloom, N8AO, Vignette, ToneMapping
 │   │   ├── Environment/
 │   │   │   ├── JunctionRoads.tsx    # Multi-lane asphalt, lane lines, zebra crossings, medians
+│   │   │   ├── UnderpassTrench.tsx  # Source-curved ORR trench, portals, walls & lighting
+│   │   │   ├── OsmSnapshotLayer.tsx # Local OSM roads, footways, buildings & POIs
 │   │   │   ├── FlyoverBridge.tsx    # Marathahalli flyover deck, concrete piers, ramps
+│   │   │   ├── MetroViaduct.tsx     # Median-aligned metro deck, piers & station
 │   │   │   ├── Skywalk.tsx          # Pedestrian covered footbridge over highway
 │   │   │   ├── Buildings.tsx        # Commercial & tech park blocks with night window glows
 │   │   │   ├── StreetFurniture.tsx  # Streetlights, 3-aspect traffic signals, overhead gantries
@@ -144,7 +158,8 @@ src/
 │   │   └── traffic/
 │   │       ├── VehicleModels.ts     # Procedural geometries for Car, Auto, Bus, Two-Wheeler
 │   │       ├── TrafficSignals.tsx   # Signal phase timing state machine
-│   │       └── TrafficSystem.tsx    # 1,000-2,000 instanced vehicles, spline queues & 60fps loop
+│   │       ├── TrafficSystem.tsx    # Junction vehicles, spline queues & 30Hz physics
+│   │       └── SourceCorridorTraffic.tsx # Source-road traffic across the widened corridor
 │   └── ui/
 │       ├── HUD.tsx                  # Dark monospace docked HUD container
 │       ├── ControlsBar.tsx          # Night, Rain, Sim speed (1x/10x/60x), Preset toggles

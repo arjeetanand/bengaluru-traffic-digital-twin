@@ -199,59 +199,59 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
         >
           {/* Main cylindrical column */}
           <mesh position={[0, metroHeight / 2, 0]} castShadow receiveShadow material={concreteMat}>
-            <cylinderGeometry args={[1.6, 1.8, metroHeight, 16]} />
+            <cylinderGeometry args={[1.18, 1.38, metroHeight, 16]} />
           </mesh>
 
           {/* Heavy Hammerhead Pier Cap (supporting U-girders) */}
           <mesh position={[0, metroHeight - 0.7, 0]} castShadow receiveShadow material={concreteMat}>
-            <boxGeometry args={[metroWidth + 0.6, 1.4, 3.4]} />
+            <boxGeometry args={[metroWidth + 0.45, 1.25, 2.9]} />
           </mesh>
 
           {/* Pier base pedestal */}
           <mesh position={[0, 0.5, 0]} castShadow receiveShadow material={concreteMat}>
-            <cylinderGeometry args={[2.4, 2.7, 1.0, 16]} />
+            <cylinderGeometry args={[1.95, 2.25, 0.9, 16]} />
           </mesh>
 
           {/* ── BMRCL Ground-Level Construction Barricades enclosing Pier Foundation ── */}
           {Math.abs(zCoord) > 35 && (
             <group position={[0, 0, 0]}>
               {/* North & South Barricades */}
-              <mesh position={[0, 0.9, 3.2]} castShadow>
-                <boxGeometry args={[6.2, 1.8, 0.1]} />
+              <mesh position={[0, 0.82, 2.7]} castShadow>
+                <boxGeometry args={[5.4, 1.55, 0.1]} />
                 <meshStandardMaterial color="#eab308" roughness={0.6} metalness={0.3} />
               </mesh>
-              <mesh position={[0, 0.9, -3.2]} castShadow>
-                <boxGeometry args={[6.2, 1.8, 0.1]} />
+              <mesh position={[0, 0.82, -2.7]} castShadow>
+                <boxGeometry args={[5.4, 1.55, 0.1]} />
                 <meshStandardMaterial color="#eab308" roughness={0.6} metalness={0.3} />
               </mesh>
               {/* East & West Barricades (Blue BMRCL) */}
-              <mesh position={[3.1, 0.9, 0]} castShadow>
-                <boxGeometry args={[0.1, 1.8, 6.4]} />
+              <mesh position={[2.7, 0.82, 0]} castShadow>
+                <boxGeometry args={[0.1, 1.55, 5.4]} />
                 <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.3} />
               </mesh>
-              <mesh position={[-3.1, 0.9, 0]} castShadow>
-                <boxGeometry args={[0.1, 1.8, 6.4]} />
+              <mesh position={[-2.7, 0.82, 0]} castShadow>
+                <boxGeometry args={[0.1, 1.55, 5.4]} />
                 <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.3} />
               </mesh>
               {/* BMRCL Logo White Stripe */}
-              <mesh position={[3.16, 1.1, 0]}>
-                <boxGeometry args={[0.02, 0.35, 5.8]} />
+              <mesh position={[2.76, 1.0, 0]}>
+                <boxGeometry args={[0.02, 0.3, 4.8]} />
                 <meshStandardMaterial color="#ffffff" />
               </mesh>
-              <mesh position={[-3.16, 1.1, 0]}>
-                <boxGeometry args={[0.02, 0.35, 5.8]} />
+              <mesh position={[-2.76, 1.0, 0]}>
+                <boxGeometry args={[0.02, 0.3, 4.8]} />
                 <meshStandardMaterial color="#ffffff" />
               </mesh>
 
               {/* Steel Rebar Cage on Construction Site */}
-              <mesh position={[1.2, 1.2, 1.2]}>
+              <mesh position={[0.9, 1.05, 0.9]}>
                 <cylinderGeometry args={[0.6, 0.6, 2.4, 8]} />
                 <meshStandardMaterial color="#64748b" wireframe />
               </mesh>
 
               {/* Warning hazard blinkers on barricade corners */}
-              {[-3.0, 3.0].map((xP, i) => (
-                <group key={i} position={[xP, 1.9, 3.1]}>
+              {[-2.6, 2.6].map((xP, i) => (
+                <group key={i} position={[xP, 1.68, 2.6]}>
                   <mesh>
                     <boxGeometry args={[0.2, 0.25, 0.2]} />
                     <meshStandardMaterial
@@ -307,17 +307,25 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
             <boxGeometry args={[18, 0.8, 58]} />
           </mesh>
 
-          {/* Station Arched Canopy Roof (Blue Steel Space Frame) */}
-          <mesh position={[0, 7.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[6.8, 6.8, 58, 24, 1, true, 0, Math.PI]} />
-            <meshStandardMaterial color="#dbeafe" metalness={0.35} roughness={0.5} side={THREE.DoubleSide} />
+          {/* Station Arched Canopy Roof (low-profile so the junction remains legible) */}
+          <mesh position={[0, 4.6, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[3.9, 3.9, 34, 24, 1, true, 0, Math.PI]} />
+            <meshStandardMaterial
+              color="#1e3a5f"
+              metalness={0.45}
+              roughness={0.72}
+              transparent
+              opacity={0.62}
+              depthWrite={false}
+              side={THREE.DoubleSide}
+            />
           </mesh>
-          <mesh position={[-6.5, 6.9, 0]}>
-            <boxGeometry args={[0.18, 0.22, 58]} />
+          <mesh position={[-3.65, 4.25, 0]}>
+            <boxGeometry args={[0.18, 0.22, 34]} />
             <meshStandardMaterial color="#0284c7" metalness={0.55} roughness={0.32} />
           </mesh>
-          <mesh position={[6.5, 6.9, 0]}>
-            <boxGeometry args={[0.18, 0.22, 58]} />
+          <mesh position={[3.65, 4.25, 0]}>
+            <boxGeometry args={[0.18, 0.22, 34]} />
             <meshStandardMaterial color="#0284c7" metalness={0.55} roughness={0.32} />
           </mesh>
 

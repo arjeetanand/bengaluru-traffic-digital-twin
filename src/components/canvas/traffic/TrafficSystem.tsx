@@ -10,7 +10,7 @@ import {
   createTwoWheelerGeometry
 } from './VehicleModels';
 import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
-import { getOrrOffsetPointAtZ } from '../../../data/RealRoadData';
+import { getOrrOffsetPointAtZ, getOrrUnderpassElevation } from '../../../data/RealRoadData';
 
 interface TrafficSystemProps {
   signalStatus: SignalStatus;
@@ -105,13 +105,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       return [x, y, projectedZ];
     };
 
-    const underpassY = (z: number) => {
-      const absZ = Math.abs(z);
-      if (absZ <= 35) return -5.1;
-      if (absZ >= 150) return 0.1;
-      const progress = (absZ - 35) / (150 - 35);
-      return -5.1 * (1 - progress) + 0.1 * progress;
-    };
+    const underpassY = (z: number) => getOrrUnderpassElevation(z);
 
     // Helper to register spline
     const addLane = (
@@ -133,7 +127,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       });
     };
 
-    // 1, 2, 3. Underpass Northbound Express Lanes (ORR subterranean through-highway, free-flowing at y = -5.1m)
+    // 1, 2, 3. Underpass Northbound Express Lanes (ORR subterranean through-highway, free-flowing at y = -6.2m)
     addLane('underpass-nb-1', [
       orrPoint(-170, -2.7, underpassY(-170)),
       orrPoint(-115, -2.7, underpassY(-115)),
@@ -164,7 +158,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       orrPoint(170, -7.8, underpassY(170))
     ], 'FREE');
 
-    // 4, 5, 6. Underpass Southbound Express Lanes (ORR subterranean through-highway, free-flowing at y = -5.1m)
+    // 4, 5, 6. Underpass Southbound Express Lanes (ORR subterranean through-highway, free-flowing at y = -6.2m)
     addLane('underpass-sb-1', [
       orrPoint(170, 2.7, underpassY(170)),
       orrPoint(115, 2.7, underpassY(115)),

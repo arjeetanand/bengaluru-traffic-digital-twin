@@ -45,8 +45,10 @@ export const GOOGLE_MAPS_PROMINENT_STORES: GoogleMapsStore[] = [
     name: 'Kalamandir Wedding Silks',
     kannadaName: 'ಕಲಾಮಂದಿರ',
     category: 'silks',
-    lat: 12.9599557,
-    lng: 77.7011929,
+    // Snapped to OSM way/223045596 centroid (x=46.0m, z=330.4m) so the
+    // catalogue pin and the modeled Kalamandir footprint share one anchor.
+    lat: 12.9598276,
+    lng: 77.7016000,
     rating: 4.0,
     reviewCount: 17556,
     address: 'Ward No. 85, 1/24, Outer Ring Rd, Anand Nagar, Marathahalli, Bengaluru 560037',
@@ -216,8 +218,11 @@ export const GOOGLE_MAPS_PROMINENT_STORES: GoogleMapsStore[] = [
     name: 'Innovative Multiplex',
     kannadaName: 'ಇನ್ನೊವೇಟಿವ್ ಮಲ್ಟಿಪ್ಲೆಕ್ಸ್',
     category: 'cinema',
-    lat: 12.9519271,
-    lng: 77.6990125,
+    // Snapped to OSM way/343600093 centroid (x=-286.0m, z=-535.1m) so the
+    // source building, catalog pin, and fly-to camera converge on the same
+    // cinema footprint.
+    lat: 12.9520014,
+    lng: 77.6985397,
     rating: 3.7,
     reviewCount: 6816,
     address: '90b, Innovative Multiplex, 135, Outer Ring Rd, Marathahalli Village, Bengaluru 560037',
