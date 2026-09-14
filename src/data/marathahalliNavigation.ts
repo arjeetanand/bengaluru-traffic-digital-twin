@@ -207,8 +207,8 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     // Bellandur ↔ Marathahalli Phase 2 slice. The registry contains point
     // anchors only, so this camera intentionally frames the approximate
     // employment corridor without implying a full imported road network.
-    position: [500, 3600, 500],
-    target: [-1450, 0, -2200]
+    position: [-260, 2500, -760],
+    target: [-1300, 0, -2350]
   },
   oraclehub: {
     position: [-470, 150, -1498],

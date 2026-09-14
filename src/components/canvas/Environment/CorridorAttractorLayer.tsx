@@ -19,8 +19,9 @@ const ATTRACTOR_PALETTE: Record<CorridorAttractorAnchor['scope'], string> = {
   adjacent_context: '#a78bfa'
 };
 const getBlockDimensions = (attractor: CorridorAttractorAnchor) => {
-  if (attractor.kind === 'technology_employment_cluster') return { width: 56, depth: 42, height: 30 };
-  return { width: 44, depth: 34, height: 24 };
+  if (attractor.scope === 'adjacent_context') return { width: 82, depth: 62, height: 38 };
+  if (attractor.kind === 'technology_employment_cluster') return { width: 112, depth: 82, height: 48 };
+  return { width: 86, depth: 62, height: 36 };
 };
 
 function AttractorLabel({
@@ -113,6 +114,10 @@ export const CorridorAttractorLayer: React.FC<CorridorAttractorLayerProps> = ({
         const accent = ATTRACTOR_PALETTE[attractor.scope];
         return (
           <group key={attractor.id} position={[x, 0, z]}>
+            <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[dimensions.width * 1.45, dimensions.depth * 1.45]} />
+              <meshBasicMaterial color={accent} transparent opacity={isNight ? 0.12 : 0.08} />
+            </mesh>
             <mesh position={[0, dimensions.height / 2, 0]} castShadow receiveShadow>
               <boxGeometry args={[dimensions.width, dimensions.height, dimensions.depth]} />
               <meshStandardMaterial

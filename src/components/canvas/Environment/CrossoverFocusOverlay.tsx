@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
+import { createRoadRibbonGeometry } from '../../../data/RealRoadData';
 
 interface CrossoverFocusOverlayProps {
   isNight?: boolean;
@@ -16,30 +17,20 @@ const createConnectorCurve = (points: readonly [number, number, number][]) => ne
   0.25
 );
 
-function createConnectorSurfaceGeometry(curve: THREE.CatmullRomCurve3, width: number) {
-  const positions: number[] = [];
-  const points = curve.getSpacedPoints(160);
-  for (let index = 1; index < points.length; index += 1) {
-    const previous = points[index - 1];
-    const current = points[index];
-    const tangent = current.clone().sub(previous).setY(0).normalize();
-    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).multiplyScalar(width / 2);
-    const previousY = 0.19;
-    const currentY = 0.19;
-    positions.push(
-      previous.x + normal.x, previousY, previous.z + normal.z,
-      current.x + normal.x, currentY, current.z + normal.z,
-      previous.x - normal.x, previousY, previous.z - normal.z,
-      current.x + normal.x, currentY, current.z + normal.z,
-      current.x - normal.x, currentY, current.z - normal.z,
-      previous.x - normal.x, previousY, previous.z - normal.z
-    );
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.computeVertexNormals();
-  geometry.computeBoundingSphere();
-  return geometry;
+function createConnectorSurfaceGeometry(
+  points: readonly [number, number, number][]
+) {
+  // Keep the audit ribbon on the same geometry contract as JunctionRoads:
+  // same control points, centripetal interpolation, sampling density and
+  // pavement datum. The overlay is still modelled, but it cannot visually
+  // drift from the shared scenario lane if the source points are revised.
+  return createRoadRibbonGeometry(
+    points.map(([x, _y, z]) => [x, z]),
+    5.4,
+    () => 0.19,
+    64,
+    'centripetal'
+  );
 }
 
 function createConnectorDashGeometry(curve: THREE.CatmullRomCurve3) {
@@ -73,11 +64,13 @@ const FocusLabel: React.FC<{
   title: string;
   detail: string;
 }> = ({ position, title, detail }) => (
-  <Html position={position} center distanceFactor={120} zIndexRange={[45, 0]}>
+  <Html position={position} center distanceFactor={88} zIndexRange={[45, 0]}>
     <div
+      role="note"
+      aria-label={`${title}. ${detail}`}
       style={{
         pointerEvents: 'none',
-        minWidth: 154,
+        minWidth: 168,
         padding: '6px 8px',
         borderRadius: 5,
         border: '1px solid rgba(56, 189, 248, 0.75)',
@@ -98,6 +91,44 @@ const FocusLabel: React.FC<{
   </Html>
 );
 
+const DirectionMarkers: React.FC<{
+  id: string;
+  curve: THREE.CatmullRomCurve3;
+  color: string;
+}> = ({ id, curve, color }) => {
+  const markers = useMemo(() => [0.34, 0.48, 0.62, 0.76].map((t) => {
+    const point = curve.getPointAt(t);
+    const tangent = curve.getTangentAt(t).setY(0).normalize();
+    return {
+      position: [point.x, 0.46, point.z] as [number, number, number],
+      angle: Math.atan2(tangent.x, tangent.z)
+    };
+  }), [curve]);
+
+  return (
+    <group name={`ModelledUturnDirectionMarkers-${id}`}>
+      {markers.map((marker, index) => (
+        <group
+          key={`${id}-direction-marker-${index}`}
+          position={marker.position}
+          rotation={[0, marker.angle, 0]}
+        >
+          {/* These are orientation annotations, not traffic signs or legal
+              permissions. They use the same curve as the modelled fleet. */}
+          <mesh position={[-0.22, 0, 0.16]} rotation={[0, -0.62, 0]} renderOrder={10}>
+            <boxGeometry args={[0.16, 0.045, 0.72]} />
+            <meshBasicMaterial color={color} transparent opacity={0.94} depthWrite={false} />
+          </mesh>
+          <mesh position={[0.22, 0, 0.16]} rotation={[0, 0.62, 0]} renderOrder={10}>
+            <boxGeometry args={[0.16, 0.045, 0.72]} />
+            <meshBasicMaterial color={color} transparent opacity={0.94} depthWrite={false} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+};
+
 /**
  * Focus aid for the crossover preset. The highlighted paths are not a second
  * traffic network: they are generated from U_TURN_CONNECTORS, the same
@@ -111,11 +142,42 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
 }) => {
   const northCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.north.points), []);
   const southCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.south.points), []);
-  const northSurfaceGeometry = useMemo(() => createConnectorSurfaceGeometry(northCurve, 5.4), [northCurve]);
-  const southSurfaceGeometry = useMemo(() => createConnectorSurfaceGeometry(southCurve, 5.4), [southCurve]);
+  const northSurfaceGeometry = useMemo(
+    () => createConnectorSurfaceGeometry(U_TURN_CONNECTORS.north.points),
+    []
+  );
+  const southSurfaceGeometry = useMemo(
+    () => createConnectorSurfaceGeometry(U_TURN_CONNECTORS.south.points),
+    []
+  );
   const northDashGeometry = useMemo(() => createConnectorDashGeometry(northCurve), [northCurve]);
   const southDashGeometry = useMemo(() => createConnectorDashGeometry(southCurve), [southCurve]);
+  const northLabelPosition = useMemo(() => {
+    const point = northCurve.getPointAt(0.62);
+    const tangent = northCurve.getTangentAt(0.62).setY(0).normalize();
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
+    return [point.x + normal.x * 12, 5.4, point.z + normal.z * 12] as [number, number, number];
+  }, [northCurve]);
+  const southLabelPosition = useMemo(() => {
+    const point = southCurve.getPointAt(0.62);
+    const tangent = southCurve.getTangentAt(0.62).setY(0).normalize();
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
+    return [point.x - normal.x * 12, 5.4, point.z - normal.z * 12] as [number, number, number];
+  }, [southCurve]);
+  const gates = useMemo(() => [
+    {
+      id: 'north',
+      point: U_TURN_CONNECTORS.north.points[4],
+      position: [U_TURN_CONNECTORS.north.points[4][0], 0.42, U_TURN_CONNECTORS.north.points[4][2]] as [number, number, number]
+    },
+    {
+      id: 'south',
+      point: U_TURN_CONNECTORS.south.points[7],
+      position: [U_TURN_CONNECTORS.south.points[7][0], 0.42, U_TURN_CONNECTORS.south.points[7][2]] as [number, number, number]
+    }
+  ], []);
   const accent = isNight ? '#fbbf24' : '#f59e0b';
+  const isOverview = cameraMode === 'overview';
 
   React.useEffect(() => () => {
     northSurfaceGeometry.dispose();
@@ -126,74 +188,91 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
 
   return (
     <group name="MarathahalliCrossoverSourceAlignmentOverlay">
-      {/* A restrained center halo anchors the signal table without covering the
-          source road surface. */}
-      <mesh position={[0, 0.34, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={8}>
-        <ringGeometry args={[5.8, 6.05, 48]} />
-        <meshBasicMaterial color="#38bdf8" transparent opacity={isNight ? 0.9 : 0.72} depthWrite={false} />
-      </mesh>
+      {/* JunctionRoads keeps its authored U-turn asphalt and chevrons inside
+          the non-source fallback branch. In the live source-backed scene this
+          group is therefore an audit visualization, not a surveyed road. Keep
+          the filled ribbons translucent and remove them from person mode so a
+          pedestrian sees the mapped road/footway rather than a giant overlay. */}
+      <group name="ModelledUturnBirdAudit" visible={isOverview}>
+        {/* A restrained center halo anchors the signal table without covering the
+            source road surface. */}
+        <mesh position={[0, 0.34, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={8}>
+          <ringGeometry args={[5.8, 6.05, 48]} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={isNight ? 0.9 : 0.72} depthWrite={false} />
+        </mesh>
 
-      {/* The two scenario loop surfaces share their exact traffic geometry. */}
-      <mesh geometry={northSurfaceGeometry} renderOrder={7}>
-        <meshStandardMaterial color="#1f2937" roughness={0.92} metalness={0.04} />
-      </mesh>
-      <mesh geometry={southSurfaceGeometry} renderOrder={7}>
-        <meshStandardMaterial color="#1f2937" roughness={0.92} metalness={0.04} />
-      </mesh>
-      <mesh geometry={northDashGeometry} renderOrder={9}>
-        <meshBasicMaterial color="#f8fafc" transparent opacity={0.82} depthWrite={false} />
-      </mesh>
-      <mesh geometry={southDashGeometry} renderOrder={9}>
-        <meshBasicMaterial color="#f8fafc" transparent opacity={0.82} depthWrite={false} />
-      </mesh>
+        {/* The two modelled loop surfaces use the shared road-ribbon builder;
+            they are an audit overlay, not a claim that OSM mapped this turn. */}
+        <mesh geometry={northSurfaceGeometry} renderOrder={7}>
+          <meshStandardMaterial color="#1f2937" roughness={0.92} metalness={0.04} transparent opacity={0.42} depthWrite={false} />
+        </mesh>
+        <mesh geometry={southSurfaceGeometry} renderOrder={7}>
+          <meshStandardMaterial color="#1f2937" roughness={0.92} metalness={0.04} transparent opacity={0.42} depthWrite={false} />
+        </mesh>
+        <mesh geometry={northDashGeometry} renderOrder={9}>
+          <meshBasicMaterial color="#f8fafc" transparent opacity={0.86} depthWrite={false} />
+        </mesh>
+        <mesh geometry={southDashGeometry} renderOrder={9}>
+          <meshBasicMaterial color="#f8fafc" transparent opacity={0.86} depthWrite={false} />
+        </mesh>
 
-      {/* A narrow amber center trace keeps the modelled scenario easy to audit
-          without turning the whole route into a glowing tube. */}
-      <mesh renderOrder={8}>
-        <tubeGeometry args={[northCurve, 96, 0.1, 8, false]} />
-        <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
-      </mesh>
-      <mesh renderOrder={8}>
-        <tubeGeometry args={[southCurve, 96, 0.1, 8, false]} />
-        <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
-      </mesh>
+        {/* A narrow amber center trace and direction chevrons make the
+            modelled vehicle flow readable while staying visibly separate from
+            the source road and the red OSM restriction layer. */}
+        <mesh renderOrder={8}>
+          <tubeGeometry args={[northCurve, 96, 0.1, 8, false]} />
+          <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
+        </mesh>
+        <mesh renderOrder={8}>
+          <tubeGeometry args={[southCurve, 96, 0.1, 8, false]} />
+          <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
+        </mesh>
+        <DirectionMarkers id="north" curve={northCurve} color={accent} />
+        <DirectionMarkers id="south" curve={southCurve} color={accent} />
 
-      {/* Small source-style route gates make the loop entrance legible from a
-          bird view without inventing another road or building. They are not a
-          legal-movement assertion while the mapped restriction is unresolved. */}
-      {[
-        { id: 'north', position: [30.3, 0.42, 29.0] as [number, number, number] },
-        { id: 'south', position: [-7.3, 0.42, -0.1] as [number, number, number] }
-      ].map((gate) => (
-        <group key={gate.id} position={gate.position}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={9}>
-            <ringGeometry args={[1.35, 1.58, 20]} />
-            <meshBasicMaterial color="#f8fafc" transparent opacity={0.9} depthWrite={false} />
-          </mesh>
-          <mesh position={[0, 0.12, 0]}>
-            <cylinderGeometry args={[0.08, 0.08, 1.35, 8]} />
-            <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={isNight ? 1.6 : 0.35} />
-          </mesh>
-        </group>
-      ))}
+        {/* These gates are indexed directly from U_TURN_CONNECTORS so they
+            cannot silently drift when a connector control point changes. They
+            are modelled audit markers, not legal-movement permissions. */}
+        {gates.map((gate) => (
+          <group key={gate.id} position={gate.position}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={9}>
+              <ringGeometry args={[1.35, 1.58, 20]} />
+              <meshBasicMaterial color="#f8fafc" transparent opacity={0.9} depthWrite={false} />
+            </mesh>
+            <mesh position={[0, 0.12, 0]}>
+              <cylinderGeometry args={[0.08, 0.08, 1.35, 8]} />
+              <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={isNight ? 1.6 : 0.35} />
+            </mesh>
+          </group>
+        ))}
 
-      {cameraMode === 'overview' && (
+        <FocusLabel
+          position={northLabelPosition}
+          title="NORTH U-TURN"
+          detail="MODELLED ONLY · OSM NO U-TURN"
+        />
+        <FocusLabel
+          position={southLabelPosition}
+          title="SOUTH U-TURN"
+          detail="MODELLED ONLY · OSM NO U-TURN"
+        />
+        <FocusLabel
+          position={[-2, 8, 14]}
+          title="MARATHAHALLI CROSSOVER"
+          detail="OSM ROAD FRAME · TURN STATUS UNRESOLVED"
+        />
+      </group>
+
+      {/* At eye level, retain only a thin, low-contrast audit trace. The
+          source-backed road and footpaths remain the pedestrian experience. */}
+      {!isOverview && (
         <>
-          <FocusLabel
-            position={[32, 5.1, 34]}
-            title="NORTH U-TURN"
-            detail="MODELLED SCENARIO · SOURCE ROAD LINKS"
-          />
-          <FocusLabel
-            position={[-3, 4.4, -7]}
-            title="SOUTH U-TURN"
-            detail="MODELLED SCENARIO · SOURCE ROAD LINKS"
-          />
-          <FocusLabel
-            position={[-2, 8, 14]}
-            title="MARATHAHALLI CROSSOVER"
-            detail="OSM ROAD FRAME · MODELLED SIGNAL"
-          />
+          <mesh geometry={northDashGeometry} renderOrder={9}>
+            <meshBasicMaterial color={accent} transparent opacity={0.42} depthWrite={false} />
+          </mesh>
+          <mesh geometry={southDashGeometry} renderOrder={9}>
+            <meshBasicMaterial color={accent} transparent opacity={0.42} depthWrite={false} />
+          </mesh>
         </>
       )}
     </group>

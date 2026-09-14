@@ -1748,6 +1748,11 @@ input:focus-visible {
   white-space: nowrap;
 }
 
+.corridor-attractor-label {
+  transform: scale(1.22);
+  transform-origin: center;
+}
+
 .corridor-attractor-label.is-context {
   color: #ddd6fe;
   border-color: rgba(167, 139, 250, 0.54);

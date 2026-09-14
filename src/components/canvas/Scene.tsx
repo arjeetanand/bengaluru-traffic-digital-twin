@@ -196,7 +196,7 @@ export const Scene: React.FC<SceneProps> = ({
             isNight={isNight}
             showStops={isLongCorridorView}
             showAdjacentContext={isLongCorridorView}
-            labelDistanceFactor={isLongCorridorView ? 1800 : 260}
+            labelDistanceFactor={cameraPreset === 'bellandur' ? 2600 : (isLongCorridorView ? 1800 : 260)}
           />
 
           {/* ── 3D Stylized Realistic Ground & Underpass Network ── */}
