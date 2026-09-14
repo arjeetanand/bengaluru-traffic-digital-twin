@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
 import { createRoadRibbonGeometry } from '../../../data/RealRoadData';
+import { createCarGeometry } from '../traffic/VehicleModels';
 
 interface CrossoverFocusOverlayProps {
   isNight?: boolean;
@@ -90,6 +92,75 @@ const FocusLabel: React.FC<{
     </div>
   </Html>
 );
+
+const CrossoverReplayVehicle: React.FC<{
+  id: string;
+  curve: THREE.CatmullRomCurve3;
+  startProgress: number;
+  laneOffset: number;
+  color: string;
+  isNight: boolean;
+}> = ({ id, curve, startProgress, laneOffset, color, isNight }) => {
+  const vehicleRef = useRef<THREE.Group>(null);
+  const progressRef = useRef(startProgress);
+  const geometry = useMemo(() => createCarGeometry(), []);
+  const curveLength = useMemo(() => curve.getLength(), [curve]);
+  const material = useMemo(() => new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.34,
+    metalness: 0.58,
+    emissive: isNight ? new THREE.Color(color) : new THREE.Color('#000000'),
+    emissiveIntensity: isNight ? 0.42 : 0
+  }), [color, isNight]);
+  const point = useMemo(() => new THREE.Vector3(), []);
+  const tangent = useMemo(() => new THREE.Vector3(), []);
+  const normal = useMemo(() => new THREE.Vector3(), []);
+
+  useEffect(() => () => {
+    geometry.dispose();
+    material.dispose();
+  }, [geometry, material]);
+
+  useFrame((_, delta) => {
+    const vehicle = vehicleRef.current;
+    if (!vehicle) return;
+
+    progressRef.current = (progressRef.current + (delta * 6.4) / Math.max(1, curveLength)) % 1;
+    curve.getPointAt(progressRef.current, point);
+    curve.getTangentAt(progressRef.current, tangent).setY(0).normalize();
+    normal.set(-tangent.z, 0, tangent.x).normalize();
+    vehicle.position.set(
+      point.x + normal.x * laneOffset,
+      0.12,
+      point.z + normal.z * laneOffset
+    );
+    // VehicleModels faces +Z; rotate it into the direction of the source
+    // replay tangent while keeping the wheels on the mapped road datum.
+    vehicle.rotation.y = Math.atan2(tangent.x, tangent.z) + Math.PI;
+  });
+
+  return (
+    <group
+      ref={vehicleRef}
+      name={`CrossoverReplayVehicle-${id}`}
+      userData={{
+        source: 'OSM relation/18922642',
+        status: 'modelled visual replay',
+        countedInFleet: false
+      }}
+    >
+      <mesh geometry={geometry} material={material} scale={0.72} castShadow />
+      <mesh position={[0, 0.64, 1.58]}>
+        <boxGeometry args={[0.22, 0.12, 0.06]} />
+        <meshBasicMaterial color={isNight ? '#fef08a' : '#fde68a'} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0.99, -0.98]}>
+        <boxGeometry args={[0.8, 0.04, 0.07]} />
+        <meshBasicMaterial color="#f97316" transparent opacity={0.9} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+};
 
 const DirectionMarkers: React.FC<{
   id: string;
@@ -268,8 +339,34 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           title="MARATHAHALLI CROSSOVER"
           detail="OSM ROADS + FOOTWAYS · TURN STATUS UNRESOLVED"
         />
+        <FocusLabel
+          position={[12, 5.4, 1]}
+          title="TURN REPLAY"
+          detail="2 HERO VEHICLES · MODELLED · NOT COUNTED"
+        />
         </group>
       )}
+
+      {/* A pair of uncounted hero vehicles make the source-linked maneuver
+          legible at a glance. The configured fleet remains in TrafficSystem;
+          these meshes are presentation aids only and carry explicit source
+          and legality metadata. */}
+      <CrossoverReplayVehicle
+        id="north"
+        curve={northCurve}
+        startProgress={0.08}
+        laneOffset={-0.72}
+        color="#0ea5e9"
+        isNight={isNight}
+      />
+      <CrossoverReplayVehicle
+        id="south"
+        curve={southCurve}
+        startProgress={0.58}
+        laneOffset={0.72}
+        color="#f97316"
+        isNight={isNight}
+      />
 
       {/* At eye level, retain only a thin, low-contrast audit trace. The
           source-backed road and footpaths remain the pedestrian experience. */}

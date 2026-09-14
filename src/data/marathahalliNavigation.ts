@@ -192,11 +192,11 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     // Center on the source underpass/arterial crossover rather than the
     // authored origin. The tighter inspection frame keeps the mapped road,
     // source footways, signal cluster and short turn replay legible together.
-    position: [82, 86, 102],
+    position: [64, 58, 72],
     target: [
-      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[0],
-      2,
-      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[1]
+      -2,
+      1.8,
+      10
     ]
   },
   corridor: {
