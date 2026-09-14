@@ -275,6 +275,14 @@ canvas:active {
   border-radius: 8px;
   padding: 10px 14px;
   transition: all 0.2s ease;
+  cursor: default;
+}
+
+.telemetry-widget.is-interactive {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -563,7 +571,7 @@ canvas:active {
 /* ── 3D Camera Controls Movement Guide Pill ── */
 .camera-hint-pill {
   position: absolute;
-  bottom: 64px;
+  bottom: 108px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -906,6 +914,40 @@ canvas:active {
   line-height: 1.4;
 }
 
+.footpath-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.footpath-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.footpath-status.paved { color: #22c55e; }
+.footpath-status.paved i { background: #22c55e; }
+.footpath-status.missing { color: #ef4444; }
+.footpath-status.missing i { background: #ef4444; }
+.footpath-status.blocked { color: #f59e0b; }
+.footpath-status.blocked i { background: #f59e0b; }
+
+.source-attribution {
+  position: absolute;
+  left: 20px;
+  bottom: 108px;
+  z-index: 10;
+  max-width: min(520px, calc(100vw - 40px));
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  pointer-events: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
 .control-btn.audit-active {
   border-color: #22c55e !important;
   color: #22c55e !important;
@@ -920,7 +962,7 @@ canvas:active {
 .hud-dock-right {
   pointer-events: auto;
   position: absolute;
-  bottom: 74px;
+  bottom: 102px;
   right: 20px;
   z-index: 15;
   display: flex;
@@ -1039,15 +1081,15 @@ canvas:active {
 
 .d-pad-grid {
   display: grid;
-  grid-template-columns: repeat(3, 32px);
-  grid-template-rows: repeat(3, 32px);
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: repeat(3, 44px);
   gap: 4px;
   place-items: center;
 }
 
 .d-pad-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   background: rgba(30, 41, 59, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
@@ -1184,3 +1226,115 @@ canvas:active {
   color: #38bdf8;
 }
 
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .hud-top-bar {
+    padding: 8px 12px;
+  }
+
+  .brand-title {
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .brand-meta {
+    flex-wrap: wrap;
+    max-width: min(72vw, 620px);
+    font-size: 8px;
+  }
+
+  .hud-dock-left {
+    top: 60px;
+    left: 10px;
+    width: min(240px, calc(100vw - 20px));
+    max-height: calc(100vh - 150px);
+  }
+
+  .hud-dock-right {
+    right: 10px;
+    bottom: 112px;
+  }
+
+  .hud-dock-bottom {
+    padding: 8px 10px;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .controls-bar-container {
+    width: max-content;
+    max-width: none;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .control-btn,
+  .group-item {
+    min-height: 44px;
+  }
+
+  .source-attribution {
+    left: 10px;
+    bottom: 110px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hud-header-right {
+    display: none;
+  }
+
+  .hud-brand {
+    gap: 7px;
+  }
+
+  .brand-meta {
+    max-width: calc(100vw - 46px);
+  }
+
+  .hud-dock-left {
+    width: calc(100vw - 20px);
+    max-height: 170px;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .hud-dock-left > * {
+    min-width: 210px;
+  }
+
+  .camera-hint-pill {
+    display: none;
+  }
+
+  .hud-dock-right {
+    bottom: 120px;
+    transform: scale(0.88);
+    transform-origin: bottom right;
+  }
+
+  .source-attribution {
+    max-width: calc(100vw - 20px);
+    font-size: 7px;
+  }
+
+  .nav-widget-card {
+    width: min(270px, calc(100vw - 20px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -134,7 +134,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ width: '100vw', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       {/* ── 3D Scene Viewport ── */}
       <Scene
         isNight={mode.isNight}

@@ -35,8 +35,9 @@ export function gpsTo3D(lat: number, lng: number, y = 0): [number, number, numbe
 }
 
 /**
- * Real prominent commercial stores retrieved directly from Google Maps around Marathahalli corridor,
- * with verified ground-truth GPS coordinates.
+ * Prominent commercial POIs in the Marathahalli corridor. Coordinates are a
+ * reviewable catalogue layer and must be reconciled against the OSM snapshot
+ * or a fresh provider export before being treated as survey-grade anchors.
  */
 export const GOOGLE_MAPS_PROMINENT_STORES: GoogleMapsStore[] = [
   {
@@ -294,9 +295,8 @@ export function getStoreCameraFraming(store: GoogleMapsStore): {
 }
 
 /**
- * Generates an official Google Maps search query link for the store's exact latitude and longitude.
+ * Generates an official Google Maps search query link for the catalogue coordinate.
  */
 export function getStoreGoogleMapsUrl(store: GoogleMapsStore): string {
   return `https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`;
 }
-

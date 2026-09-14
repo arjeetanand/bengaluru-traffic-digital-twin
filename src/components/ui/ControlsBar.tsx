@@ -41,7 +41,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       <button
         className={`control-btn ${isStoreDrawerOpen ? 'active' : ''}`}
         onClick={onToggleStoreDrawer}
-        title="Explore prominent stores from Google Maps with real latitude & longitude (Kalamandir, Multiplex, Tanishq, Vijay Sales...)"
+        title="Explore mapped corridor points of interest and review their GPS placement"
         style={{
           borderColor: isStoreDrawerOpen ? '#38bdf8' : undefined,
           color: isStoreDrawerOpen ? '#38bdf8' : undefined
@@ -81,7 +81,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
         title={
           mode.buildingMode === 'google-tiles'
             ? 'Active: Google Photorealistic 3D Tiles. Click to switch to OSM Digital Twin.'
-            : 'Active: OSM 3D Digital Twin (Photographic Facades). Click to stream Google 3D Tiles.'
+            : 'Active: OSM massing snapshot. Click to stream optional Google 3D Tiles.'
         }
       >
         <Building2 size={15} />

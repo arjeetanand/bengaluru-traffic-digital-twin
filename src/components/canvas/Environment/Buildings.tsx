@@ -19,7 +19,7 @@ interface BuildingsProps {
 }
 
 export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
-  // ── 1. Batch-merge surrounding OSM buildings by category for 60 FPS performance ──
+  // ── 1. Batch-merge surrounding OSM buildings by category for render performance ──
   const { commercialBatch, retailBatch, apartmentsBatch } = useMemo(() => {
     const commercialGeoms: THREE.BufferGeometry[] = [];
     const retailGeoms: THREE.BufferGeometry[] = [];
@@ -30,9 +30,12 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
       if (!b.pts || b.pts.length < 3) return null;
       try {
         const shape = new THREE.Shape();
-        shape.moveTo(b.pts[0][0], b.pts[0][1]);
+        // Use the same world convention as the GPS projection: positive
+        // source northing becomes positive world Z while extrusion remains
+        // above the ground plane.
+        shape.moveTo(b.pts[0][0], -b.pts[0][1]);
         for (let i = 1; i < b.pts.length; i++) {
-          shape.lineTo(b.pts[i][0], b.pts[i][1]);
+          shape.lineTo(b.pts[i][0], -b.pts[i][1]);
         }
         shape.closePath();
 
@@ -41,7 +44,7 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
           bevelEnabled: false
         });
 
-        // Rotate from XY extrusion to XZ ground and Y vertical height
+        // Rotate from XY extrusion to XZ ground and Y vertical height.
         geom.rotateX(-Math.PI / 2);
         // Translate to building's world centroid
         geom.translate(b.cx, 0, b.cz);

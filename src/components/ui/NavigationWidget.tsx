@@ -31,8 +31,10 @@ export const NavigationWidget: React.FC = () => {
       cameraControlBus.resetInputs();
     };
     window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('pointercancel', handleGlobalPointerUp);
     return () => {
       window.removeEventListener('pointerup', handleGlobalPointerUp);
+      window.removeEventListener('pointercancel', handleGlobalPointerUp);
     };
   }, []);
 
@@ -109,7 +111,7 @@ export const NavigationWidget: React.FC = () => {
                 className={`d-pad-btn ${activeButton === 'fwd' ? 'btn-active' : ''}`}
                 onPointerDown={() => handlePointerDown('forward', 'fwd')}
                 onPointerUp={() => handlePointerUp('forward')}
-                title="Move Forward [W / ↑]"
+                title="Move Forward [W]"
               >
                 <ChevronUp size={16} />
               </button>
@@ -144,7 +146,7 @@ export const NavigationWidget: React.FC = () => {
                 className={`d-pad-btn ${activeButton === 'back' ? 'btn-active' : ''}`}
                 onPointerDown={() => handlePointerDown('backward', 'back')}
                 onPointerUp={() => handlePointerUp('backward')}
-                title="Move Backward [S / ↓]"
+                title="Move Backward [S]"
               >
                 <ChevronDown size={16} />
               </button>

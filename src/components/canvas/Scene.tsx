@@ -29,6 +29,7 @@ import { StreetFurniture } from './Environment/StreetFurniture';
 import { Greenery } from './Environment/Greenery';
 import { RainParticles } from './Environment/RainParticles';
 import { TrafficSystem } from './traffic/TrafficSystem';
+import { OsmSnapshotLayer } from './Environment/OsmSnapshotLayer';
 
 interface SceneProps {
   isNight: boolean;
@@ -73,13 +74,14 @@ export const Scene: React.FC<SceneProps> = ({
   const hemiIntensity = isNight ? 0.2 : (isRaining ? 0.6 : 0.85);
 
   const fogDensity = isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY);
-  const fogColor = isNight ? '#030712' : (isRaining ? '#334155' : '#e2e8f0');
+  const fogColor = isNight ? '#030712' : (isRaining ? '#334155' : '#a9b8c8');
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, overflow: 'hidden' }}>
       <Canvas
+        dpr={[1, 1.5]}
         shadows={{ type: THREE.PCFSoftShadowMap }}
-        camera={{ position: CAMERA_DEFAULT_POSITION, fov: 45, near: 0.5, far: 800 }}
+        camera={{ position: CAMERA_DEFAULT_POSITION, fov: 50, near: 0.5, far: 1200 }}
         gl={{
           antialias: true,
           toneMapping: THREE.ACESFilmicToneMapping,
@@ -108,8 +110,8 @@ export const Scene: React.FC<SceneProps> = ({
           intensity={sunIntensity}
           color={sunColor}
           castShadow
-          shadow-mapSize-width={4096}
-          shadow-mapSize-height={4096}
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
           shadow-camera-near={10}
           shadow-camera-far={350}
           shadow-camera-left={-160}
@@ -134,6 +136,9 @@ export const Scene: React.FC<SceneProps> = ({
             <meshBasicMaterial color="#1e40af" transparent opacity={0.3} />
           </mesh>
         }>
+          {/* Source-backed roads, footways, crossings, signals and shop POIs. */}
+          <OsmSnapshotLayer isNight={isNight} showBuildings buildingLimit={500} />
+
           {/* ── 3D Stylized Realistic Ground & Underpass Network ── */}
           <JunctionRoads
             isRaining={isRaining}

@@ -64,6 +64,9 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Mapped Marathahalli corridor points of interest"
       style={{
         position: 'fixed',
         top: 0,
@@ -112,10 +115,10 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
           </div>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.5px' }}>
-              GOOGLE MAPS STORES
+              MAPPED CORRIDOR POIs
             </div>
             <div style={{ fontSize: '10px', color: '#38bdf8', letterSpacing: '0.2px' }}>
-              GROUND-TRUTH 3D GPS SIMULATION
+              GPS INDEX • PLACEMENT NEEDS REVIEW
             </div>
           </div>
         </div>
@@ -127,6 +130,8 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
             border: 'none',
             borderRadius: '6px',
             padding: '6px',
+            minWidth: '44px',
+            minHeight: '44px',
             cursor: 'pointer',
             color: '#94a3b8',
             display: 'flex',
@@ -134,6 +139,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
             justifyContent: 'center'
           }}
           title="Close store explorer"
+          aria-label="Close mapped corridor points of interest"
         >
           <X size={18} />
         </button>
@@ -151,7 +157,8 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
       >
         {/* Search input */}
         <input
-          type="text"
+          type="search"
+          aria-label="Search mapped corridor points of interest"
           placeholder="Search Kalamandir, Multiplex, Tanishq..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -162,6 +169,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
             padding: '8px 12px',
             color: '#f8fafc',
             fontSize: '12px',
+            minHeight: '44px',
             outline: 'none'
           }}
         />
@@ -203,7 +211,8 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
                     : 'rgba(255, 255, 255, 0.04)',
                 color: categoryFilter === cat.id ? '#38bdf8' : '#94a3b8',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                minHeight: '36px'
               }}
             >
               {cat.label}
@@ -287,13 +296,13 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#94a3b8' }}>REAL LATITUDE:</span>
+              <span style={{ color: '#94a3b8' }}>MAPPED LATITUDE:</span>
               <span style={{ color: '#38bdf8', fontWeight: 700 }}>
                 {selectedStore.lat.toFixed(7)}° N
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#94a3b8' }}>REAL LONGITUDE:</span>
+              <span style={{ color: '#94a3b8' }}>MAPPED LONGITUDE:</span>
               <span style={{ color: '#38bdf8', fontWeight: 700 }}>
                 {selectedStore.lng.toFixed(7)}° E
               </span>
@@ -330,6 +339,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
                 border: 'none',
                 borderRadius: '6px',
                 padding: '9px 12px',
+                minHeight: '44px',
                 color: '#ffffff',
                 fontSize: '11px',
                 fontWeight: 700,
@@ -364,7 +374,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
                 justifyContent: 'center',
                 gap: '5px'
               }}
-              title="Open verified location in official Google Maps"
+              title="Open mapped location in official Google Maps"
             >
               <ExternalLink size={13} />
               <span>MAPS</span>
@@ -385,14 +395,15 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
         }}
       >
         <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', letterSpacing: '0.5px', marginTop: '6px' }}>
-          VERIFIED CORRIDOR STORES ({filteredStores.length})
+          MAPPED CORRIDOR POIs ({filteredStores.length})
         </div>
 
         {filteredStores.map((store) => {
           const isSelected = selectedStoreId === store.id;
           const [sx, , sz] = gpsTo3D(store.lat, store.lng);
           return (
-            <div
+            <button
+              type="button"
               key={store.id}
               onClick={() => {
                 onSelectStore(store);
@@ -407,11 +418,16 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
                   : '1px solid rgba(255, 255, 255, 0.07)',
                 borderRadius: '8px',
                 padding: '10px 12px',
+                minHeight: '44px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                width: '100%',
+                textAlign: 'left',
+                fontFamily: 'inherit',
+                color: '#f8fafc'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
@@ -484,7 +500,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
                   {store.category}
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

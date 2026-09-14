@@ -127,15 +127,10 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
   });
 
   if (loadError) {
-    return (
-      <group position={[0, 20, 0]}>
-        {/* Visual indicator floating billboard */}
-        <mesh position={[0, 5, 0]}>
-          <boxGeometry args={[40, 10, 1]} />
-          <meshBasicMaterial color="#1e293b" transparent opacity={0.85} />
-        </mesh>
-      </group>
-    );
+    // Keep the OSM scene unobstructed when the optional provider is unavailable.
+    // Status is reported to the caller; a world-space billboard is not a useful
+    // fallback because it can occlude the very scene the user is inspecting.
+    return null;
   }
 
   return null;

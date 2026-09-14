@@ -401,11 +401,20 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const tangent = useMemo(() => new THREE.Vector3(), []);
+  const simulationAccumulator = useRef(0);
 
-  // ── 60 FPS Physics & Simulation Frame Loop ──
+  // ── Fixed-step Physics & Simulation Loop ──
+  // Vehicle transforms are still uploaded every simulation step, but the
+  // expensive lane grouping/sorting/spline sampling is capped at 30 Hz. This
+  // leaves the renderer and controls responsive while preserving sim speed.
   useFrame((_, delta) => {
     // Clamp delta to prevent simulation exploding during tab switch
-    const dt = Math.min(delta, 0.1) * simSpeedMultiplier;
+    simulationAccumulator.current += Math.min(delta, 0.1);
+    const simulationStep = 1 / 30;
+    if (simulationAccumulator.current < simulationStep) return;
+
+    const dt = Math.min(simulationAccumulator.current, 0.1) * simSpeedMultiplier;
+    simulationAccumulator.current = 0;
 
     // Determine current signal allowances
     const nsCanPass = signalStatus.nsColor === 'green';
@@ -476,7 +485,9 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
         const advanceT = (veh.speed * dt) / lane.length;
         veh.t += advanceT;
         if (veh.t > 1.0) {
-          veh.t -= 1.0;
+          // A high simulation multiplier can advance more than one lap in a
+          // fixed step; modulo keeps the lane position bounded and stable.
+          veh.t %= 1.0;
         }
 
         // Calculate 3D position and tangent
@@ -531,8 +542,6 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       <instancedMesh
         ref={carsMeshRef}
         args={[carGeom, carMaterial, counts.car]}
-        castShadow
-        receiveShadow
         frustumCulled={false}
       />
 
@@ -540,8 +549,6 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       <instancedMesh
         ref={twoWheelersMeshRef}
         args={[twoWheelerGeom, twoWheelerMaterial, counts.twoWheeler]}
-        castShadow
-        receiveShadow
         frustumCulled={false}
       />
 
@@ -549,8 +556,6 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       <instancedMesh
         ref={autosMeshRef}
         args={[autoGeom, autoMaterial, counts.auto]}
-        castShadow
-        receiveShadow
         frustumCulled={false}
       />
 
@@ -558,8 +563,6 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       <instancedMesh
         ref={busesMeshRef}
         args={[busGeom, busMaterial, counts.bus]}
-        castShadow
-        receiveShadow
         frustumCulled={false}
       />
     </group>

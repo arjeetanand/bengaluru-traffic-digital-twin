@@ -26,6 +26,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const targetLookAt = useRef(new THREE.Vector3(...CAMERA_DEFAULT_TARGET));
   const isTransitioning = useRef(false);
   const transitionProgress = useRef(0);
+  const hasInitializedCamera = useRef(false);
 
   // Active keyboard inputs
   const keys = useRef({
@@ -41,6 +42,15 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     tiltDown: false,
     sprint: false
   });
+
+  // Reuse transient vectors in the render loop to keep inspection controls
+  // responsive while the scene is simulating many vehicles.
+  const forwardVec = useRef(new THREE.Vector3());
+  const rightVec = useRef(new THREE.Vector3());
+  const moveVec = useRef(new THREE.Vector3());
+  const worldUp = useRef(new THREE.Vector3(0, 1, 0));
+  const cameraRight = useRef(new THREE.Vector3());
+  const cameraDirection = useRef(new THREE.Vector3());
 
   // Attach window keyboard listeners for controlled movement & rotation
   useEffect(() => {
@@ -247,11 +257,22 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       case 'overview':
       case 'cinematic':
       case 'flyover':
-      default:
-        // Elevated isometric overview showing both the underground underpass trench & surface crossroads
-        targetCamPos.current.set(-42, 32, 52);
-        targetLookAt.current.set(0, -1.5, 0);
+    default:
+        // Wide local-aerial overview showing the junction without clipping into a landmark.
+        targetCamPos.current.set(...CAMERA_DEFAULT_POSITION);
+        targetLookAt.current.set(...CAMERA_DEFAULT_TARGET);
         break;
+    }
+
+    // OrbitControls owns the camera after mount. Seed its spherical state from
+    // the selected preset so the first frame is aimed at the junction instead
+    // of using the camera's default -Z orientation.
+    if (!hasInitializedCamera.current && controlsRef.current) {
+      camera.position.copy(targetCamPos.current);
+      controlsRef.current.target.copy(targetLookAt.current);
+      controlsRef.current.update();
+      hasInitializedCamera.current = true;
+      isTransitioning.current = false;
     }
   }, [cameraPreset]);
 
@@ -275,31 +296,31 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       isTransitioning.current = false;
 
       // Compute horizontal forward vector from camera orientation
-      const forwardVec = new THREE.Vector3();
-      camera.getWorldDirection(forwardVec);
-      forwardVec.y = 0;
-      if (forwardVec.lengthSq() > 0.001) {
-        forwardVec.normalize();
+      camera.getWorldDirection(forwardVec.current);
+      forwardVec.current.y = 0;
+      if (forwardVec.current.lengthSq() > 0.001) {
+        forwardVec.current.normalize();
       } else {
-        forwardVec.set(0, 0, -1);
+        forwardVec.current.set(0, 0, -1);
       }
 
       // Compute horizontal right vector (perpendicular to forward and world Y)
-      const rightVec = new THREE.Vector3().crossVectors(forwardVec, new THREE.Vector3(0, 1, 0)).normalize();
+      rightVec.current.crossVectors(forwardVec.current, worldUp.current).normalize();
 
-      const moveVec = new THREE.Vector3(0, 0, 0);
-      if (isForward) moveVec.add(forwardVec);
-      if (isBackward) moveVec.sub(forwardVec);
-      if (isRight) moveVec.add(rightVec);
-      if (isLeft) moveVec.sub(rightVec);
-      if (isUp) moveVec.y += 1;
-      if (isDown) moveVec.y -= 1;
+      moveVec.current.set(0, 0, 0);
+      if (isForward) moveVec.current.add(forwardVec.current);
+      if (isBackward) moveVec.current.sub(forwardVec.current);
+      if (isRight) moveVec.current.add(rightVec.current);
+      if (isLeft) moveVec.current.sub(rightVec.current);
+      if (isUp) moveVec.current.y += 1;
+      if (isDown) moveVec.current.y -= 1;
 
-      if (moveVec.lengthSq() > 0) {
-        moveVec.normalize();
-        const moveSpeed = (keys.current.sprint ? 50 : 25) * safeDelta;
-        camera.position.addScaledVector(moveVec, moveSpeed);
-        controlsRef.current.target.addScaledVector(moveVec, moveSpeed);
+      if (moveVec.current.lengthSq() > 0) {
+        moveVec.current.normalize();
+        const moveSpeed = (keys.current.sprint ? 50 : 25) * busState.speedMultiplier * safeDelta;
+        camera.position.addScaledVector(moveVec.current, moveSpeed);
+        controlsRef.current.target.addScaledVector(moveVec.current, moveSpeed);
+        camera.position.y = Math.max(0.75, camera.position.y);
       }
     }
 
@@ -323,17 +344,15 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       }
 
       if (isTiltUp || isTiltDown) {
-        const camRight = new THREE.Vector3().crossVectors(
-          camera.getWorldDirection(new THREE.Vector3()),
-          new THREE.Vector3(0, 1, 0)
-        );
-        if (camRight.lengthSq() > 0.001) {
-          camRight.normalize();
+        camera.getWorldDirection(cameraDirection.current);
+        cameraRight.current.crossVectors(cameraDirection.current, worldUp.current);
+        if (cameraRight.current.lengthSq() > 0.001) {
+          cameraRight.current.normalize();
         } else {
-          camRight.set(1, 0, 0);
+          cameraRight.current.set(1, 0, 0);
         }
         const tiltAngle = (isTiltUp ? 1 : -1) * rotSpeed;
-        offset.applyAxisAngle(camRight, tiltAngle);
+        offset.applyAxisAngle(cameraRight.current, tiltAngle);
       }
 
       camera.position.copy(target).add(offset);
@@ -366,6 +385,10 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
     // Ensure orbit controls updates every frame for smooth damping
     controlsRef.current.update();
+    if (camera.position.y < 0.75) {
+      camera.position.y = 0.75;
+      controlsRef.current.update();
+    }
   });
 
   return (

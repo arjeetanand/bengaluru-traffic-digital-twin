@@ -101,7 +101,9 @@ export const GoogleMaps3DMarkers: React.FC<GoogleMaps3DMarkersProps> = ({
                 distanceFactor={42}
                 zIndexRange={[100, 0]}
               >
-                <div
+                <button
+                  type="button"
+                  aria-label={`Inspect mapped point of interest ${store.name}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleClick();
@@ -114,7 +116,12 @@ export const GoogleMaps3DMarkers: React.FC<GoogleMaps3DMarkersProps> = ({
                     alignItems: 'center',
                     pointerEvents: 'auto',
                     transform: isSelected ? 'scale(1.08)' : 'scale(1)',
-                    transition: 'transform 0.2s ease'
+                    transition: 'transform 0.2s ease',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    font: 'inherit',
+                    color: 'inherit'
                   }}
                 >
                   <div
@@ -178,7 +185,7 @@ export const GoogleMaps3DMarkers: React.FC<GoogleMaps3DMarkersProps> = ({
                       </span>
                     </div>
 
-                    {/* Bottom Row: Verified GPS Coordinates Badge */}
+                    {/* Bottom Row: Mapped GPS Coordinates Badge */}
                     <div
                       style={{
                         marginTop: '2px',
@@ -193,7 +200,7 @@ export const GoogleMaps3DMarkers: React.FC<GoogleMaps3DMarkersProps> = ({
                       }}
                     >
                       <span style={{ fontSize: '8px', color: '#38bdf8', fontFamily: 'monospace' }}>
-                        📍 {store.lat.toFixed(6)}, {store.lng.toFixed(6)}
+                        {store.lat.toFixed(6)}, {store.lng.toFixed(6)}
                       </span>
                       <span
                         style={{
@@ -221,7 +228,7 @@ export const GoogleMaps3DMarkers: React.FC<GoogleMaps3DMarkersProps> = ({
                         : '6px solid rgba(15, 23, 42, 0.88)'
                     }}
                   />
-                </div>
+                </button>
               </Html>
             </group>
           </group>

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "data:compile": "node scripts/compile-marathahalli-osm.mjs",
+    "data:validate": "node scripts/validate-marathahalli-demo.mjs",
+    "build": "npm run data:compile && npm run data:validate && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

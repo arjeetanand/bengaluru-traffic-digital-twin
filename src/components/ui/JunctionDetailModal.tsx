@@ -27,20 +27,31 @@ export const JunctionDetailModal: React.FC<JunctionDetailModalProps> = ({
   const speedPercent = Math.min(100, Math.round((flowData.currentSpeed / flowData.freeFlowSpeed) * 100));
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="junction-modal-title"
+      onClick={onClose}
+    >
       <div className="junction-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header">
           <div className="modal-header-title">
             <MapPin size={18} className="text-cyan" />
             <div>
-              <h3>{ACTIVE_JUNCTION_NAME}</h3>
+              <h3 id="junction-modal-title">{ACTIVE_JUNCTION_NAME}</h3>
               <span className="modal-sub">
                 {ACTIVE_CITY} • {ACTIVE_COORDINATES.lat.toFixed(6)}, {ACTIVE_COORDINATES.lng.toFixed(6)}
               </span>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onClose}
+            aria-label="Close junction telemetry"
+          >
             <X size={16} />
           </button>
         </div>

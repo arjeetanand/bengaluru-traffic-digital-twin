@@ -82,10 +82,10 @@ export const HUD: React.FC<HUDProps> = ({
               <span>LAT: 12.956840  LNG: 77.701176</span>
               <span className="meta-dot">•</span>
               <span className="source-tag">
-                {!flowData.isDemo ? 'TOMTOM LIVE FEED' : 'DIGITAL TWIN ENGINE'}
+                {!flowData.isDemo ? 'TOMTOM LIVE FEED' : 'OSM SNAPSHOT • MODELLED TRAFFIC'}
               </span>
               <span className="meta-dot">•</span>
-              <span>{mode.vehicleCount} VEHICLES (60 FPS)</span>
+              <span>{mode.vehicleCount} MODELLED VEHICLES</span>
             </div>
           </div>
         </div>
@@ -116,7 +116,12 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ── Docked Left Telemetry Panel (Compact, Dark, Monospace) ── */}
       <aside className="hud-dock-left">
         {/* Network Health Widget */}
-        <div className="telemetry-widget" onClick={onOpenJunctionDetail} title="Click to inspect junction">
+        <button
+          type="button"
+          className="telemetry-widget is-interactive"
+          onClick={onOpenJunctionDetail}
+          title="Inspect modelled junction telemetry"
+        >
           <div className="widget-header">
             <span className="widget-title">NETWORK HEALTH</span>
             <Activity size={13} className="widget-icon" />
@@ -132,7 +137,7 @@ export const HUD: React.FC<HUDProps> = ({
               style={{ width: `${metrics.networkHealth}%` }}
             />
           </div>
-        </div>
+        </button>
 
         {/* Average Junction Flow */}
         <div className="telemetry-widget">
@@ -184,11 +189,11 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
 
         {/* Footpath Walkability Telemetry Card */}
-        <div
+        <button
+          type="button"
           className={`telemetry-widget ${mode.footpathAuditMode ? 'audit-active-card' : ''}`}
           onClick={() => onUpdateMode({ footpathAuditMode: !mode.footpathAuditMode })}
-          title="Click to toggle 3D Footpath Walkability Audit: Green (Paved), Red (Missing), Amber (Blocked)"
-          style={{ cursor: 'pointer' }}
+          title="Toggle the modelled footpath audit overlay"
         >
           <div className="widget-header">
             <span className="widget-title">FOOTPATH STATUS</span>
@@ -199,14 +204,14 @@ export const HUD: React.FC<HUDProps> = ({
             <span className="metric-unit">Walkable</span>
           </div>
           <div className="footpath-breakdown">
-            <span style={{ color: '#22c55e' }}>🟢 Paved 54%</span>
-            <span style={{ color: '#ef4444' }}>🔴 Missing 26%</span>
-            <span style={{ color: '#f59e0b' }}>🟡 Blocked 20%</span>
+            <span className="footpath-status paved"><i aria-hidden="true" />Paved 54%</span>
+            <span className="footpath-status missing"><i aria-hidden="true" />Missing 26%</span>
+            <span className="footpath-status blocked"><i aria-hidden="true" />Blocked 20%</span>
           </div>
           <div className="widget-caption-tag" style={{ marginTop: 4, color: mode.footpathAuditMode ? '#4ade80' : undefined }}>
-            {mode.footpathAuditMode ? '● 3D AUDIT OVERLAY ACTIVE' : 'CLICK TO AUDIT 3D FOOTPATHS'}
+            {mode.footpathAuditMode ? '3D AUDIT OVERLAY ACTIVE' : 'CLICK TO AUDIT • FIELD VERIFY'}
           </div>
-        </div>
+        </button>
 
         {/* TomTom API Quota & 30% Safety Stop Indicator */}
         <ApiUsageBadge usage={usage} onReset={onResetUsage} />
@@ -215,9 +220,9 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ── 3D Camera Controls Movement Guide Pill ── */}
       <div className="camera-hint-pill">
         <span className="hint-tag">CONTROLS</span>
-        <span>⌨️ <b>WASD:</b> Move / Glide</span>
+        <span><b>WASD:</b> Move / Glide</span>
         <span className="hint-divider">•</span>
-        <span>🖱️ <b>Drag:</b> Rotate Any Angle 360°</span>
+        <span><b>Drag:</b> Rotate Any Angle 360°</span>
         <span className="hint-divider">•</span>
         <span><b>Arrows:</b> Turn / Tilt</span>
         <span className="hint-divider">•</span>
@@ -231,6 +236,10 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ── Floating Interactive Navigation Controller ── */}
       <div className="hud-dock-right">
         <NavigationWidget />
+      </div>
+
+      <div className="source-attribution" aria-label="Map data attribution">
+        OSM SNAPSHOT • © OpenStreetMap contributors • ODbL • API LAYERS OPTIONAL
       </div>
 
       {/* ── Docked Bottom Mode Controls Bar ── */}

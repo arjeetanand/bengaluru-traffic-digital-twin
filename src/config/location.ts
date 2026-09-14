@@ -25,16 +25,20 @@ export const SUN_POSITION_DAY: [number, number, number] = [90, 48, -75];
 export const SUN_POSITION_OVERCAST: [number, number, number] = [30, 60, 20];
 
 // Fog density across the junction
-export const FOG_DENSITY_DAY = 0.0024;
-export const FOG_DENSITY_RAIN = 0.0065;
-export const FOG_DENSITY_NIGHT = 0.0035;
+// Tuned for the wide inspection camera: the prior values hid the OSM massing
+// behind roughly 75% exponential fog at a 500m view distance.
+export const FOG_DENSITY_DAY = 0.00045;
+export const FOG_DENSITY_RAIN = 0.0013;
+export const FOG_DENSITY_NIGHT = 0.00065;
 
 // Color grading and exposure
 export const TONE_MAPPING_EXPOSURE = 1.08;
 
-// Camera defaults (Cinematic street-level / low-aerial angle looking across the junction)
-export const CAMERA_DEFAULT_POSITION: [number, number, number] = [-32, 26, 46];
-export const CAMERA_DEFAULT_TARGET: [number, number, number] = [18, 2, 6];
+// Camera defaults (wide local-aerial angle that keeps the junction readable on first load).
+// The earlier street-level default placed the camera inside the authored corridor
+// landmarks, so a roof filled most of the viewport before the user could navigate.
+export const CAMERA_DEFAULT_POSITION: [number, number, number] = [-300, 320, 420];
+export const CAMERA_DEFAULT_TARGET: [number, number, number] = [0, 0, 40];
 
 // Junction physical dimensions (in 3D world units)
 export const JUNCTION_BOUNDS = {

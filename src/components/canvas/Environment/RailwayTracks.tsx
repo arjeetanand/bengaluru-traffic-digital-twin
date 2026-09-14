@@ -55,11 +55,11 @@ export const RailwayTracks: React.FC<RailwayTracksProps> = ({ isNight }) => {
       ))}
 
       {/* Overhead Contact Wires (Tensioned high voltage copper wires) */}
-      <mesh position={[0, 6.2, trackOffset1]}>
+      <mesh position={[0, 6.2, trackOffset1]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.02, 0.02, trackLength, 4]} />
         <meshStandardMaterial color="#b45309" metalness={0.9} roughness={0.2} />
       </mesh>
-      <mesh position={[0, 6.2, trackOffset2]}>
+      <mesh position={[0, 6.2, trackOffset2]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.02, 0.02, trackLength, 4]} />
         <meshStandardMaterial color="#b45309" metalness={0.9} roughness={0.2} />
       </mesh>

@@ -81,7 +81,7 @@ export const FlyoverBridge: React.FC<FlyoverBridgeProps> = ({ isRaining, isNight
       {/* ── West Approach Ramp (ascending from x = 120, y = 0 to x = 155, y = 7.5m) ── */}
       <group position={[120 + rampLength / 2, deckHeight / 2, 0]}>
         <mesh
-          rotation={[0, 0, -rampAngle]}
+          rotation={[0, 0, rampAngle]}
           position={[0, -0.2, 0]}
           receiveShadow
           castShadow
@@ -90,7 +90,7 @@ export const FlyoverBridge: React.FC<FlyoverBridgeProps> = ({ isRaining, isNight
           <boxGeometry args={[rampHypot, 0.9, deckWidth]} />
         </mesh>
         <mesh
-          rotation={[0, 0, -rampAngle]}
+          rotation={[0, 0, rampAngle]}
           position={[0, 0.3, 0]}
           receiveShadow
           material={asphaltDeckMat}
@@ -99,14 +99,14 @@ export const FlyoverBridge: React.FC<FlyoverBridgeProps> = ({ isRaining, isNight
         </mesh>
         {/* Parapets */}
         <mesh
-          rotation={[0, 0, -rampAngle]}
+          rotation={[0, 0, rampAngle]}
           position={[0, 0.7, deckWidth / 2 - 0.35]}
           material={barrierMat}
         >
           <boxGeometry args={[rampHypot, 0.9, 0.7]} />
         </mesh>
         <mesh
-          rotation={[0, 0, -rampAngle]}
+          rotation={[0, 0, rampAngle]}
           position={[0, 0.7, -deckWidth / 2 + 0.35]}
           material={barrierMat}
         >
@@ -117,7 +117,7 @@ export const FlyoverBridge: React.FC<FlyoverBridgeProps> = ({ isRaining, isNight
       {/* ── East Approach Ramp (descending from x = 195, y = 7.5m to x = 230, y = 0) ── */}
       <group position={[195 + rampLength / 2, deckHeight / 2, 0]}>
         <mesh
-          rotation={[0, 0, rampAngle]}
+          rotation={[0, 0, -rampAngle]}
           position={[0, -0.2, 0]}
           receiveShadow
           castShadow
@@ -126,7 +126,7 @@ export const FlyoverBridge: React.FC<FlyoverBridgeProps> = ({ isRaining, isNight
           <boxGeometry args={[rampHypot, 0.9, deckWidth]} />
         </mesh>
         <mesh
-          rotation={[0, 0, rampAngle]}
+          rotation={[0, 0, -rampAngle]}
           position={[0, 0.3, 0]}
           receiveShadow
           material={asphaltDeckMat}
@@ -135,14 +135,14 @@ export const FlyoverBridge: React.FC<FlyoverBridgeProps> = ({ isRaining, isNight
         </mesh>
         {/* Parapets */}
         <mesh
-          rotation={[0, 0, rampAngle]}
+          rotation={[0, 0, -rampAngle]}
           position={[0, 0.7, deckWidth / 2 - 0.35]}
           material={barrierMat}
         >
           <boxGeometry args={[rampHypot, 0.9, 0.7]} />
         </mesh>
         <mesh
-          rotation={[0, 0, rampAngle]}
+          rotation={[0, 0, -rampAngle]}
           position={[0, 0.7, -deckWidth / 2 + 0.35]}
           material={barrierMat}
         >
