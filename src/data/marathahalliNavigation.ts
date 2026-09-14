@@ -404,6 +404,45 @@ const SOURCE_WALK_ROUTES_FALLBACK: readonly SourceWalkRoute[] = [
 ];
 
 let registeredSourceWalkRoutes: readonly SourceWalkRoute[] = SOURCE_WALK_ROUTES_FALLBACK;
+const SOURCE_WALK_CONNECTIVITY_TOLERANCE = 4.5;
+let sourceWalkRouteConnections = buildSourceWalkRouteConnections(SOURCE_WALK_ROUTES_FALLBACK);
+
+function sourceWalkRouteKey(route: SourceWalkRoute) {
+  return route.sourceWayIds.join('|');
+}
+
+function buildSourceWalkRouteConnections(routes: readonly SourceWalkRoute[]) {
+  const connections = new Map<string, Set<string>>();
+  routes.forEach((route) => connections.set(sourceWalkRouteKey(route), new Set()));
+
+  for (let leftIndex = 0; leftIndex < routes.length; leftIndex += 1) {
+    const left = routes[leftIndex];
+    const leftStart = left.points[0];
+    const leftEnd = left.points[left.points.length - 1];
+    for (let rightIndex = leftIndex + 1; rightIndex < routes.length; rightIndex += 1) {
+      const right = routes[rightIndex];
+      const rightStart = right.points[0];
+      const rightEnd = right.points[right.points.length - 1];
+      const joins = [
+        Math.hypot(leftStart[0] - rightStart[0], leftStart[1] - rightStart[1]),
+        Math.hypot(leftStart[0] - rightEnd[0], leftStart[1] - rightEnd[1]),
+        Math.hypot(leftEnd[0] - rightStart[0], leftEnd[1] - rightStart[1]),
+        Math.hypot(leftEnd[0] - rightEnd[0], leftEnd[1] - rightEnd[1])
+      ];
+      if (Math.min(...joins) > SOURCE_WALK_CONNECTIVITY_TOLERANCE) continue;
+      connections.get(sourceWalkRouteKey(left))?.add(sourceWalkRouteKey(right));
+      connections.get(sourceWalkRouteKey(right))?.add(sourceWalkRouteKey(left));
+    }
+  }
+
+  return connections;
+}
+
+function areSourceWalkRoutesConnected(left: SourceWalkRoute, right: SourceWalkRoute) {
+  const leftKey = sourceWalkRouteKey(left);
+  const rightKey = sourceWalkRouteKey(right);
+  return leftKey === rightKey || sourceWalkRouteConnections.get(leftKey)?.has(rightKey) === true;
+}
 
 function parseSourceWidth(feature: OSMPolylineFeature) {
   const taggedWidth = Number.parseFloat(feature.tags.width || '');
@@ -442,13 +481,14 @@ export function registerSnapshotWalkRoutes(footways: readonly OSMPolylineFeature
 
   if (snapshotRoutes.length > 0) {
     registeredSourceWalkRoutes = [...snapshotRoutes, ...SOURCE_SKYWALK_ROUTES];
+    sourceWalkRouteConnections = buildSourceWalkRouteConnections(registeredSourceWalkRoutes);
   }
 }
 
-// Route guidance is deliberately a preference corridor, not a complete
-// pedestrian graph. The extra clearance keeps the camera near a mapped
-// footway while still allowing authored landmark aprons and source gaps to be
-// inspected when the catalog has no connected way there.
+// Route guidance stays inside a bounded source-way corridor. Endpoint joins
+// prevent a nearby but unrelated footway from becoming an invisible teleport;
+// the remaining free-movement fallback keeps authored landmark aprons and
+// source gaps inspectable when the catalog has no connected way there.
 const SOURCE_WALK_ROUTE_CLEARANCE = 2.5;
 const SOURCE_WALK_ROUTE_CONTINUITY_WEIGHT = 0.35;
 
@@ -641,6 +681,16 @@ function resolveSourceGuidedWalkPosition(
   const requestedDistance = Math.hypot(nextX - currentX, nextZ - currentZ);
   if (requestedDistance === 0) return null;
 
+  const nearestCurrentRoute = registeredSourceWalkRoutes
+    .map((route) => projectToWalkRoute(currentX, currentZ, route))
+    .reduce<WalkRouteProjection | null>((current, candidate) => (
+      !current || candidate.distance < current.distance ? candidate : current
+    ), null);
+  const currentRoute = nearestCurrentRoute && nearestCurrentRoute.distance <=
+    getSourceRouteCorridorRadius(nearestCurrentRoute.route)
+    ? nearestCurrentRoute.route
+    : null;
+
   const routeCandidates = registeredSourceWalkRoutes
     .map((route) => ({
       route,
@@ -650,6 +700,7 @@ function resolveSourceGuidedWalkPosition(
     .filter(({ route, current, next }) => (
       (current.distance <= getSourceRouteCorridorRadius(route) ||
         next.distance <= getSourceRouteCorridorRadius(route)) &&
+      (!currentRoute || areSourceWalkRoutesConnected(currentRoute, route)) &&
       canChangeWalkSurface(currentX, currentZ, next.point[0], next.point[1])
     ));
 
