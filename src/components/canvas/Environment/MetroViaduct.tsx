@@ -24,48 +24,83 @@ const METRO_TRAIN_Y = METRO_DECK_CENTER_Y + 0.68;
 const METRO_PIER_SPACING = 32;
 const METRO_SAMPLE_SPACING = 8;
 const METRO_TRAIN_SPEED = 22;
+// The source ways carry a relative OSM layer (layer=2), not survey elevations.
+// These are display elevations for the modeled viaduct detail only.
+const METRO_JUNCTION_CLEAR_HALF_LENGTH = 42;
+const METRO_JUNCTION_CLEAR_HALF_WIDTH = 14;
 
 interface MetroTrackData {
   trackPaths: LocalPoint[][];
   centerline: LocalPoint[];
-  centerCurve: THREE.CatmullRomCurve3;
-  trainCurve: THREE.CatmullRomCurve3;
+  centerCurve: THREE.Curve<THREE.Vector3>;
+  trainCurve: THREE.Curve<THREE.Vector3>;
   trainLength: number;
   initialProgress: number;
+}
+
+interface SourceCurveData {
+  curve: THREE.Curve<THREE.Vector3>;
+  points: LocalPoint[];
+  vertexProgress: number[];
 }
 
 function distanceBetween(a: LocalPoint, b: LocalPoint) {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
 
-function toCurve(points: LocalPoint[]) {
-  return new THREE.CatmullRomCurve3(
-    points.map(([x, z]) => new THREE.Vector3(x, 0, z)),
-    false,
-    'centripetal',
-    0.25
-  );
+function toPolylineCurve(points: LocalPoint[]) {
+  const curve = new THREE.CurvePath<THREE.Vector3>();
+  for (let index = 1; index < points.length; index += 1) {
+    curve.add(new THREE.LineCurve3(
+      new THREE.Vector3(points[index - 1][0], 0, points[index - 1][1]),
+      new THREE.Vector3(points[index][0], 0, points[index][1])
+    ));
+  }
+  return curve;
 }
 
 function toLocalPoints(points: THREE.Vector3[]): LocalPoint[] {
   return points.map((point) => [point.x, point.z]);
 }
 
-function sourceCurve(feature: OSMPolylineFeature) {
+function sourceCurve(feature: OSMPolylineFeature): SourceCurveData {
   const points = feature.geometry.filter((point, index, geometry) => (
     index === 0 || distanceBetween(point, geometry[index - 1]) > 0.05
   ));
-  return toCurve(points);
+  const segmentLengths = points.slice(1).map((point, index) => (
+    distanceBetween(points[index], point)
+  ));
+  const totalLength = segmentLengths.reduce((sum, length) => sum + length, 0);
+  const vertexProgress = [0];
+  let accumulatedLength = 0;
+  segmentLengths.forEach((length) => {
+    accumulatedLength += length;
+    vertexProgress.push(totalLength > 0 ? accumulatedLength / totalLength : 1);
+  });
+  return {
+    curve: toPolylineCurve(points),
+    points,
+    vertexProgress
+  };
 }
 
-function orientLike(reference: LocalPoint[], candidate: LocalPoint[]) {
-  const referenceLast = reference[reference.length - 1];
-  const candidateLast = candidate[candidate.length - 1];
-  const direct = distanceBetween(reference[0], candidate[0])
+function orientSourceCurveLike(reference: SourceCurveData, candidate: SourceCurveData) {
+  const referenceLast = reference.points[reference.points.length - 1];
+  const candidateLast = candidate.points[candidate.points.length - 1];
+  const direct = distanceBetween(reference.points[0], candidate.points[0])
     + distanceBetween(referenceLast, candidateLast);
-  const reversed = distanceBetween(reference[0], candidateLast)
-    + distanceBetween(referenceLast, candidate[0]);
-  return reversed < direct ? [...candidate].reverse() : candidate;
+  const reversed = distanceBetween(reference.points[0], candidateLast)
+    + distanceBetween(referenceLast, candidate.points[0]);
+  if (reversed >= direct) return candidate;
+
+  return {
+    points: [...candidate.points].reverse(),
+    curve: toPolylineCurve([...candidate.points].reverse()),
+    vertexProgress: candidate.vertexProgress
+      .slice()
+      .reverse()
+      .map((progress) => 1 - progress)
+  };
 }
 
 function getTangent(points: LocalPoint[], index: number): LocalPoint {
@@ -135,23 +170,36 @@ function buildMetroTrackData(snapshot: MarathahalliDemoSnapshot): MetroTrackData
     .sort((a, b) => a.id.localeCompare(b.id));
   if (ways.length < 2) return null;
 
-  const curves = ways.slice(0, 2).map(sourceCurve);
+  const sourceCurves = ways.slice(0, 2).map(sourceCurve);
+  sourceCurves[1] = orientSourceCurveLike(sourceCurves[0], sourceCurves[1]);
   const sampleCount = Math.max(
     2,
-    Math.ceil(Math.max(...curves.map((curve) => curve.getLength())) / METRO_SAMPLE_SPACING)
+    Math.ceil(Math.max(...sourceCurves.map(({ curve }) => curve.getLength())) / METRO_SAMPLE_SPACING)
   );
-  const firstTrack = toLocalPoints(curves[0].getSpacedPoints(sampleCount));
-  const secondTrack = orientLike(
-    firstTrack,
-    toLocalPoints(curves[1].getSpacedPoints(sampleCount))
-  );
+  // Sample by shared normalized distance, while also retaining every source
+  // vertex. This keeps both tracks paired without smoothing or cutting across
+  // a mapped bend in the OSM alignment.
+  const progressValues = new Set<number>([0, 1]);
+  for (let index = 1; index < sampleCount; index += 1) {
+    progressValues.add(index / sampleCount);
+  }
+  sourceCurves.forEach(({ vertexProgress }) => {
+    vertexProgress.forEach((progress) => progressValues.add(progress));
+  });
+  const sharedProgress = [...progressValues].sort((a, b) => a - b);
+  const firstTrack = toLocalPoints(sharedProgress.map((progress) => (
+    sourceCurves[0].curve.getPointAt(progress)
+  )));
+  const secondTrack = toLocalPoints(sharedProgress.map((progress) => (
+    sourceCurves[1].curve.getPointAt(progress)
+  )));
   const trackPaths = [firstTrack, secondTrack];
   const centerline = firstTrack.map((point, index) => [
     (point[0] + secondTrack[index][0]) / 2,
     (point[1] + secondTrack[index][1]) / 2
   ] as LocalPoint);
-  const centerCurve = toCurve(centerline);
-  const trainCurve = toCurve(firstTrack);
+  const centerCurve = toPolylineCurve(centerline);
+  const trainCurve = toPolylineCurve(firstTrack);
 
   let nearestIndex = 0;
   let nearestDistance = Infinity;
@@ -190,15 +238,21 @@ function nearestCenterlineFrame(trackData: MetroTrackData, point: LocalPoint) {
   };
 }
 
+function isJunctionClearZone([x, z]: LocalPoint) {
+  return Math.abs(z) < METRO_JUNCTION_CLEAR_HALF_LENGTH
+    && Math.abs(x) < METRO_JUNCTION_CLEAR_HALF_WIDTH;
+}
+
 function sourcePierFrames(trackData: MetroTrackData, sourceSupports: LocalPoint[]) {
   if (sourceSupports.length) {
     return sourceSupports
-      .filter(([x, z]) => !(Math.abs(z) < 42 && Math.abs(x) < 14))
+      .filter((point) => !isJunctionClearZone(point))
       .map((point) => nearestCenterlineFrame(trackData, point));
   }
 
-  // Keep a deterministic modelled fallback for an older or incomplete source
-  // snapshot. The current extract uses the source support nodes above.
+  // The current extract has no explicitly metro-tagged supports. Keep a
+  // deterministic modeled station grid centered on the exact source path;
+  // never use nearby road supports as a proxy for metro construction.
   const length = trackData.centerCurve.getLength();
   const frames: { point: LocalPoint; angle: number }[] = [];
 
@@ -209,7 +263,7 @@ function sourcePierFrames(trackData: MetroTrackData, sourceSupports: LocalPoint[
     // Keep the junction's below-grade carriageway and its mapped pedestrian
     // crossing open. The source alignment still spans this clear zone; only
     // the support station is skipped because this fallback has no pier nodes.
-    if (Math.abs(point.z) < 42 && Math.abs(point.x) < 14) continue;
+    if (isJunctionClearZone([point.x, point.z])) continue;
 
     const tangent = trackData.centerCurve.getTangentAt(progress).normalize();
     frames.push({

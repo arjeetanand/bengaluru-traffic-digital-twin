@@ -127,11 +127,14 @@ function pointToSegmentDistance(
 }
 
 /**
- * The August 2026 OSM extract includes individually tagged concrete pier
- * nodes along the current Namma Metro Phase 2A corridor. They are not
- * members of the railway ways, so match them to the source track geometry by
- * distance instead of guessing a regular pier grid. The 14m threshold keeps
- * nearby ORR bridge supports out of the metro layer.
+ * Return only bridge supports with explicit metro evidence. The August 2026
+ * extract contains 144 concrete pier nodes near the metro alignment, but
+ * their refs identify ORR / Marathahalli / Kodibeesanahalli road structures;
+ * none is tagged as a Namma Metro support. Proximity alone is not enough to
+ * reclassify a road pier as metro infrastructure. A future extract can opt a
+ * support into the source metro layer by adding an explicit Namma Metro tag;
+ * the distance guard then prevents an unrelated nearby support from leaking
+ * into the track model.
  */
 export function isNammaMetroPierSupport(
   support: OSMPointFeature,
@@ -139,6 +142,11 @@ export function isNammaMetroPierSupport(
   maxDistance = 14
 ) {
   if (support.tags['bridge:support'] !== 'pier') return false;
+  const hasExplicitMetroTag = [
+    support.name,
+    ...Object.values(support.tags)
+  ].some((value) => /namma\s+metro/i.test(value || ''));
+  if (!hasExplicitMetroTag) return false;
   return metroWays.some((way) => way.geometry.slice(1).some((point, index) => (
     pointToSegmentDistance(support.position, way.geometry[index], point) <= maxDistance
   )));
