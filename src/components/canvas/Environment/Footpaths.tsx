@@ -229,7 +229,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       width: 2.4,
       height: 0.18,
       status: 'metro_blocked',
-      description: 'Squeezed footpath under elevated Marathahalli Metro Station stairs'
+      description: 'Squeezed footpath beside the elevated Marathahalli Metro structure'
     },
 
     // ══════════════════════════════════════════════════════════════════════════

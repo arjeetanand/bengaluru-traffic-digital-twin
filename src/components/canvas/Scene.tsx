@@ -100,6 +100,9 @@ export const Scene: React.FC<SceneProps> = ({
     'kalamandir',
     'multiplex'
   ].includes(cameraPreset);
+  const sourceBuildingLimit = cameraPreset === 'corridor'
+    ? 3000
+    : (isCrossoverFocusView ? 850 : (isSourceGeometryFocusView ? 1600 : 1000));
   // The compiled source snapshot is the canonical road graph. Keep the full
   // fleet on source ways everywhere except the dedicated crossover audit,
   // where a small, explicitly modelled scenario fleet demonstrates the
@@ -183,7 +186,7 @@ export const Scene: React.FC<SceneProps> = ({
           <OsmSnapshotLayer
             isNight={isNight}
             showBuildings={buildingMode !== 'google-tiles' || googleTilesFailed}
-            buildingLimit={isCrossoverFocusView ? 520 : 1000}
+            buildingLimit={sourceBuildingLimit}
             buildingOpacity={isCrossoverFocusView ? 0.28 : 0.5}
             buildingOutlineOpacity={isCrossoverFocusView ? 0.2 : 0.32}
             labelDistanceFactor={sourceLabelDistanceFactor}

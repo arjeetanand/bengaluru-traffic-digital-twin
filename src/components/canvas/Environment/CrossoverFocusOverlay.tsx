@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
 
 interface CrossoverFocusOverlayProps {
@@ -14,6 +15,58 @@ const createConnectorCurve = (points: readonly [number, number, number][]) => ne
   'centripetal',
   0.25
 );
+
+function createConnectorSurfaceGeometry(curve: THREE.CatmullRomCurve3, width: number) {
+  const positions: number[] = [];
+  const points = curve.getSpacedPoints(160);
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const tangent = current.clone().sub(previous).setY(0).normalize();
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).multiplyScalar(width / 2);
+    const previousY = 0.19;
+    const currentY = 0.19;
+    positions.push(
+      previous.x + normal.x, previousY, previous.z + normal.z,
+      current.x + normal.x, currentY, current.z + normal.z,
+      previous.x - normal.x, previousY, previous.z - normal.z,
+      current.x + normal.x, currentY, current.z + normal.z,
+      current.x - normal.x, currentY, current.z - normal.z,
+      previous.x - normal.x, previousY, previous.z - normal.z
+    );
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function createConnectorDashGeometry(curve: THREE.CatmullRomCurve3) {
+  const pieces: THREE.BufferGeometry[] = [];
+  const points = curve.getSpacedPoints(120);
+  const yAxis = new THREE.Vector3(0, 1, 0);
+  for (let index = 2; index < points.length - 1; index += 5) {
+    const previous = points[index];
+    const current = points[index + 1];
+    const dx = current.x - previous.x;
+    const dz = current.z - previous.z;
+    const length = Math.hypot(dx, dz);
+    if (length < 0.2) continue;
+    const dash = new THREE.BoxGeometry(0.13, 0.025, Math.min(2.2, length * 0.72));
+    dash.applyMatrix4(
+      new THREE.Matrix4().compose(
+        new THREE.Vector3((previous.x + current.x) / 2, 0.34, (previous.z + current.z) / 2),
+        new THREE.Quaternion().setFromAxisAngle(yAxis, Math.atan2(dx, dz)),
+        new THREE.Vector3(1, 1, 1)
+      )
+    );
+    pieces.push(dash);
+  }
+  const geometry = mergeGeometries(pieces, false);
+  pieces.forEach((piece) => piece.dispose());
+  return geometry || new THREE.BufferGeometry();
+}
 
 const FocusLabel: React.FC<{
   position: [number, number, number];
@@ -58,7 +111,18 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
 }) => {
   const northCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.north.points), []);
   const southCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.south.points), []);
+  const northSurfaceGeometry = useMemo(() => createConnectorSurfaceGeometry(northCurve, 5.4), [northCurve]);
+  const southSurfaceGeometry = useMemo(() => createConnectorSurfaceGeometry(southCurve, 5.4), [southCurve]);
+  const northDashGeometry = useMemo(() => createConnectorDashGeometry(northCurve), [northCurve]);
+  const southDashGeometry = useMemo(() => createConnectorDashGeometry(southCurve), [southCurve]);
   const accent = isNight ? '#fbbf24' : '#f59e0b';
+
+  React.useEffect(() => () => {
+    northSurfaceGeometry.dispose();
+    southSurfaceGeometry.dispose();
+    northDashGeometry.dispose();
+    southDashGeometry.dispose();
+  }, [northDashGeometry, northSurfaceGeometry, southDashGeometry, southSurfaceGeometry]);
 
   return (
     <group name="MarathahalliCrossoverSourceAlignmentOverlay">
@@ -69,13 +133,28 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         <meshBasicMaterial color="#38bdf8" transparent opacity={isNight ? 0.9 : 0.72} depthWrite={false} />
       </mesh>
 
-      {/* The two scenario loop paths share their exact traffic geometry. */}
+      {/* The two scenario loop surfaces share their exact traffic geometry. */}
+      <mesh geometry={northSurfaceGeometry} renderOrder={7}>
+        <meshStandardMaterial color="#1f2937" roughness={0.92} metalness={0.04} />
+      </mesh>
+      <mesh geometry={southSurfaceGeometry} renderOrder={7}>
+        <meshStandardMaterial color="#1f2937" roughness={0.92} metalness={0.04} />
+      </mesh>
+      <mesh geometry={northDashGeometry} renderOrder={9}>
+        <meshBasicMaterial color="#f8fafc" transparent opacity={0.82} depthWrite={false} />
+      </mesh>
+      <mesh geometry={southDashGeometry} renderOrder={9}>
+        <meshBasicMaterial color="#f8fafc" transparent opacity={0.82} depthWrite={false} />
+      </mesh>
+
+      {/* A narrow amber center trace keeps the modelled scenario easy to audit
+          without turning the whole route into a glowing tube. */}
       <mesh renderOrder={8}>
-        <tubeGeometry args={[northCurve, 96, 0.22, 8, false]} />
+        <tubeGeometry args={[northCurve, 96, 0.1, 8, false]} />
         <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
       </mesh>
       <mesh renderOrder={8}>
-        <tubeGeometry args={[southCurve, 96, 0.22, 8, false]} />
+        <tubeGeometry args={[southCurve, 96, 0.1, 8, false]} />
         <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
       </mesh>
 
@@ -103,12 +182,12 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           <FocusLabel
             position={[32, 5.1, 34]}
             title="NORTH U-TURN"
-            detail="MODELLED ROUTE · OSM no_u_turn"
+            detail="MODELLED SCENARIO · SOURCE ROAD LINKS"
           />
           <FocusLabel
             position={[-3, 4.4, -7]}
             title="SOUTH U-TURN"
-            detail="MODELLED ROUTE · OSM no_u_turn"
+            detail="MODELLED SCENARIO · SOURCE ROAD LINKS"
           />
           <FocusLabel
             position={[-2, 8, 14]}

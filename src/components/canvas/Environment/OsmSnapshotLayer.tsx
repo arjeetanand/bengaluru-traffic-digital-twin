@@ -7,6 +7,7 @@ import {
   OSMPolylineFeature,
   VARTHUR_VIADUCT_DECK_TOP_Y,
   isSourceElevatedRoad,
+  isNammaMetroSourceWay,
   isMarathahalliSkywalkDeck,
   isMarathahalliSkywalkStair,
   isVarthurViaductFootway,
@@ -271,6 +272,10 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     () => snapshot?.roads.filter(isSourceElevatedRoad) || [],
     [snapshot]
   );
+  const sourceBridgeSupportFeatures = useMemo(
+    () => snapshot?.bridgeSupports || [],
+    [snapshot]
+  );
   const sourceBridgeSurfaceGeometry = useMemo(
     () => (snapshot
       ? createRibbonGeometry(
@@ -313,7 +318,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [snapshot]
   );
   const railwayGeometry = useMemo(
-    () => (snapshot ? createPolylineGeometry(snapshot.railways) : null),
+    () => (snapshot ? createPolylineGeometry(snapshot.railways.filter((feature) => !isNammaMetroSourceWay(feature))) : null),
     [snapshot]
   );
   const buildingGeometry = useMemo(
@@ -334,7 +339,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     // anchors are never lost just because the XML ordering changed.
     const named = snapshot.shops.filter((shop) => shop.name || shop.tags.name);
     const unnamed = snapshot.shops.filter((shop) => !shop.name && !shop.tags.name);
-    return [...named, ...unnamed].slice(0, 160);
+    return [...named, ...unnamed].slice(0, 420);
   }, [snapshot]);
   const sourceShopLabelFeatures = useMemo(() => {
     if (!snapshot) return [];
@@ -455,6 +460,25 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           <lineBasicMaterial color={isNight ? '#cbd5e1' : '#64748b'} transparent opacity={0.82} />
         </lineSegments>
       )}
+
+      {/* OSM explicitly tags these support nodes as bridge piers. They belong
+          to source elevated-road/rail structures, not the separate modelled
+          metro support sequence, so keep their provenance visible in code and
+          place them at the same source bridge deck datum. */}
+      <group name="OSMSourceBridgePiers">
+        {sourceBridgeSupportFeatures.map((support) => (
+          <group key={`bridge-support-${support.id}`} position={[support.position[0], 0, support.position[1]]}>
+            <mesh position={[0, 2.35, 0]} castShadow receiveShadow>
+              <cylinderGeometry args={[0.72, 0.88, 4.7, 10]} />
+              <meshStandardMaterial color={isNight ? '#64748b' : '#9ca3af'} roughness={0.9} metalness={0.04} />
+            </mesh>
+            <mesh position={[0, 4.82, 0]} castShadow receiveShadow>
+              <boxGeometry args={[3.0, 0.52, 1.7]} />
+              <meshStandardMaterial color={isNight ? '#475569' : '#94a3b8'} roughness={0.86} metalness={0.05} />
+            </mesh>
+          </group>
+        ))}
+      </group>
 
       {footwaySurfaceGeometry && (
         <mesh geometry={footwaySurfaceGeometry} renderOrder={1}>

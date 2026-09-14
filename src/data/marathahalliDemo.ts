@@ -23,6 +23,16 @@ export const VARTHUR_VIADUCT_FOOTWAY_WAY_IDS = [
 
 export const VARTHUR_VIADUCT_DECK_TOP_Y = 8.0;
 
+// Current OSM source geometry for the two Namma Metro Phase 2A mainline
+// tracks. The extract also contains way/1551136769, a short siding fragment;
+// keep it available in the snapshot but exclude it from the running viaduct
+// and train path so the rendered deck follows the two through tracks.
+export const NAMMA_METRO_MAINLINE_WAY_IDS = [
+  'way/1551136768',
+  'way/1551136770'
+] as const;
+export const NAMMA_METRO_SIDING_WAY_ID = 'way/1551136769';
+
 // The pedestrian overbridge is a separate mapped footway, not the east-west
 // vehicle flyover. Keeping its source IDs here gives the renderer, the
 // pedestrian animation and the OSM layer one unambiguous geometry contract.
@@ -64,6 +74,14 @@ export function isVarthurViaductWay(feature: OSMPolylineFeature) {
 
 export function isVarthurViaductFootway(feature: OSMPolylineFeature) {
   return VARTHUR_VIADUCT_FOOTWAY_WAY_IDS.includes(feature.id as (typeof VARTHUR_VIADUCT_FOOTWAY_WAY_IDS)[number]);
+}
+
+export function isNammaMetroMainlineWay(feature: OSMPolylineFeature) {
+  return NAMMA_METRO_MAINLINE_WAY_IDS.includes(feature.id as (typeof NAMMA_METRO_MAINLINE_WAY_IDS)[number]);
+}
+
+export function isNammaMetroSourceWay(feature: OSMPolylineFeature) {
+  return isNammaMetroMainlineWay(feature) || feature.id === NAMMA_METRO_SIDING_WAY_ID;
 }
 
 export function isMarathahalliSkywalkDeck(feature: OSMPolylineFeature) {
@@ -134,6 +152,7 @@ export interface MarathahalliDemoSnapshot {
   crossings: OSMPointFeature[];
   busStops: OSMPointFeature[];
   trees: OSMPointFeature[];
+  bridgeSupports: OSMPointFeature[];
   railways: OSMPolylineFeature[];
   turnRestrictions: OSMTurnRestriction[];
 }

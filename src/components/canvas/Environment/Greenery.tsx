@@ -74,7 +74,7 @@ const TREE_CORRIDORS: TreeCorridor[] = [
 
   // ══════════════════════════════════════════════════════════════════════════
   // B: ORR EAST SIDE – Neem Trees (Azadirachta indica)
-  //    Skip: junction box, Brand Factory driveway, metro station area
+  //    Skip: junction box, Brand Factory driveway, metro structure area
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'orr-east',
@@ -87,7 +87,7 @@ const TREE_CORRIDORS: TreeCorridor[] = [
     skipZones: [
       { start: -25,  end: 25,  reason: 'Junction box – signal clearance' },
       { start: 62,   end: 72,  reason: 'Brand Factory main entrance driveway' },
-      { start: 118,  end: 175, reason: 'Metro station stairwell & barricade zone' },
+      { start: 118,  end: 175, reason: 'Metro structure and access clearance' },
       { start: -155, end: -140, reason: 'Auto-rickshaw stand encroachment' },
     ],
     trunkRadius: 0.22, trunkHeight: 2.8, canopyRadius: 2.0,

@@ -67,7 +67,8 @@ function compactTags(tags) {
     'public_transport', 'railway', 'bridge', 'tunnel', 'crossing', 'crossing:markings',
     'natural', 'barrier', 'lit', 'operator', 'addr:street', 'addr:housenumber', 'landuse',
     'traffic_signals', 'layer', 'step_count', 'width', 'incline', 'ramp', 'covered',
-    'handrail', 'smoothness', 'footway', 'embankment'
+    'handrail', 'smoothness', 'footway', 'embankment', 'service', 'network', 'colour',
+    'gauge', 'voltage', 'frequency', 'bridge:support', 'material'
   ];
   return Object.fromEntries(allowed.filter((key) => tags[key] !== undefined).map((key) => [key, tags[key]]));
 }
@@ -95,11 +96,30 @@ function parseWay(match) {
   const refs = [...body.matchAll(/<nd\b([^>]*)\/>/g)]
     .map((nodeMatch) => attr(nodeMatch[1], 'ref'))
     .filter(Boolean);
-  const points = refs.map((ref) => nodes.get(ref)).filter(Boolean);
-  if (points.length < 2 || !points.every((point) => inClip(point.lat, point.lon))) return null;
-  const geometry = points.map((point) => toLocal(point.lat, point.lon));
-  const sum = points.reduce((acc, point) => [acc[0] + point.lat, acc[1] + point.lon], [0, 0]);
-  const centroid = toLocal(sum[0] / points.length, sum[1] / points.length);
+  const points = refs.map((ref) => nodes.get(ref) || null);
+  // Ways returned by the OSM API often continue well beyond the requested
+  // map window. Dropping those ways wholesale silently removed the current
+  // Namma Metro Phase 2A alignment because its source ways run from the
+  // wider corridor into this clip. Keep the longest contiguous in-window run
+  // so long roads, railways and footways retain their real local geometry
+  // without connecting two separate in-window runs across an omitted area.
+  const clippedRuns = [];
+  let currentRun = [];
+  for (const point of points) {
+    if (point && inClip(point.lat, point.lon)) {
+      currentRun.push(point);
+    } else if (currentRun.length) {
+      clippedRuns.push(currentRun);
+      currentRun = [];
+    }
+  }
+  if (currentRun.length) clippedRuns.push(currentRun);
+  const clippedPoints = clippedRuns
+    .sort((a, b) => b.length - a.length)[0] || [];
+  if (clippedPoints.length < 2) return null;
+  const geometry = clippedPoints.map((point) => toLocal(point.lat, point.lon));
+  const sum = clippedPoints.reduce((acc, point) => [acc[0] + point.lat, acc[1] + point.lon], [0, 0]);
+  const centroid = toLocal(sum[0] / clippedPoints.length, sum[1] / clippedPoints.length);
   const tags = compactTags(parseTags(body));
   const id = attr(attrs, 'id');
   if (!id) return null;
@@ -201,6 +221,14 @@ const busStops = pointFeatures.filter((feature) =>
   feature.tags.highway === 'bus_stop' || feature.tags.public_transport === 'platform'
 );
 const trees = pointFeatures.filter((feature) => feature.tags.natural === 'tree');
+const bridgeSupports = pointFeatures
+  .filter((feature) => feature.tags['bridge:support'] === 'pier')
+  .map((feature) => ({
+    id: feature.id,
+    name: feature.name,
+    tags: feature.tags,
+    position: feature.position
+  }));
 
 const namedFeatures = [...buildings, ...places, ...pointFeatures];
 const hasNamedFeature = (needle) => namedFeatures.some((feature) =>
@@ -252,6 +280,7 @@ const dataset = {
     crossings: crossings.length,
     busStops: busStops.length,
     trees: trees.length,
+    bridgeSupports: bridgeSupports.length,
     railways: railways.length,
     turnRestrictions: turnRestrictions.length
   },
@@ -264,6 +293,7 @@ const dataset = {
   crossings,
   busStops,
   trees,
+  bridgeSupports,
   railways,
   turnRestrictions
 };

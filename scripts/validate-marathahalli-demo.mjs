@@ -7,7 +7,7 @@ const errors = [];
 const warnings = [];
 
 const requiredCollections = [
-  'buildings', 'roads', 'footways', 'shops', 'places', 'signals', 'crossings', 'busStops', 'trees', 'railways'
+  'buildings', 'roads', 'footways', 'shops', 'places', 'signals', 'crossings', 'busStops', 'trees', 'bridgeSupports', 'railways'
 ];
 
 function finite(value, label) {
@@ -51,7 +51,7 @@ for (const collection of requiredCollections) {
     if (!feature.id) errors.push(`${collection} feature is missing id`);
     if (ids.has(feature.id)) errors.push(`${collection} contains duplicate id ${feature.id}`);
     ids.add(feature.id);
-    if (collection === 'shops' || collection === 'signals' || collection === 'crossings' || collection === 'busStops' || collection === 'trees') {
+    if (collection === 'shops' || collection === 'signals' || collection === 'crossings' || collection === 'busStops' || collection === 'trees' || collection === 'bridgeSupports') {
       checkPosition(feature.position, `${collection}.${feature.id}.position`);
     } else {
       checkGeometry(feature.geometry, `${collection}.${feature.id}.geometry`);
@@ -108,6 +108,21 @@ for (const anchor of directionAnchors) {
   }
 }
 
+// These are the current source-backed Namma Metro Phase 2A through tracks.
+// They are long ways that cross the clip boundary, so this check catches a
+// compiler regression that would silently replace the physical alignment with
+// a hand-authored shortcut in the 3D scene.
+for (const metroWayId of ['way/1551136768', 'way/1551136770']) {
+  const metroWay = dataset.railways.find((feature) => feature.id === metroWayId);
+  if (!metroWay) {
+    errors.push(`Namma Metro source way ${metroWayId} is missing`);
+  } else {
+    if (metroWay.geometry.length < 10) errors.push(`${metroWayId} has too few clipped source points`);
+    if (metroWay.tags?.name !== 'Namma Metro - Phase 2A') errors.push(`${metroWayId} lost its source name`);
+    if (metroWay.tags?.bridge !== 'viaduct') warnings.push(`${metroWayId} is missing bridge=viaduct`);
+  }
+}
+
 if (dataset.schemaVersion >= 2) {
   if (!Array.isArray(dataset.turnRestrictions)) {
     errors.push('turnRestrictions collection is missing');
@@ -152,6 +167,7 @@ for (const collection of requiredCollections) {
 if (dataset.roads.length < 100) warnings.push(`only ${dataset.roads.length} road ways are in the clipped snapshot`);
 if (dataset.footways.length < 50) warnings.push(`only ${dataset.footways.length} footway ways are in the clipped snapshot`);
 if (dataset.shops.length < 20) warnings.push(`only ${dataset.shops.length} POIs are in the clipped snapshot`);
+if (dataset.bridgeSupports.length < 50) warnings.push(`only ${dataset.bridgeSupports.length} source bridge supports are in the clipped snapshot`);
 for (const landmark of dataset.coverage?.landmarks || []) {
   if (!landmark.sourceBacked) warnings.push(`${landmark.name} is not source-backed in this snapshot`);
 }
