@@ -12,7 +12,10 @@ import {
 import {
   MARATHAHALLI_SNAPSHOT_URL,
   MarathahalliDemoSnapshot,
-  OSMPolylineFeature
+  OSMPolylineFeature,
+  VARTHUR_VIADUCT_DECK_TOP_Y,
+  isSourceElevatedRoad,
+  isVarthurViaductWay
 } from '../../../data/marathahalliDemo';
 
 interface SourceCorridorTrafficProps {
@@ -135,7 +138,12 @@ function buildSourceRoutes(snapshot: MarathahalliDemoSnapshot): SourceRoute[] {
 
   return selected
     .map((feature) => {
-      const points = feature.geometry.map(([x, z]) => new THREE.Vector3(x, 0.1, z));
+      const routeY = isVarthurViaductWay(feature)
+        ? VARTHUR_VIADUCT_DECK_TOP_Y + 0.08
+        : isSourceElevatedRoad(feature)
+          ? 5.3
+          : 0.1;
+      const points = feature.geometry.map(([x, z]) => new THREE.Vector3(x, routeY, z));
       const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.18);
       const oneway = feature.tags.oneway;
       const preferredDirection: 1 | -1 | null = oneway === 'yes' || oneway === '1'

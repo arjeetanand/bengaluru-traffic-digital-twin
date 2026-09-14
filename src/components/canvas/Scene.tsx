@@ -16,7 +16,6 @@ import { JunctionRoads } from './Environment/JunctionRoads';
 import { Footpaths } from './Environment/Footpaths';
 import { RoadsideShops } from './Environment/RoadsideShops';
 import { FlyoverBridge } from './Environment/FlyoverBridge';
-import { RailwayTracks } from './Environment/RailwayTracks';
 import { MetroViaduct } from './Environment/MetroViaduct';
 import { Skywalk } from './Environment/Skywalk';
 import { WestCorridorBuildings } from './Environment/WestCorridorBuildings';
@@ -79,6 +78,14 @@ export const Scene: React.FC<SceneProps> = ({
 
   const isLongCorridorView = cameraPreset === 'corridor';
   const isCrossoverFocusView = cameraPreset === 'crossover';
+  const isSourceGeometryFocusView = [
+    'corridor',
+    'crossover',
+    'flyover',
+    'underpass',
+    'spicegarden',
+    'oraclehub'
+  ].includes(cameraPreset);
   const corridorVehicleCount = Math.min(vehicleCount, Math.max(32, Math.round(vehicleCount * 0.18)));
   const junctionVehicleCount = Math.max(0, vehicleCount - corridorVehicleCount);
   const fogDensity = isLongCorridorView
@@ -176,18 +183,15 @@ export const Scene: React.FC<SceneProps> = ({
           />
 
           {/* ── Indian Roadside Commercial Showrooms, Bakeries, Chai Stalls & Bus Stops ── */}
-          <RoadsideShops
-            isNight={isNight}
-          />
+          {!isSourceGeometryFocusView && (
+            <RoadsideShops
+              isNight={isNight}
+            />
+          )}
 
-          {/* ── Marathahalli Railway Overbridge (ROB) Spanning Railway Line ── */}
+          {/* ── Source-positioned Varthur Road viaduct above the ORR ── */}
           <FlyoverBridge
             isRaining={isRaining}
-            isNight={isNight}
-          />
-
-          {/* ── Indian Railways Dual Broad-Gauge Tracks & Passing Express Train ── */}
-          <RailwayTracks
             isNight={isNight}
           />
 
@@ -202,14 +206,14 @@ export const Scene: React.FC<SceneProps> = ({
           />
 
           {/* ── Realistic West Corridor Landmarks (Innovative Multiplex, Krishna Summit, Krishna Grand, Novel MSR) ── */}
-          {!isCrossoverFocusView && (
+          {!isSourceGeometryFocusView && (
             <WestCorridorBuildings
               isNight={isNight}
             />
           )}
 
           {/* ── Realistic East Corridor Landmarks (Brand Factory, Kalamandir Palace, Factory Outlets Row, Nalli Silks) ── */}
-          {!isCrossoverFocusView && (
+          {!isSourceGeometryFocusView && (
             <EastCorridorBuildings
               isNight={isNight}
             />

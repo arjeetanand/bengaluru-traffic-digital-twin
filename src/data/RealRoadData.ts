@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VARTHUR_VIADUCT_DECK_TOP_Y } from './marathahalliDemo';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // REAL-WORLD GEOMETRIC ROAD SPLINES DERIVED FROM MARATHAHALLI_OSM.XML
@@ -9,34 +10,94 @@ import * as THREE from 'three';
 
 /**
  * 1. Outer Ring Road (ORR) Central Highway Corridor (Underpass & Main Carriageway)
- * Real trajectory exhibits a natural 15-degree diagonal S-curve from SW to NE.
+ *
+ * The OSM extract models the underpass as two separate, one-way three-lane
+ * carriageways. Keep both source ways here and derive the navigation
+ * centerline from their midpoint. This is the geometry contract shared by
+ * the trench, surface service roads, U-turn entries, traffic splines and
+ * median-aligned metro — it must not follow just one carriageway.
+ *
+ * Source ways:
+ *   way/376784366 + way/380704971 (north-oriented carriageway)
+ *   way/380787519 + way/380787521 + way/380787520 (south-oriented carriageway,
+ *   listed in increasing northing order below)
  */
-export const ORR_CENTERLINE_PTS: [number, number][] = [
-  [-111.9, -381.3],
-  [-94.6, -317.1],
-  [-88.6, -285.2],
-  [-62.8, -175.7],
-  [-57.8, -156.2],
-  [-52.9, -139.3],
-  [-47.1, -121.0],
-  [-36.1, -88.7],
-  [-26.1, -58.2],
-  [-19.1, -31.1],
+export const ORR_SOURCE_CARRIAGEWAY_WEST: readonly [number, number][] = [
+  [-88.6, -283.3],
+  [-62.8, -174.6],
+  [-57.8, -155.2],
+  [-52.9, -138.4],
+  [-47.0, -120.2],
+  [-36.1, -88.2],
+  [-26.1, -57.8],
+  [-19.1, -30.9],
   [-14.4, -7.3],
-  [-7.0, 18.0],
-  [-7.0, 32.9],
-  [-5.6, 51.1],
-  [-3.5, 77.1],
-  [-2.1, 109.4],
-  [-1.2, 145.2],
-  [-2.6, 203.4],
-  [-2.1, 231.3],
-  [5.3, 309.7],
-  [10.5, 348.4],
-  [14.9, 378.9],
-  [24.2, 421.4],
-  [35.0, 470.0]
+  [-7.0, 32.6],
+  [-5.6, 50.7],
+  [-3.5, 76.6],
+  [-2.1, 108.7],
+  [-1.2, 144.2],
+  [-2.6, 202.0],
+  [-2.1, 229.8],
+  [5.3, 307.7]
 ];
+
+export const ORR_SOURCE_CARRIAGEWAY_EAST: readonly [number, number][] = [
+  [-74.8, -285.9],
+  [-48.2, -182.6],
+  [-43.0, -163.1],
+  [-38.7, -146.4],
+  [-34.2, -130.3],
+  [-28.5, -109.6],
+  [-20.7, -86.1],
+  [-11.7, -55.2],
+  [-0.2, -8.6],
+  [5.8, 31.5],
+  [8.1, 54.4],
+  [10.9, 81.3],
+  [12.0, 108.1],
+  [12.4, 129.0],
+  [11.7, 205.0],
+  [13.3, 231.2],
+  [21.8, 304.5]
+];
+
+function interpolateSourceXAtZ(points: readonly [number, number][], z: number) {
+  if (z <= points[0][1]) return points[0][0];
+  const last = points[points.length - 1];
+  if (z >= last[1]) return last[0];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    if (z > current[1]) continue;
+    const span = current[1] - previous[1];
+    const progress = span === 0 ? 0 : (z - previous[1]) / span;
+    return previous[0] + (current[0] - previous[0]) * progress;
+  }
+
+  return last[0];
+}
+
+const ORR_SOURCE_Z_MIN = Math.max(
+  ORR_SOURCE_CARRIAGEWAY_WEST[0][1],
+  ORR_SOURCE_CARRIAGEWAY_EAST[0][1]
+);
+const ORR_SOURCE_Z_MAX = Math.min(
+  ORR_SOURCE_CARRIAGEWAY_WEST[ORR_SOURCE_CARRIAGEWAY_WEST.length - 1][1],
+  ORR_SOURCE_CARRIAGEWAY_EAST[ORR_SOURCE_CARRIAGEWAY_EAST.length - 1][1]
+);
+const ORR_SOURCE_SAMPLE_ZS = [...new Set(
+  [...ORR_SOURCE_CARRIAGEWAY_WEST, ...ORR_SOURCE_CARRIAGEWAY_EAST]
+    .map(([, z]) => z)
+    .filter((z) => z >= ORR_SOURCE_Z_MIN && z <= ORR_SOURCE_Z_MAX)
+)].sort((a, b) => a - b);
+
+export const ORR_CENTERLINE_PTS: [number, number][] = ORR_SOURCE_SAMPLE_ZS.map((z) => [
+  (interpolateSourceXAtZ(ORR_SOURCE_CARRIAGEWAY_WEST, z) +
+    interpolateSourceXAtZ(ORR_SOURCE_CARRIAGEWAY_EAST, z)) / 2,
+  z
+]);
 
 export interface RoadFrame {
   x: number;
@@ -92,11 +153,34 @@ export function getOrrOffsetPointAtZ(zCoord: number, lateralOffset: number): [nu
   ];
 }
 
-// The source snapshot contains separate ORR carriageways. The modeled metro
-// follows their local median, not the western carriageway centerline used by
-// the underpass spline. Calibrated from the paired source carriageways near
-// the signal: roughly 6.3m east of the canonical reference line.
-export const ORR_MEDIAN_LATERAL_OFFSET = -6.3;
+// ORR_CENTERLINE_PTS is already the midpoint between the two source
+// carriageways, so a zero lateral offset is the physical ORR median. Keeping
+// this named contract makes the metro alignment explicit at call sites.
+export const ORR_MEDIAN_LATERAL_OFFSET = 0;
+
+// The source Varthur Road bridge starts just east of the signal and returns
+// to grade before Spice Garden. This elevation profile is shared by the
+// surface ribbon, median marking and any modelled road traffic on the upper
+// deck; the detailed deck itself is rendered by FlyoverBridge.
+export const VARTHUR_VIADUCT_RAMP_START_X = 285;
+export const VARTHUR_VIADUCT_START_X = 338;
+export const VARTHUR_VIADUCT_END_X = 414;
+export const VARTHUR_VIADUCT_RAMP_END_X = 470;
+
+export function getVarthurRoadElevation(xCoord: number): number {
+  if (xCoord <= VARTHUR_VIADUCT_RAMP_START_X || xCoord >= VARTHUR_VIADUCT_RAMP_END_X) {
+    return 0.06;
+  }
+  if (xCoord < VARTHUR_VIADUCT_START_X) {
+    const progress = (xCoord - VARTHUR_VIADUCT_RAMP_START_X)
+      / (VARTHUR_VIADUCT_START_X - VARTHUR_VIADUCT_RAMP_START_X);
+    return 0.06 + (VARTHUR_VIADUCT_DECK_TOP_Y - 0.06) * progress;
+  }
+  if (xCoord <= VARTHUR_VIADUCT_END_X) return VARTHUR_VIADUCT_DECK_TOP_Y;
+  const progress = (VARTHUR_VIADUCT_RAMP_END_X - xCoord)
+    / (VARTHUR_VIADUCT_RAMP_END_X - VARTHUR_VIADUCT_END_X);
+  return 0.06 + (VARTHUR_VIADUCT_DECK_TOP_Y - 0.06) * progress;
+}
 
 export function getOrrMedianPointAtZ(zCoord: number): [number, number] {
   return getOrrOffsetPointAtZ(zCoord, ORR_MEDIAN_LATERAL_OFFSET);
@@ -150,7 +234,7 @@ export function createOrrOffsetRibbonGeometry(
 
 /**
  * 2. East-West Arterial Corridor:
- * HAL Old Airport Road (West) ──► Surface Junction ──► Marathahalli ROB Bridge ──► Spice Garden (East)
+ * HAL Old Airport Road (West) ──► Surface Junction ──► Varthur Road viaduct ──► Spice Garden (East)
  * Slopes from North-West to South-East crossing the ORR at an angle.
  */
 export const HAL_TO_SPICEGARDEN_PTS: [number, number][] = [

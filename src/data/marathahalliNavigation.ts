@@ -62,8 +62,9 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     target: CAMERA_DEFAULT_TARGET
   },
   flyover: {
-    position: [150, 42, 95],
-    target: [175, 7, 0]
+    // Source Varthur Road viaduct (OSM ways 1157170083/1157170085).
+    position: [300, 48, 72],
+    target: [376, 8, -15]
   },
   ground: {
     position: [-34, 8, 24],
@@ -118,7 +119,7 @@ const WALK_STARTS: Record<CameraPreset, CameraView> = {
   surface: createOrrWalkAnchor(-38, 5, -26.5),
   aerial: createOrrWalkAnchor(-38, 5, -23.5),
   cinematic: createOrrWalkAnchor(-38, 5, -26.5),
-  flyover: { position: [125, 1.7, 8], target: [175, 1.7, 0] },
+  flyover: { position: [326, 1.7, 14], target: [358, 8, -9] },
   ground: createOrrWalkAnchor(-38, 5, -26.5),
   multiplex: { position: [-220, WALK_EYE_HEIGHT, -535], target: [-226.3, WALK_EYE_HEIGHT, -537.8] },
   kalamandir: { position: [22, WALK_EYE_HEIGHT, 332.5], target: [40, WALK_EYE_HEIGHT, 332.5] },

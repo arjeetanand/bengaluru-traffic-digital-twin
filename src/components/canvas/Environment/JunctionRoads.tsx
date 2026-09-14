@@ -6,7 +6,8 @@ import {
   HAL_TO_SPICEGARDEN_PTS,
   createRoadRibbonGeometry,
   createCurveLineGeometry,
-  getOrrOffsetPointAtZ
+  getOrrOffsetPointAtZ,
+  getVarthurRoadElevation
 } from '../../../data/RealRoadData';
 import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
 
@@ -69,7 +70,7 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
     return createRoadRibbonGeometry(
       HAL_TO_SPICEGARDEN_PTS,
       22,
-      () => 0.06,
+      (_t, x) => getVarthurRoadElevation(x),
       140
     );
   }, []);
@@ -79,7 +80,7 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
     return createCurveLineGeometry(
       HAL_TO_SPICEGARDEN_PTS,
       0,
-      () => 0.18,
+      (_t, x) => getVarthurRoadElevation(x) + 0.12,
       1.2,
       140
     );
@@ -155,7 +156,7 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
       <UnderpassTrench isRaining={isRaining} isNight={isNight} />
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 2. SURFACE ROAD NETWORK (Ground Level y = 0.05)                     */}
+      {/* 2. SURFACE ROAD NETWORK (with source Varthur viaduct ramp profile)  */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       <group name="SurfaceRoadNetwork">
         {/* ── Surface Intersection Table Deck (Crosses directly over the Underpass) ── */}

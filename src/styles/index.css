@@ -1413,7 +1413,7 @@ input:focus-visible {
 
   .controls-bar-container > .btn-group:not(.camera-mode-group) {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     overflow: hidden;
   }
 

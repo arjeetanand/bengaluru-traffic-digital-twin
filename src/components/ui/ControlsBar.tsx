@@ -148,7 +148,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
 
       {/* ── Camera View Angle Presets (Corridors & Landmarks) ── */}
       <div className="btn-group" role="group" aria-label="Camera preset">
-        {(['overview', 'corridor', 'oraclehub', 'crossover', 'brandfactory', 'kalamandir', 'multiplex', 'spicegarden', 'underpass'] as const).map((preset) => (
+        {(['overview', 'corridor', 'oraclehub', 'crossover', 'flyover', 'brandfactory', 'kalamandir', 'multiplex', 'spicegarden', 'underpass'] as const).map((preset) => (
           <button
             key={preset}
             className={`group-item ${mode.cameraPreset === preset ? 'active' : ''}`}
@@ -162,7 +162,9 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
                 ? 'BRAND FACTORY'
                 : preset === 'oraclehub'
                   ? 'ORACLE HUB'
-                  : preset.toUpperCase()}
+                  : preset === 'flyover'
+                    ? 'VARTHUR FLYOVER'
+                    : preset.toUpperCase()}
           </button>
         ))}
       </div>

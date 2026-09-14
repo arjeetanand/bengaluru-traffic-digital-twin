@@ -5,7 +5,11 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   MARATHAHALLI_SNAPSHOT_URL,
   MarathahalliDemoSnapshot,
-  OSMPolylineFeature
+  OSMPolylineFeature,
+  VARTHUR_VIADUCT_DECK_TOP_Y,
+  isSourceElevatedRoad,
+  isVarthurViaductFootway,
+  isVarthurViaductWay
 } from '../../../data/marathahalliDemo';
 
 interface OsmSnapshotLayerProps {
@@ -17,13 +21,17 @@ interface OsmSnapshotLayerProps {
   labelDistanceFactor?: number;
 }
 
-function createPolylineGeometry(features: OSMPolylineFeature[], y = 0.12) {
+function createPolylineGeometry(
+  features: OSMPolylineFeature[],
+  y: number | ((feature: OSMPolylineFeature) => number) = 0.12
+) {
   const positions: number[] = [];
   for (const feature of features) {
+    const featureY = typeof y === 'function' ? y(feature) : y;
     for (let index = 1; index < feature.geometry.length; index += 1) {
       const previous = feature.geometry[index - 1];
       const current = feature.geometry[index];
-      positions.push(previous[0], y, previous[1], current[0], y, current[1]);
+      positions.push(previous[0], featureY, previous[1], current[0], featureY, current[1]);
     }
   }
 
@@ -36,10 +44,11 @@ function createPolylineGeometry(features: OSMPolylineFeature[], y = 0.12) {
 function createRibbonGeometry(
   features: OSMPolylineFeature[],
   width: number | ((feature: OSMPolylineFeature) => number),
-  y: number
+  y: number | ((feature: OSMPolylineFeature) => number)
 ) {
   const positions: number[] = [];
   for (const feature of features) {
+    const featureY = typeof y === 'function' ? y(feature) : y;
     for (let index = 1; index < feature.geometry.length; index += 1) {
       const previous = feature.geometry[index - 1];
       const current = feature.geometry[index];
@@ -59,8 +68,8 @@ function createRibbonGeometry(
       const dx2 = current[0] - nx * halfWidth;
       const dz2 = current[1] - nz * halfWidth;
       positions.push(
-        ax, y, az, cx, y, cz, bx, y, bz,
-        cx, y, cz, dx2, y, dz2, bx, y, bz
+        ax, featureY, az, cx, featureY, cz, bx, featureY, bz,
+        cx, featureY, cz, dx2, featureY, dz2, bx, featureY, bz
       );
     }
   }
@@ -79,10 +88,6 @@ function getRoadRibbonWidth(feature: OSMPolylineFeature) {
   if (['secondary', 'tertiary'].includes(feature.tags.highway || '')) return 8;
   if (feature.tags.highway === 'service') return 4.2;
   return 5.4;
-}
-
-function isSourceElevatedRoad(feature: OSMPolylineFeature) {
-  return feature.tags.bridge === 'yes' || feature.tags.bridge === 'viaduct';
 }
 
 function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
@@ -212,11 +217,19 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   }, []);
 
   const roadGeometry = useMemo(
-    () => (snapshot ? createPolylineGeometry(snapshot.roads) : null),
+    () => (snapshot
+      ? createPolylineGeometry(snapshot.roads.filter((feature) => !isVarthurViaductWay(feature)))
+      : null),
     [snapshot]
   );
   const roadSurfaceGeometry = useMemo(
-    () => (snapshot ? createRibbonGeometry(snapshot.roads, getRoadRibbonWidth, 0.075) : null),
+    () => (snapshot
+      ? createRibbonGeometry(
+        snapshot.roads.filter((feature) => !isVarthurViaductWay(feature)),
+        getRoadRibbonWidth,
+        0.075
+      )
+      : null),
     [snapshot]
   );
   const sourceBridgeFeatures = useMemo(
@@ -224,19 +237,44 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [snapshot]
   );
   const sourceBridgeSurfaceGeometry = useMemo(
-    () => (snapshot ? createRibbonGeometry(sourceBridgeFeatures, getRoadRibbonWidth, 5.2) : null),
+    () => (snapshot
+      ? createRibbonGeometry(
+        sourceBridgeFeatures,
+        getRoadRibbonWidth,
+        (feature) => isVarthurViaductWay(feature) ? VARTHUR_VIADUCT_DECK_TOP_Y + 0.02 : 5.2
+      )
+      : null),
     [snapshot, sourceBridgeFeatures]
   );
   const sourceBridgeGeometry = useMemo(
-    () => (snapshot ? createPolylineGeometry(sourceBridgeFeatures, 5.34) : null),
+    () => (snapshot
+      ? createPolylineGeometry(
+        sourceBridgeFeatures,
+        (feature) => isVarthurViaductWay(feature) ? VARTHUR_VIADUCT_DECK_TOP_Y + 0.12 : 5.34
+      )
+      : null),
     [snapshot, sourceBridgeFeatures]
   );
   const footwayGeometry = useMemo(
-    () => (snapshot ? createPolylineGeometry(snapshot.footways) : null),
+    () => (snapshot
+      ? createPolylineGeometry(snapshot.footways, (feature) => {
+        if (isVarthurViaductFootway(feature)) {
+          return VARTHUR_VIADUCT_DECK_TOP_Y + 0.16;
+        }
+        return feature.tags.bridge ? 7.55 : 0.12;
+      })
+      : null),
     [snapshot]
   );
   const footwaySurfaceGeometry = useMemo(
-    () => (snapshot ? createRibbonGeometry(snapshot.footways, 1.8, 0.14) : null),
+    () => (snapshot
+      ? createRibbonGeometry(snapshot.footways, 1.8, (feature) => {
+        if (isVarthurViaductFootway(feature)) {
+          return VARTHUR_VIADUCT_DECK_TOP_Y + 0.16;
+        }
+        return feature.tags.bridge ? 7.55 : 0.14;
+      })
+      : null),
     [snapshot]
   );
   const railwayGeometry = useMemo(

@@ -24,7 +24,7 @@ interface FootpathSegment {
   width: number;
   height: number;
   status: FootpathStatus;
-  elevation?: number; // base Y elevation (e.g. for elevated ROB bridge)
+  elevation?: number; // base Y elevation for explicitly elevated paths
   description: string;
 }
 
@@ -275,41 +275,13 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       description: 'Footpath with auto parking and small shops leading to Munnekolala portal'
     },
 
-    // ── Marathahalli Railway Overbridge (ROB) Elevated Sidewalks (X: 120 to 195) ──
-    {
-      id: 'rob-sidewalk-north',
-      name: 'Marathahalli Bridge North Pedestrian Walkway',
-      axis: 'X',
-      start: 120,
-      end: 195,
-      offset: 7.2,
-      width: 1.6,
-      height: 0.3,
-      elevation: 7.5,
-      status: 'paved',
-      description: 'Elevated cantilevered concrete footway on bridge deck with steel crash barriers'
-    },
-    {
-      id: 'rob-sidewalk-south',
-      name: 'Marathahalli Bridge South Pedestrian Walkway',
-      axis: 'X',
-      start: 120,
-      end: 195,
-      offset: -7.2,
-      width: 1.6,
-      height: 0.3,
-      elevation: 7.5,
-      status: 'paved',
-      description: 'Elevated footway overlooking Indian Railways mainline tracks below'
-    },
-
-    // ── Spice Garden / Munnekolala Corridor East of Bridge (X: 195 to 270) ──
+    // ── Spice Garden / Munnekolala Corridor East of the Varthur viaduct ──
     // North edge (z ≈ +13.5)
     {
       id: 'spice-n-descent',
       name: 'Bridge Exit North Slope to Munnekolala',
       axis: 'X',
-      start: 195,
+      start: 414,
       end: 225,
       offset: 13.5,
       width: 2.2,
@@ -347,7 +319,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       id: 'spice-s-descent',
       name: 'Bridge Exit South Service Link',
       axis: 'X',
-      start: 195,
+      start: 414,
       end: 220,
       offset: -13.5,
       width: 2.2,
@@ -473,9 +445,9 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
       createPedestrianRoute([[-18, 7.55, 32], [0, 7.55, 32], [18, 7.55, 32]], 2.5, '#15803d'),
       createPedestrianRoute([[16, 7.55, 32], [0, 7.55, 32], [-16, 7.55, 32]], 2.6, '#9333ea'),
 
-      // ROB sidewalks.
-      createPedestrianRoute([[125, 7.8, 7.2], [157, 7.8, 7.2], [190, 7.8, 7.2]], 3.0, '#f59e0b'),
-      createPedestrianRoute([[185, 7.8, -7.2], [156, 7.8, -7.2], [125, 7.8, -7.2]], 2.9, '#64748b')
+      // Varthur viaduct footway movement is supplied by the source-mapped
+      // bridge footways; the old invented ROB corridor is intentionally not
+      // animated here.
     ];
   }, []);
 

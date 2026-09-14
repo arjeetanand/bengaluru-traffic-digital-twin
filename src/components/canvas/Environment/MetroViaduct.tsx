@@ -185,7 +185,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     }
     const [trainX, trainZ] = getOrrOffsetPointAtZ(
       metroTrainZRef.current,
-      -1.7 - 6.3
+      -1.7
     );
     metroTrainRef.current.position.set(trainX, metroHeight + 0.7, trainZ);
     metroTrainRef.current.rotation.y = getMetroPathAngle(metroTrainZRef.current);
