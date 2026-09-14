@@ -4,7 +4,8 @@ import {
   Zap,
   Clock,
   Flame,
-  Footprints
+  Footprints,
+  CarFront
 } from 'lucide-react';
 import {
   TrafficFlowData,
@@ -171,6 +172,23 @@ export const HUD: React.FC<HUDProps> = ({
           <div className="widget-sub">Passing Junction Capacity</div>
         </div>
 
+        {/* Active fleet telemetry: the count is explicit and keeps live-feed provenance honest. */}
+        <div className="telemetry-widget" aria-live="polite">
+          <div className="widget-header">
+            <span className="widget-title">ACTIVE TRAFFIC</span>
+            <CarFront size={13} className="widget-icon" />
+          </div>
+          <div className="metric-row">
+            <span className="metric-value text-cyan">
+              {metrics.activeVehicleCount.toLocaleString()}
+            </span>
+            <span className="metric-unit">vehicles</span>
+          </div>
+          <div className="widget-sub">
+            {flowData.isDemo ? '30 HZ MODELLED FLEET' : 'TOMTOM FLOW INPUT · FLEET MODELLED'} · {mode.simSpeed}× CLOCK
+          </div>
+        </div>
+
         {/* Average Delay Per Vehicle */}
         <div className="telemetry-widget">
           <div className="widget-header">
@@ -225,7 +243,7 @@ export const HUD: React.FC<HUDProps> = ({
             <span className="footpath-status missing"><i aria-hidden="true" />Missing {FOOTPATH_AUDIT_SUMMARY.missingUnpavedPct}%</span>
             <span className="footpath-status blocked"><i aria-hidden="true" />Blocked {FOOTPATH_AUDIT_SUMMARY.blockedEncroachedPct}%</span>
           </div>
-          <div className="widget-sub">MODELLED AUDIT · {(FOOTPATH_AUDIT_SUMMARY.totalMeters / 1000).toFixed(2)} km · {FOOTPATH_AUDIT_SUMMARY.segmentCount} segments</div>
+          <div className="widget-sub">OSM FOOTWAYS + MODELLED AUDIT · {(FOOTPATH_AUDIT_SUMMARY.totalMeters / 1000).toFixed(2)} km · {FOOTPATH_AUDIT_SUMMARY.segmentCount} audit segments</div>
           <div className="widget-caption-tag" style={{ marginTop: 4, color: mode.footpathAuditMode ? '#4ade80' : undefined }}>
             {mode.footpathAuditMode ? '3D AUDIT OVERLAY ACTIVE' : 'CLICK TO AUDIT • FIELD VERIFY'}
           </div>

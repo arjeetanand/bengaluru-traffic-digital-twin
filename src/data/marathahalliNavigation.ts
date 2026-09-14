@@ -4,7 +4,11 @@ import {
   MARATHAHALLI_SKYWALK_DECK_POINTS,
   MARATHAHALLI_SKYWALK_DECK_TOP_Y,
   MARATHAHALLI_SKYWALK_GROUND_TOP_Y,
-  MARATHAHALLI_SKYWALK_STAIR_POINTS
+  MARATHAHALLI_SKYWALK_STAIR_POINTS,
+  OSMPolylineFeature,
+  isMarathahalliSkywalkDeck,
+  isMarathahalliSkywalkStair,
+  isVarthurViaductFootway
 } from './marathahalliDemo';
 import {
   SOURCE_ELEVATED_WALK_ROUTES,
@@ -393,11 +397,53 @@ const SOURCE_SKYWALK_ROUTES: readonly SourceWalkRoute[] = [
   }
 ];
 
-const SOURCE_WALK_ROUTES: readonly SourceWalkRoute[] = [
+const SOURCE_WALK_ROUTES_FALLBACK: readonly SourceWalkRoute[] = [
   ...SOURCE_GROUND_WALK_ROUTES,
   ...SOURCE_ELEVATED_WALK_ROUTES,
   ...SOURCE_SKYWALK_ROUTES
 ];
+
+let registeredSourceWalkRoutes: readonly SourceWalkRoute[] = SOURCE_WALK_ROUTES_FALLBACK;
+
+function parseSourceWidth(feature: OSMPolylineFeature) {
+  const taggedWidth = Number.parseFloat(feature.tags.width || '');
+  if (Number.isFinite(taggedWidth) && taggedWidth >= 1) return Math.min(8, taggedWidth);
+  return feature.tags.footway === 'crossing' || feature.tags.highway === 'crossing' ? 2.5 : 2.0;
+}
+
+function getSourceWalkElevation(feature: OSMPolylineFeature) {
+  if (isVarthurViaductFootway(feature)) return 8.54;
+  if (isMarathahalliSkywalkDeck(feature) || feature.tags.bridge === 'yes' || feature.tags.bridge === 'viaduct') {
+    return MARATHAHALLI_SKYWALK_DECK_TOP_Y;
+  }
+  return 0;
+}
+
+/**
+ * Replace the fallback pedestrian catalog with every footway in the compiled
+ * snapshot. The explicitly mapped skywalk flights stay in the registry as a
+ * special elevation case because their stair geometry is intentionally kept
+ * out of the flat source ribbon layer.
+ */
+export function registerSnapshotWalkRoutes(footways: readonly OSMPolylineFeature[]) {
+  const snapshotRoutes = footways
+    .filter((feature) => feature.geometry.length >= 2)
+    .filter((feature) => !isMarathahalliSkywalkStair(feature) && !isMarathahalliSkywalkDeck(feature))
+    .map<SourceWalkRoute>((feature) => {
+      const elevation = getSourceWalkElevation(feature);
+      return {
+        sourceWayIds: [feature.id],
+        points: feature.geometry,
+        width: parseSourceWidth(feature),
+        elevation,
+        connectedToGrade: elevation === 0
+      };
+    });
+
+  if (snapshotRoutes.length > 0) {
+    registeredSourceWalkRoutes = [...snapshotRoutes, ...SOURCE_SKYWALK_ROUTES];
+  }
+}
 
 // Route guidance is deliberately a preference corridor, not a complete
 // pedestrian graph. The extra clearance keeps the camera near a mapped
@@ -459,7 +505,7 @@ function projectToWalkRoute(x: number, z: number, route: SourceWalkRoute): WalkR
  * not guarantee a pedestrian route exists everywhere in the extract.
  */
 export function getNearestSourceWalkPoint(x: number, z: number, maxDistance = 18) {
-  const nearest = SOURCE_WALK_ROUTES
+  const nearest = registeredSourceWalkRoutes
     .map((route) => projectToWalkRoute(x, z, route))
     .reduce<WalkRouteProjection | null>((current, candidate) => (
       !current || candidate.distance < current.distance ? candidate : current
@@ -498,8 +544,9 @@ export function resolveWalkSurfaceY(x: number, z: number): number {
   // The Varthur elevated ways share their endpoints with mapped ground
   // approaches. Prefer grade at those junction points: the source has no
   // ramp, so a person walking on the approach must not pop onto the deck.
-  const onVarthurGroundApproach = SOURCE_GROUND_WALK_ROUTES.some((route) =>
+  const onVarthurGroundApproach = registeredSourceWalkRoutes.some((route) =>
     route.sourceWayIds.some((wayId) => wayId === 'way/1225572737' || wayId === 'way/1225572744') &&
+    route.elevation === 0 &&
     isNearSourceRoute(x, z, route, 0.35)
   );
   if (onVarthurGroundApproach) return 0;
@@ -507,7 +554,8 @@ export function resolveWalkSurfaceY(x: number, z: number): number {
   // Varthur's elevated pedestrian ways are source-mapped, but the snapshot
   // contains no pedestrian ramp connecting them to grade. Only assign their
   // deck height when the point is already on the elevated way.
-  for (const route of SOURCE_ELEVATED_WALK_ROUTES) {
+  for (const route of registeredSourceWalkRoutes) {
+    if (route.elevation <= 0) continue;
     if (isNearSourceRoute(x, z, route, 0.35)) return route.elevation;
   }
 
@@ -593,7 +641,7 @@ function resolveSourceGuidedWalkPosition(
   const requestedDistance = Math.hypot(nextX - currentX, nextZ - currentZ);
   if (requestedDistance === 0) return null;
 
-  const routeCandidates = SOURCE_WALK_ROUTES
+  const routeCandidates = registeredSourceWalkRoutes
     .map((route) => ({
       route,
       current: projectToWalkRoute(currentX, currentZ, route),

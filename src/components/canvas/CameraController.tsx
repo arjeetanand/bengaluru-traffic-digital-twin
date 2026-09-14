@@ -14,8 +14,10 @@ import {
   resolveWalkStart,
   MARATHAHALLI_OVERVIEW_BOUNDS,
   MARATHAHALLI_WALK_BOUNDS,
-  resolveWalkEyeHeight
+  resolveWalkEyeHeight,
+  registerSnapshotWalkRoutes
 } from '../../data/marathahalliNavigation';
+import { loadMarathahalliSnapshot } from '../../services/marathahalliSnapshot';
 
 interface CameraControllerProps {
   isCinematic: boolean;
@@ -73,6 +75,15 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
   // Attach window keyboard listeners for controlled movement & rotation
   useEffect(() => {
+    let active = true;
+    void loadMarathahalliSnapshot()
+      .then((snapshot) => {
+        if (active) registerSnapshotWalkRoutes(snapshot.footways);
+      })
+      .catch(() => {
+        // The compact source route fallback remains usable if the snapshot is unavailable.
+      });
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if typing in input or modal
       const activeEl = document.activeElement;
@@ -238,6 +249,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     });
 
     return () => {
+      active = false;
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
