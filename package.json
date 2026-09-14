@@ -7,9 +7,10 @@
     "dev": "vite",
     "data:compile": "node scripts/compile-marathahalli-osm.mjs",
     "data:validate": "node scripts/validate-marathahalli-demo.mjs",
+    "metro:validate": "node scripts/validate-metro-geometry.mjs",
     "corridor:validate": "node src/data/validate-bellandur-marathahalli-corridor.mjs",
     "scenario:validate": "node scripts/validate-scenario-engine.mjs",
-    "build": "npm run data:compile && npm run data:validate && npm run corridor:validate && npm run scenario:validate && tsc && vite build",
+    "build": "npm run data:compile && npm run data:validate && npm run metro:validate && npm run corridor:validate && npm run scenario:validate && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

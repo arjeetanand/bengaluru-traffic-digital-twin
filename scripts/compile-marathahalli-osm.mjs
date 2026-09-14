@@ -103,7 +103,7 @@ function parseWay(match) {
   const refs = [...body.matchAll(/<nd\b([^>]*)\/>/g)]
     .map((nodeMatch) => attr(nodeMatch[1], 'ref'))
     .filter(Boolean);
-  const points = refs.map((ref) => nodes.get(ref) || null);
+  const sourceNodes = refs.map((ref) => ({ ref, point: nodes.get(ref) || null }));
   // Ways returned by the OSM API often continue well beyond the requested
   // map window. Dropping those ways wholesale silently removed the current
   // Namma Metro Phase 2A alignment because its source ways run from the
@@ -112,25 +112,29 @@ function parseWay(match) {
   // without connecting two separate in-window runs across an omitted area.
   const clippedRuns = [];
   let currentRun = [];
-  for (const point of points) {
-    if (point && inClip(point.lat, point.lon)) {
-      currentRun.push(point);
+  for (const sourceNode of sourceNodes) {
+    if (sourceNode.point && inClip(sourceNode.point.lat, sourceNode.point.lon)) {
+      currentRun.push(sourceNode);
     } else if (currentRun.length) {
       clippedRuns.push(currentRun);
       currentRun = [];
     }
   }
   if (currentRun.length) clippedRuns.push(currentRun);
-  const clippedPoints = clippedRuns
+  const clippedRun = clippedRuns
     .sort((a, b) => b.length - a.length)[0] || [];
-  if (clippedPoints.length < 2) return null;
-  const geometry = clippedPoints.map((point) => toLocal(point.lat, point.lon));
-  const sum = clippedPoints.reduce((acc, point) => [acc[0] + point.lat, acc[1] + point.lon], [0, 0]);
-  const centroid = toLocal(sum[0] / clippedPoints.length, sum[1] / clippedPoints.length);
+  if (clippedRun.length < 2) return null;
+  const geometry = clippedRun.map(({ point }) => toLocal(point.lat, point.lon));
+  // Keep the raw OSM refs in the same order as the clipped geometry. This
+  // preserves source topology without inventing connections across omitted
+  // parts of a way.
+  const nodeRefs = clippedRun.map(({ ref }) => ref);
+  const sum = clippedRun.reduce((acc, { point }) => [acc[0] + point.lat, acc[1] + point.lon], [0, 0]);
+  const centroid = toLocal(sum[0] / clippedRun.length, sum[1] / clippedRun.length);
   const tags = compactTags(parseTags(body));
   const id = attr(attrs, 'id');
   if (!id) return null;
-  return { id: `way/${id}`, tags, geometry, centroid };
+  return { id: `way/${id}`, tags, geometry, nodeRefs, centroid };
 }
 
 const ways = [];
@@ -182,13 +186,38 @@ for (const [id, node] of nodes) {
   pointFeatures.push({ ...feature, lat: node.lat, lon: node.lon });
 }
 
+function parsePositiveNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function resolveHeight(tags, minimumHeight) {
+  const taggedHeight = parsePositiveNumber(tags.height);
+  if (taggedHeight !== null) {
+    return { height: taggedHeight, heightSource: 'osm:height' };
+  }
+
+  const taggedLevels = parsePositiveNumber(tags['building:levels']);
+  if (taggedLevels !== null) {
+    return {
+      height: Math.max(minimumHeight, taggedLevels * 3.2),
+      heightSource: 'osm:building:levels'
+    };
+  }
+
+  return {
+    height: Math.max(minimumHeight, 3.2),
+    heightSource: 'modelled:fallback'
+  };
+}
+
 const buildings = ways
   .filter((way) => way.tags.building)
   .filter((way) => way.geometry.length >= 3)
   .map((way) => ({
     ...way,
     name: way.tags.name,
-    height: Number(way.tags.height) || Math.max(4, (Number(way.tags['building:levels']) || 1) * 3.2)
+    ...resolveHeight(way.tags, 4)
   }));
 
 const roadValues = new Set([
@@ -226,7 +255,7 @@ const places = ways
   .map((way) => ({
     ...way,
     name: way.tags.name,
-    height: Number(way.tags.height) || Math.max(1.5, (Number(way.tags['building:levels']) || 1) * 3.2)
+    ...resolveHeight(way.tags, 1.5)
   }));
 const signals = pointFeatures.filter((feature) =>
   feature.tags.highway === 'traffic_signals' || feature.tags.traffic_signals === 'signal'
@@ -278,7 +307,7 @@ const landmarkCoverage = [
 const missingLandmarks = landmarkCoverage.filter((landmark) => !landmark.sourceBacked).map((landmark) => landmark.name);
 
 const dataset = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   source: {
     provider: 'OpenStreetMap',
     file: 'marathahalli_osm.xml',

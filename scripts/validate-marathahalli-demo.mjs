@@ -5,6 +5,8 @@ const datasetPath = path.join(process.cwd(), 'public', 'data', 'marathahalli-dem
 const dataset = JSON.parse(await readFile(datasetPath, 'utf8'));
 const errors = [];
 const warnings = [];
+const SUPPORTED_SCHEMA_VERSIONS = [1, 2, 3, 4];
+const NODE_REFS_SCHEMA_VERSION = 4;
 const CURRENT_NO_U_TURN_RELATION_ID = 'relation/18922642';
 const SOURCE_JOIN_TOLERANCE_METRES = 1.5;
 const uTurnValidation = {
@@ -30,6 +32,7 @@ const collectionsToValidate = [
 const pointCollections = new Set([
   'shops', 'signals', 'crossings', 'busStops', 'trees', 'sourceAnchors', 'bridgeSupports', 'namedPlaces'
 ]);
+const validHeightSources = new Set(['osm:height', 'osm:building:levels', 'modelled:fallback']);
 
 function finite(value, label) {
   if (!Number.isFinite(value)) errors.push(`${label} must be finite`);
@@ -52,6 +55,28 @@ function checkGeometry(geometry, label) {
   geometry.forEach((position, index) => checkPosition(position, `${label}[${index}]`));
 }
 
+function checkPolylineFeature(feature, label) {
+  checkGeometry(feature.geometry, `${label}.geometry`);
+  checkPosition(feature.centroid, `${label}.centroid`);
+
+  if (!Array.isArray(feature.nodeRefs)) {
+    if (dataset.schemaVersion >= NODE_REFS_SCHEMA_VERSION) {
+      errors.push(`${label}.nodeRefs must be an array`);
+    }
+    return;
+  }
+
+  feature.nodeRefs.forEach((nodeRef, index) => {
+    if (typeof nodeRef !== 'string' || nodeRef.length === 0) {
+      errors.push(`${label}.nodeRefs[${index}] must be a non-empty source node ID`);
+    }
+  });
+
+  if (Array.isArray(feature.geometry) && feature.nodeRefs.length !== feature.geometry.length) {
+    errors.push(`${label}.nodeRefs length (${feature.nodeRefs.length}) must match geometry length (${feature.geometry.length})`);
+  }
+}
+
 function distanceBetween(left, right) {
   if (!Array.isArray(left) || !Array.isArray(right) ||
     ![left[0], left[1], right[0], right[1]].every((value) => Number.isFinite(value))) {
@@ -60,7 +85,7 @@ function distanceBetween(left, right) {
   return Math.hypot(left[0] - right[0], left[1] - right[1]);
 }
 
-if (![1, 2, 3].includes(dataset.schemaVersion)) errors.push('unsupported schemaVersion');
+if (!SUPPORTED_SCHEMA_VERSIONS.includes(dataset.schemaVersion)) errors.push('unsupported schemaVersion');
 if (dataset.source?.provider !== 'OpenStreetMap') errors.push('source.provider must be OpenStreetMap');
 if (!dataset.source?.attribution?.includes('OpenStreetMap contributors')) errors.push('OSM attribution is missing');
 if (dataset.source?.license !== 'ODbL-1.0') errors.push('OSM license must be ODbL-1.0');
@@ -83,7 +108,10 @@ for (const collection of collectionsToValidate) {
     if (pointCollections.has(collection)) {
       checkPosition(feature.position, `${collection}.${feature.id}.position`);
     } else {
-      checkGeometry(feature.geometry, `${collection}.${feature.id}.geometry`);
+      checkPolylineFeature(feature, `${collection}.${feature.id}`);
+    }
+    if (feature.heightSource !== undefined && !validHeightSources.has(feature.heightSource)) {
+      errors.push(`${collection}.${feature.id}.heightSource is unsupported`);
     }
   }
 }

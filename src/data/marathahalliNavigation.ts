@@ -5,6 +5,7 @@ import {
   MARATHAHALLI_SKYWALK_DECK_TOP_Y,
   MARATHAHALLI_SKYWALK_GROUND_TOP_Y,
   MARATHAHALLI_SKYWALK_STAIR_POINTS,
+  VARTHUR_VIADUCT_DECK_TOP_Y,
   OSMPolylineFeature,
   isMarathahalliSkywalkDeck,
   isMarathahalliSkywalkStair,
@@ -451,7 +452,10 @@ function parseSourceWidth(feature: OSMPolylineFeature) {
 }
 
 function getSourceWalkElevation(feature: OSMPolylineFeature) {
-  if (isVarthurViaductFootway(feature)) return 8.54;
+  // The source layer and audit renderer use the same modeled footway datum:
+  // Varthur viaduct deck top plus a 0.16 m walkable slab. OSM layer=1 is only
+  // relative ordering, so this remains an explicit modeled value.
+  if (isVarthurViaductFootway(feature)) return VARTHUR_VIADUCT_DECK_TOP_Y + 0.16;
   if (isMarathahalliSkywalkDeck(feature) || feature.tags.bridge === 'yes' || feature.tags.bridge === 'viaduct') {
     return MARATHAHALLI_SKYWALK_DECK_TOP_Y;
   }

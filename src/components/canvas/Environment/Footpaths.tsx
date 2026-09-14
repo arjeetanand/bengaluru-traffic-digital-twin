@@ -18,6 +18,11 @@ import {
 interface FootpathsProps {
   auditMode: boolean;
   isNight?: boolean;
+  // Source-focus views should show the compiled OSM footways as the physical
+  // surface. The procedural catalog remains useful for the default demo and
+  // audit storytelling, but rendering both layers in the same focus view can
+  // create double-width slabs that look like a false sidewalk.
+  showModeledNetwork?: boolean;
 }
 
 export type FootpathStatus = 'paved' | 'missing' | 'encroached' | 'metro_blocked';
@@ -66,7 +71,11 @@ function createPathRibbonGeometry(points: [number, number][], width: number, y: 
   return geometry;
 }
 
-export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false }) => {
+export const Footpaths: React.FC<FootpathsProps> = ({
+  auditMode,
+  isNight = false,
+  showModeledNetwork = true
+}) => {
   // ── Procedural Real-World Footpath Segments along the Two Corridors ──
   const segments: FootpathSegment[] = useMemo(() => [
     // ══════════════════════════════════════════════════════════════════════════
@@ -326,7 +335,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       offset: 0,
       width: 2.6,
       height: 0.08,
-      elevation: 8.54,
+      elevation: VARTHUR_VIADUCT_DECK_TOP_Y + 0.16,
       status: 'paved',
       sourcePath: [[338.7, -1.3], [414.9, -6.8]],
       sourceWayIds: ['way/1225572736'],
@@ -355,7 +364,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       offset: 0,
       width: 2.6,
       height: 0.08,
-      elevation: 8.54,
+      elevation: VARTHUR_VIADUCT_DECK_TOP_Y + 0.16,
       status: 'paved',
       sourcePath: [[337.2, -23.1], [413.3, -29.1]],
       sourceWayIds: ['way/1225572743'],
@@ -441,11 +450,14 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
 
   return (
     <group name="MarathahalliFootpathNetwork">
-      {segments.map((seg) => seg.sourcePath ? (
-        <SourceMappedFootpathAuditSegment key={seg.id} segment={seg} auditMode={auditMode} />
-      ) : (
-        <FootpathSegmentMesh key={seg.id} segment={seg} auditMode={auditMode} isNight={isNight} />
-      ))}
+      {segments.map((seg) => {
+        if (seg.sourcePath) {
+          return <SourceMappedFootpathAuditSegment key={seg.id} segment={seg} auditMode={auditMode} />;
+        }
+        return showModeledNetwork
+          ? <FootpathSegmentMesh key={seg.id} segment={seg} auditMode={auditMode} isNight={isNight} />
+          : null;
+      })}
       <AnimatedPedestrians isNight={isNight} />
     </group>
   );
@@ -527,16 +539,16 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
       [338.7, 0.35, -1.3]
     ];
     const varthurNorthBridge: [number, number, number][] = [
-      [338.7, VARTHUR_VIADUCT_DECK_TOP_Y + 0.35, -1.3],
-      [414.9, VARTHUR_VIADUCT_DECK_TOP_Y + 0.35, -6.8]
+      [338.7, VARTHUR_VIADUCT_DECK_TOP_Y + 0.16, -1.3],
+      [414.9, VARTHUR_VIADUCT_DECK_TOP_Y + 0.16, -6.8]
     ];
     const varthurSouthGround: [number, number, number][] = [
       [246.7, 0.35, -19.4],
       [337.2, 0.35, -23.1]
     ];
     const varthurSouthBridge: [number, number, number][] = [
-      [337.2, VARTHUR_VIADUCT_DECK_TOP_Y + 0.35, -23.1],
-      [413.3, VARTHUR_VIADUCT_DECK_TOP_Y + 0.35, -29.1]
+      [337.2, VARTHUR_VIADUCT_DECK_TOP_Y + 0.16, -23.1],
+      [413.3, VARTHUR_VIADUCT_DECK_TOP_Y + 0.16, -29.1]
     ];
 
     return [

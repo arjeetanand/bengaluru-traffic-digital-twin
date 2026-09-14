@@ -139,7 +139,6 @@ export const Scene: React.FC<SceneProps> = ({
 
         {/* Camera Rig & OrbitControls */}
         <CameraController
-          key={`${cameraPreset}-${cameraMode}`}
           isCinematic={isCinematic}
           cameraPreset={cameraPreset}
           cameraMode={cameraMode}
@@ -217,6 +216,7 @@ export const Scene: React.FC<SceneProps> = ({
           <Footpaths
             auditMode={footpathAuditMode}
             isNight={isNight}
+            showModeledNetwork={!isSourceGeometryFocusView}
           />
 
           {/* ── Indian Roadside Commercial Showrooms, Bakeries, Chai Stalls & Bus Stops ── */}

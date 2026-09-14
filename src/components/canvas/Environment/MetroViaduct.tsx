@@ -293,7 +293,40 @@ function isJunctionClearZone([x, z]: LocalPoint) {
     && Math.abs(x) < METRO_JUNCTION_CLEAR_HALF_WIDTH;
 }
 
-function sourcePierFrames(trackData: MetroTrackData, sourceSupports: LocalPoint[]): MetroPierFrame[] {
+function isPointInsidePolygon([x, z]: LocalPoint, polygon: LocalPoint[]) {
+  let inside = false;
+  for (let index = 0, previousIndex = polygon.length - 1; index < polygon.length; previousIndex = index++) {
+    const [currentX, currentZ] = polygon[index];
+    const [previousX, previousZ] = polygon[previousIndex];
+    const crossesRay = (currentZ > z) !== (previousZ > z);
+    if (!crossesRay) continue;
+    const intersectionX = (previousX - currentX) * (z - currentZ) /
+      (previousZ - currentZ) + currentX;
+    if (x < intersectionX) inside = !inside;
+  }
+  return inside;
+}
+
+function isInsideSourceBuilding(point: LocalPoint, buildings: OSMPolylineFeature[]) {
+  return buildings.some((building) => {
+    if (building.geometry.length < 3) return false;
+    const xs = building.geometry.map(([x]) => x);
+    const zs = building.geometry.map(([, z]) => z);
+    if (
+      point[0] < Math.min(...xs) - 1.8 ||
+      point[0] > Math.max(...xs) + 1.8 ||
+      point[1] < Math.min(...zs) - 1.8 ||
+      point[1] > Math.max(...zs) + 1.8
+    ) return false;
+    return isPointInsidePolygon(point, building.geometry);
+  });
+}
+
+function sourcePierFrames(
+  trackData: MetroTrackData,
+  sourceSupports: LocalPoint[],
+  sourceBuildings: OSMPolylineFeature[]
+): MetroPierFrame[] {
   if (sourceSupports.length) {
     return sourceSupports
       .filter((point) => !isJunctionClearZone(point))
@@ -325,7 +358,13 @@ function sourcePierFrames(trackData: MetroTrackData, sourceSupports: LocalPoint[
       sourceBacked: false
     });
   }
-  return frames;
+  // The source extract has no metro pier nodes, so these are only candidate
+  // stations. Never place a modeled column through a mapped building massing
+  // footprint; leaving a longer span is more honest than rendering an
+  // impossible collision. Road/median proximity is intentionally not a
+  // rejection rule because an elevated metro pier may legitimately occupy a
+  // carriageway median and OSM has no surveyed pier setback data here.
+  return frames.filter(({ point }) => !isInsideSourceBuilding(point, sourceBuildings));
 }
 
 function createTransverseBeamGeometry(
@@ -425,9 +464,13 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   );
   const pierFrames = useMemo(
     () => (trackData
-      ? sourcePierFrames(trackData, sourceMetroSupportFeatures.map((support) => support.position))
+      ? sourcePierFrames(
+        trackData,
+        sourceMetroSupportFeatures.map((support) => support.position),
+        snapshot?.buildings || []
+      )
       : []),
-    [sourceMetroSupportFeatures, trackData]
+    [snapshot, sourceMetroSupportFeatures, trackData]
   );
   const parapetPaths = useMemo(
     () => (trackData ? trackData.trackPaths.flatMap((path) => [

@@ -313,12 +313,14 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     canvas.addEventListener('pointermove', handlePointerMove, { passive: false });
     canvas.addEventListener('pointerup', releasePointer);
     canvas.addEventListener('pointercancel', releasePointer);
+    canvas.addEventListener('lostpointercapture', releasePointer);
 
     return () => {
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerup', releasePointer);
       canvas.removeEventListener('pointercancel', releasePointer);
+      canvas.removeEventListener('lostpointercapture', releasePointer);
     };
   }, [gl]);
 
@@ -496,7 +498,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     }
 
     // 4. Auto-orbit only when cinematic mode is explicitly turned ON
-    if (isCinematic && !isTransitioning.current && !hasMoveInput && !hasRotateInput) {
+    if (cameraMode === 'overview' && isCinematic && !isTransitioning.current && !hasMoveInput && !hasRotateInput) {
       controlsRef.current.autoRotate = true;
       controlsRef.current.autoRotateSpeed = 0.5 * Math.min(2, Math.max(0.4, simSpeedMultiplier * 0.2 + 0.3));
     } else {

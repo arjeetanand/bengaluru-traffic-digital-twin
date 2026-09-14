@@ -19,6 +19,24 @@ The scenario engine is intentionally a modelled fallback. It makes the
 baseline/counterfactual workflow testable offline, but it does not claim to be
 SUMO output.
 
+The source snapshot is schema 4. The compiler retains the ordered OSM node
+references for every clipped polyline, which is the handoff point for a future
+connected road/lane and pedestrian graph. Building and named-place heights are
+also tagged with provenance: an OSM height tag, a height derived from OSM
+building levels, or a modelled fallback. The numeric fallback keeps the demo
+renderable; it is not a claim about the real building height.
+
+The metro alignment audit is reproducible with:
+
+```bash
+npm run metro:validate
+```
+
+It verifies the two source Namma Metro Phase 2A ways and emits conservative
+plan-view proximity warnings for roads, buildings, and footways. The regular
+fallback pier grid remains explicitly modelled until surveyed/BMRCL structural
+data is available.
+
 ## SUMO integration boundary
 
 The intended microscopic path is:
@@ -52,6 +70,7 @@ not an implied live simulation.
 ```bash
 npm run data:compile
 npm run data:validate
+npm run metro:validate
 npm run corridor:validate
 npm run scenario:validate
 npm run build

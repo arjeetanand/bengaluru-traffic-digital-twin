@@ -19,6 +19,7 @@ The demo map is source-backed rather than an invented city block: the committed 
 - **Source-backed Marathahalli corridor**:
   - Local OpenStreetMap snapshot with **48,196 nodes, 9,841 clipped ways, 7,533 building footprints, 1,453 roads, 256 footways, 363 shop/restaurant POIs, 63 crossings, 20 bus stops, 41 mapped trees, 144 tagged bridge piers, 11 signals, 21 railway/viaduct ways, 3 named infrastructure ways, and 2 validated turn restrictions**.
   - Source road ribbons, footpaths, signals, crossings, shops, trees, railways, named landmarks, and four named source labels share one local metre projection.
+  - Schema 4 keeps each clipped polyline's ordered OSM node references for future road/walk graph construction. Building and named-place heights expose `osm:height`, `osm:building:levels`, or `modelled:fallback` provenance; missing OSM height is never presented as measured.
   - Current OSM **Namma Metro Phase 2A** through-track ways are retained when they cross the clip boundary. The twin-track viaduct, moving train and regularly spaced supports are generated from that source alignment; OSM does not publish a survey of individual pier foundations, so support spacing remains explicitly modelled.
   - The 41 OSM tree nodes remain source markers; a deterministic roadside/median planting layer adds visual green coverage for the demo and is labelled as planned/modelled rather than a surveyed tree inventory.
   - The mapped ORR bend is reused by the underpass walls, portals, lane markings, traffic splines, and navigation anchors. The metro deck follows its own current OSM Phase 2A track ways rather than assuming it is the road centreline.
@@ -106,10 +107,12 @@ The demo map is source-backed rather than an invented city block: the committed 
 
 6. **Validate the source and scenario milestones**:
    ```bash
+   npm run data:validate
+   npm run metro:validate
    npm run corridor:validate
    npm run scenario:validate
    ```
-   The current scenario milestone is a deterministic browser-side modelled engine. A SUMO/TraCI/libsumo adapter is intentionally not claimed until the network conversion, route legality, microscopic state stream, and calibration contracts are implemented.
+   `metro:validate` confirms both source Namma Metro ways and reports conservative proximity warnings without treating the modelled fallback pier grid as surveyed. The current scenario milestone is a deterministic browser-side modelled engine. A SUMO/TraCI/libsumo adapter is intentionally not claimed until the network conversion, route legality, microscopic state stream, and calibration contracts are implemented.
 
 See [`docs/simulation-architecture.md`](docs/simulation-architecture.md) for the current state boundary and the planned SUMO → TraCI → React/Three.js pipeline.
 

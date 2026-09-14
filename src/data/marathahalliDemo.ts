@@ -1,10 +1,17 @@
+export type OSMHeightSource = 'osm:height' | 'osm:building:levels' | 'modelled:fallback';
+
 export interface OSMPolylineFeature {
   id: string;
   name?: string;
   tags: Record<string, string>;
   geometry: [number, number][];
+  /** Raw OSM node IDs for the clipped geometry, in the same order. */
+  nodeRefs: string[];
   centroid: [number, number];
   height?: number;
+  // Optional so snapshots compiled before provenance was introduced remain
+  // readable without a schema migration.
+  heightSource?: OSMHeightSource;
 }
 
 // These are the two one-way Varthur Road viaduct ways that cross above the

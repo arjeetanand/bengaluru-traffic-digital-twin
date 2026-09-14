@@ -290,6 +290,25 @@ function createNamedAreaGeometry(features: OSMPolylineFeature[]) {
   return createBuildingGeometry(sourceNamedAreas, sourceNamedAreas.length);
 }
 
+function getHeightProvenanceLabel(feature: OSMPolylineFeature) {
+  const height = Number.isFinite(feature.height) ? `${feature.height?.toFixed(1)}M` : '—';
+  const explicitHeight = Number(feature.tags.height);
+  const explicitLevels = Number(feature.tags['building:levels']);
+  const source = feature.heightSource || (
+    Number.isFinite(explicitHeight) && explicitHeight > 0
+      ? 'osm:height'
+      : Number.isFinite(explicitLevels) && explicitLevels > 0
+        ? 'osm:building:levels'
+        : 'modelled:fallback'
+  );
+
+  if (source === 'osm:height') return `HEIGHT OSM TAG · ${height}`;
+  if (source === 'osm:building:levels') {
+    return `HEIGHT DERIVED · ${feature.tags['building:levels']} OSM LEVELS`;
+  }
+  return `HEIGHT UNKNOWN · ${height} FALLBACK`;
+}
+
 export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   isNight = false,
   showBuildings = false,
@@ -795,6 +814,9 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           const position = place?.centroid || point?.position;
           if (!position) return null;
           const labelLift = isLongRange ? 36 : 4;
+          const heightLabel = place
+            ? getHeightProvenanceLabel(place)
+            : 'HEIGHT NOT IN SNAPSHOT';
           return (
             <Html
               key={label}
@@ -817,7 +839,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
                   boxShadow: '0 3px 12px rgba(2, 6, 23, 0.4)'
                 }}
               >
-                SOURCE · {label.toUpperCase()}
+                SOURCE · {label.toUpperCase()} · {heightLabel}
               </div>
             </Html>
           );
