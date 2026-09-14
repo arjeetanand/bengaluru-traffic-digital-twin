@@ -1,6 +1,12 @@
 import { CAMERA_DEFAULT_POSITION } from '../config/location';
 import { CameraMode, CameraPreset } from '../types';
 import { getOrrOffsetPointAtZ } from './RealRoadData';
+import {
+  MARATHAHALLI_SKYWALK_DECK_POINTS,
+  MARATHAHALLI_SKYWALK_DECK_TOP_Y,
+  MARATHAHALLI_SKYWALK_GROUND_TOP_Y,
+  MARATHAHALLI_SKYWALK_STAIR_POINTS
+} from './marathahalliDemo';
 
 export interface CameraView {
   position: [number, number, number];
@@ -166,6 +172,10 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     position: [-20, 28, 112],
     target: [48, 12, 58]
   },
+  skywalk: {
+    position: [112, 46, 74],
+    target: [MARATHAHALLI_SKYWALK_DECK_POINTS[0][0], 6.5, MARATHAHALLI_SKYWALK_DECK_POINTS[0][1]]
+  },
   spicegarden: {
     // OSM-backed Spice Garden restaurant point (12.9570571, 77.7091042),
     // east of the Marathahalli junction on the actual HAL Airport Road.
@@ -242,6 +252,10 @@ const WALK_STARTS: Record<CameraPreset, CameraView> = {
     ]
   },
   brandfactory: { position: [15, 1.7, 58], target: [48, 1.7, 58] },
+  skywalk: {
+    position: [45.2, WALK_EYE_HEIGHT, -4.7],
+    target: [63.9, WALK_EYE_HEIGHT, -4.6]
+  },
   // Start on the mapped Spice Garden Road footway near the source restaurant
   // point instead of teleporting back to the junction scene.
   spicegarden: {
@@ -309,6 +323,47 @@ export const MARATHAHALLI_WALK_OBSTACLES: WalkObstacle[] = [
   { minX: -980, maxX: -568, minZ: -1900, maxZ: -1580 } // Oracle Tech Hub campus
 ];
 
+const distanceToSegment = (x: number, z: number, start: LocalXZ, end: LocalXZ) => {
+  const dx = end[0] - start[0];
+  const dz = end[1] - start[1];
+  const lengthSq = dx * dx + dz * dz;
+  const progress = lengthSq === 0
+    ? 0
+    : Math.max(0, Math.min(1, ((x - start[0]) * dx + (z - start[1]) * dz) / lengthSq));
+  const closestX = start[0] + dx * progress;
+  const closestZ = start[1] + dz * progress;
+  return { distance: Math.hypot(x - closestX, z - closestZ), progress };
+};
+
+/**
+ * Resolve the source-mapped pedestrian surface under a local X/Z point. The
+ * skywalk deck and its two recorded stair flights are the elevated pedestrian
+ * geometry; all other walking stays at grade. The camera adds eye height on
+ * top of this surface value.
+ */
+export function resolveWalkSurfaceY(x: number, z: number): number {
+  for (const { deck, ground } of MARATHAHALLI_SKYWALK_STAIR_POINTS) {
+    const projection = distanceToSegment(x, z, deck, ground);
+    if (projection.distance <= 2.0) {
+      return MARATHAHALLI_SKYWALK_DECK_TOP_Y +
+        (MARATHAHALLI_SKYWALK_GROUND_TOP_Y - MARATHAHALLI_SKYWALK_DECK_TOP_Y) * projection.progress;
+    }
+  }
+
+  const deckProjection = distanceToSegment(
+    x,
+    z,
+    MARATHAHALLI_SKYWALK_DECK_POINTS[0],
+    MARATHAHALLI_SKYWALK_DECK_POINTS[1]
+  );
+  if (deckProjection.distance <= 2.0) return MARATHAHALLI_SKYWALK_DECK_TOP_Y;
+  return 0;
+}
+
+export function resolveWalkEyeHeight(x: number, z: number): number {
+  return WALK_EYE_HEIGHT + resolveWalkSurfaceY(x, z);
+}
+
 const isInsideObstacle = (x: number, z: number, padding = 1.2) =>
   MARATHAHALLI_WALK_OBSTACLES.some(
     (obstacle) =>
@@ -374,16 +429,17 @@ export function resolveWalkStart(x: number, z: number): [number, number] {
 }
 
 export function createWalkView(position: [number, number, number], target: [number, number, number]): CameraView {
+  const eyeHeight = resolveWalkEyeHeight(position[0], position[2]);
   const dx = target[0] - position[0];
   const dy = target[1] - position[1];
   const dz = target[2] - position[2];
   const distance = Math.hypot(dx, dy, dz) || 1;
 
   return {
-    position: [position[0], WALK_EYE_HEIGHT, position[2]],
+    position: [position[0], eyeHeight, position[2]],
     target: [
       position[0] + (dx / distance) * WALK_LOOK_DISTANCE,
-      WALK_EYE_HEIGHT + (dy / distance) * WALK_LOOK_DISTANCE,
+      eyeHeight + (dy / distance) * WALK_LOOK_DISTANCE,
       position[2] + (dz / distance) * WALK_LOOK_DISTANCE
     ]
   };

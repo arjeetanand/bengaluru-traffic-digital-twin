@@ -144,8 +144,8 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
           envelope. Keep one broad, low-cost ground tile under that same
           extent so source roads, footways and building massing do not float
           against the background in the corridor bird view. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -690]} receiveShadow>
-        <planeGeometry args={[2300, 2600]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -800]} receiveShadow>
+        <planeGeometry args={[12000, 14000]} />
         <meshStandardMaterial
           color={isRaining ? '#1a221a' : '#263326'}
           roughness={0.96}

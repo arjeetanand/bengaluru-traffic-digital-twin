@@ -24,13 +24,12 @@ import { Buildings } from './Environment/Buildings';
 import { Google3DTiles } from './Environment/Google3DTiles';
 import { GoogleMaps3DMarkers } from './Environment/GoogleMaps3DMarkers';
 import { GoogleMapsStore } from '../../data/GoogleMapsStoreRegistry';
-import { StreetFurniture } from './Environment/StreetFurniture';
-import { Greenery } from './Environment/Greenery';
 import { RainParticles } from './Environment/RainParticles';
 import { TrafficSystem } from './traffic/TrafficSystem';
 import { SourceCorridorTraffic } from './traffic/SourceCorridorTraffic';
 import { OsmSnapshotLayer } from './Environment/OsmSnapshotLayer';
 import { CrossoverFocusOverlay } from './Environment/CrossoverFocusOverlay';
+import { MARATHAHALLI_SOURCE_ANCHORS } from '../../data/marathahalliNavigation';
 
 interface SceneProps {
   isNight: boolean;
@@ -82,6 +81,7 @@ export const Scene: React.FC<SceneProps> = ({
     'corridor',
     'crossover',
     'flyover',
+    'skywalk',
     'underpass',
     'spicegarden',
     'oraclehub',
@@ -91,13 +91,16 @@ export const Scene: React.FC<SceneProps> = ({
   ].includes(cameraPreset);
   // The compiled source snapshot is the canonical road graph. Keep the full
   // fleet on source ways so no vehicle falls back to the old mirrored,
-  // schematic junction lanes.
-  const corridorVehicleCount = vehicleCount;
+  // schematic junction lanes or the mapped no-U-turn restriction is bypassed.
   const junctionVehicleCount = 0;
+  const corridorVehicleCount = vehicleCount;
   const fogDensity = isLongCorridorView
-    ? (isNight ? 0.00018 : (isRaining ? 0.00034 : 0.00012))
+    ? (isNight ? 0.00006 : (isRaining ? 0.00012 : 0.00004))
     : (isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY));
   const fogColor = isNight ? '#030712' : (isRaining ? '#334155' : '#a9b8c8');
+  const sourceLabelDistanceFactor = cameraMode === 'overview'
+    ? (cameraPreset === 'corridor' ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65)))
+    : 65;
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, overflow: 'hidden' }}>
@@ -164,11 +167,11 @@ export const Scene: React.FC<SceneProps> = ({
           {/* Source-backed roads, footways, crossings, signals and shop POIs. */}
           <OsmSnapshotLayer
             isNight={isNight}
-            showBuildings
+            showBuildings={buildingMode !== 'google-tiles'}
             buildingLimit={isCrossoverFocusView ? 520 : 1000}
             buildingOpacity={isCrossoverFocusView ? 0.28 : 0.5}
             buildingOutlineOpacity={isCrossoverFocusView ? 0.2 : 0.32}
-            labelDistanceFactor={cameraPreset === 'corridor' ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65))}
+            labelDistanceFactor={sourceLabelDistanceFactor}
           />
 
           {/* ── 3D Stylized Realistic Ground & Underpass Network ── */}
@@ -240,15 +243,6 @@ export const Scene: React.FC<SceneProps> = ({
           <Buildings isNight={isNight} includeSurroundingBuildings={false} />
           ) : null}
 
-          <StreetFurniture
-            isNight={isNight}
-            signalStatus={signalStatus}
-          />
-
-          <Greenery
-            isRaining={isRaining}
-          />
-
           <RainParticles
             isRaining={isRaining}
           />
@@ -260,6 +254,7 @@ export const Scene: React.FC<SceneProps> = ({
             simSpeedMultiplier={simSpeed}
             isNight={isNight}
             vehicleTotalCount={junctionVehicleCount}
+            scenarioOnly={false}
           />
 
           {/* Source-road vehicles extend the configured modelled fleet across
@@ -271,7 +266,14 @@ export const Scene: React.FC<SceneProps> = ({
           />
 
           {/* ── Interactive Junction Beacon / Clickable Trigger ── */}
-          <group position={[0, 0.4, 0]} onClick={onInspectJunction}>
+          <group
+            position={[
+              MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[0],
+              0.4,
+              MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[1]
+            ]}
+            onClick={onInspectJunction}
+          >
             <mesh position={[0, 0.1, 0]}>
               <cylinderGeometry args={[4.5, 4.5, 0.1, 32]} />
               <meshBasicMaterial

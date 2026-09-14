@@ -13,7 +13,8 @@ import {
   resolveWalkPosition,
   resolveWalkStart,
   MARATHAHALLI_OVERVIEW_BOUNDS,
-  MARATHAHALLI_WALK_BOUNDS
+  MARATHAHALLI_WALK_BOUNDS,
+  resolveWalkEyeHeight
 } from '../../data/marathahalliNavigation';
 
 interface CameraControllerProps {
@@ -283,7 +284,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       }
       cameraDirection.current.y = Math.max(-0.92, Math.min(0.92, cameraDirection.current.y));
       cameraDirection.current.normalize();
-      camera.position.y = WALK_EYE_HEIGHT;
+      camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
       targetLookAt.current.copy(camera.position).addScaledVector(cameraDirection.current, WALK_LOOK_DISTANCE);
       controlsRef.current?.target.copy(targetLookAt.current);
       camera.lookAt(targetLookAt.current);
@@ -401,7 +402,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
           const deltaZ = resolvedZ - camera.position.z;
           camera.position.x = resolvedX;
           camera.position.z = resolvedZ;
-          camera.position.y = WALK_EYE_HEIGHT;
+          camera.position.y = resolveWalkEyeHeight(resolvedX, resolvedZ);
           controlsRef.current.target.x += deltaX;
           controlsRef.current.target.z += deltaZ;
           controlsRef.current.target.y = Math.max(-3, Math.min(8, controlsRef.current.target.y));
@@ -442,7 +443,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
           cameraDirection.current.applyAxisAngle(cameraRight.current, tiltAngle);
         }
         cameraDirection.current.normalize();
-        camera.position.y = WALK_EYE_HEIGHT;
+        camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
         target.copy(camera.position).addScaledVector(cameraDirection.current, WALK_LOOK_DISTANCE);
         camera.lookAt(target);
       } else {
@@ -493,7 +494,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     // Ensure orbit controls updates every frame for smooth damping.
     controlsRef.current.update();
     if (cameraMode === 'walk') {
-      camera.position.y = WALK_EYE_HEIGHT;
+      camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
     } else if (camera.position.y < 0.75) {
       camera.position.y = 0.75;
       controlsRef.current.update();

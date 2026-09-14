@@ -17,11 +17,11 @@ The demo map is source-backed rather than an invented city block: the committed 
   - Iconic covered pedestrian **Skywalk** (foot-overbridge) spanning the corridor.
   - Roadside commercial buildings, tech-park curtain-wall facades, overhead highway gantry signboards (*Bellandur, Whitefield, HAL, KR Puram*), and BMTC bus shelters.
 - **Source-backed Marathahalli corridor**:
-  - Local OpenStreetMap snapshot with **48,196 nodes, 9,760 ways, 7,533 building footprints, 1,430 roads, 358 footways, 363 shop/restaurant POIs, 63 crossings, 20 bus stops, 41 mapped trees, 11 signals, and 11 railway/viaduct ways**.
+  - Local OpenStreetMap snapshot with **48,196 nodes, 9,760 ways, 7,533 building footprints, 1,430 roads, 249 footways, 363 shop/restaurant POIs, 63 crossings, 20 bus stops, 41 mapped trees, 11 signals, and 11 railway/viaduct ways**.
   - Source road ribbons, footpaths, signals, crossings, shops, trees, railways, named landmarks, and four named source labels share one local metre projection.
   - The mapped ORR bend is reused by the underpass walls, portals, lane markings, traffic splines, metro median, and navigation anchors so those layers do not drift independently.
 - **Optional photorealistic 3D provider**:
-  - The `OSM 3D TWIN` control is the no-key demo path. With a Google Maps Platform key and Map Tiles API enabled, the same scene can stream Google Photorealistic 3D Tiles through [`3d-tiles-renderer`](https://github.com/NASA-AMMOS/3DTilesRendererJS), bounded to a 450 m local region and cached in the browser.
+  - The `OSM 3D TWIN` control is the no-key demo path. With a Google Maps Platform key and Map Tiles API enabled, the same scene can stream Google Photorealistic 3D Tiles through [`3d-tiles-renderer`](https://github.com/NASA-AMMOS/3DTilesRendererJS), bounded to the full local Oracle → Spice Garden corridor and rendered with the provider attribution on screen.
   - Open-source alternatives worth evaluating for a larger geospatial product are [`CesiumJS`](https://github.com/CesiumGS/cesium) and [`iTowns`](https://github.com/iTowns/itowns); they are integration choices, not additional data silently bundled into this demo.
 - **High-Density 60 FPS Traffic (1,000–2,000 Vehicles)**:
   - 4 specialized `THREE.InstancedMesh` systems (Cars, Bengaluru yellow/green Auto-Rickshaws, BMTC Transit Buses, and Two-Wheelers with helmeted riders).

@@ -9,10 +9,10 @@ import {
   isSourceElevatedRoad,
   isMarathahalliSkywalkDeck,
   isMarathahalliSkywalkStair,
-  isMarathahalliUnderpassWay,
   isVarthurViaductFootway,
   isVarthurViaductWay
 } from '../../../data/marathahalliDemo';
+import { getOrrUnderpassElevation } from '../../../data/RealRoadData';
 import { loadMarathahalliSnapshot } from '../../../services/marathahalliSnapshot';
 
 interface OsmSnapshotLayerProps {
@@ -26,15 +26,16 @@ interface OsmSnapshotLayerProps {
 
 function createPolylineGeometry(
   features: OSMPolylineFeature[],
-  y: number | ((feature: OSMPolylineFeature) => number) = 0.12
+  y: number | ((feature: OSMPolylineFeature, point: [number, number]) => number) = 0.12
 ) {
   const positions: number[] = [];
   for (const feature of features) {
-    const featureY = typeof y === 'function' ? y(feature) : y;
     for (let index = 1; index < feature.geometry.length; index += 1) {
       const previous = feature.geometry[index - 1];
       const current = feature.geometry[index];
-      positions.push(previous[0], featureY, previous[1], current[0], featureY, current[1]);
+      const previousY = typeof y === 'function' ? y(feature, previous) : y;
+      const currentY = typeof y === 'function' ? y(feature, current) : y;
+      positions.push(previous[0], previousY, previous[1], current[0], currentY, current[1]);
     }
   }
 
@@ -47,11 +48,10 @@ function createPolylineGeometry(
 function createRibbonGeometry(
   features: OSMPolylineFeature[],
   width: number | ((feature: OSMPolylineFeature) => number),
-  y: number | ((feature: OSMPolylineFeature) => number)
+  y: number | ((feature: OSMPolylineFeature, point: [number, number]) => number)
 ) {
   const positions: number[] = [];
   for (const feature of features) {
-    const featureY = typeof y === 'function' ? y(feature) : y;
     for (let index = 1; index < feature.geometry.length; index += 1) {
       const previous = feature.geometry[index - 1];
       const current = feature.geometry[index];
@@ -70,9 +70,11 @@ function createRibbonGeometry(
       const cz = current[1] + nz * halfWidth;
       const dx2 = current[0] - nx * halfWidth;
       const dz2 = current[1] - nz * halfWidth;
+      const previousY = typeof y === 'function' ? y(feature, previous) : y;
+      const currentY = typeof y === 'function' ? y(feature, current) : y;
       positions.push(
-        ax, featureY, az, cx, featureY, cz, bx, featureY, bz,
-        cx, featureY, cz, dx2, featureY, dz2, bx, featureY, bz
+        ax, previousY, az, cx, currentY, cz, bx, previousY, bz,
+        cx, currentY, cz, dx2, currentY, dz2, bx, previousY, bz
       );
     }
   }
@@ -91,6 +93,30 @@ function getRoadRibbonWidth(feature: OSMPolylineFeature) {
   if (['secondary', 'tertiary'].includes(feature.tags.highway || '')) return 8;
   if (feature.tags.highway === 'service') return 4.2;
   return 5.4;
+}
+
+function isSourceUnderpass(feature: OSMPolylineFeature) {
+  const name = feature.name || feature.tags.name || '';
+  return /underpass/i.test(name) || feature.tags.tunnel === 'yes';
+}
+
+function getRoadSurfaceY(feature: OSMPolylineFeature, point: [number, number]) {
+  if (isSourceUnderpass(feature)) return getOrrUnderpassElevation(point[1]) + 0.075;
+  return 0.075;
+}
+
+function getRestrictionFeatures(snapshot: MarathahalliDemoSnapshot, restrictionType: string) {
+  const restriction = snapshot.turnRestrictions.find((entry) => entry.restriction === restrictionType);
+  if (!restriction) return null;
+
+  const roadsById = new Map(snapshot.roads.map((feature) => [feature.id, feature]));
+  const roads = [...new Set(
+    restriction.members
+      .filter((member) => member.type === 'way')
+      .map((member) => roadsById.get(member.ref))
+      .filter((feature): feature is OSMPolylineFeature => Boolean(feature))
+  )];
+  return { restriction, roads };
 }
 
 function selectBuildingFeatures(features: OSMPolylineFeature[], limit: number) {
@@ -224,20 +250,19 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
 
   const roadGeometry = useMemo(
     () => (snapshot
-      ? createPolylineGeometry(snapshot.roads.filter((feature) =>
-        !isVarthurViaductWay(feature) && !isMarathahalliUnderpassWay(feature)
-      ))
+      ? createPolylineGeometry(
+        snapshot.roads.filter((feature) => !isSourceElevatedRoad(feature) && !isVarthurViaductWay(feature)),
+        getRoadSurfaceY
+      )
       : null),
     [snapshot]
   );
   const roadSurfaceGeometry = useMemo(
     () => (snapshot
       ? createRibbonGeometry(
-        snapshot.roads.filter((feature) =>
-          !isVarthurViaductWay(feature) && !isMarathahalliUnderpassWay(feature)
-        ),
+        snapshot.roads.filter((feature) => !isSourceElevatedRoad(feature) && !isVarthurViaductWay(feature)),
         getRoadRibbonWidth,
-        0.075
+        getRoadSurfaceY
       )
       : null),
     [snapshot]
@@ -316,7 +341,25 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     const landmarkShopPattern = /spice garden|pizza hut|village hypermart|holly flames|sweet chariot|kalamandir|nalli|tanishq|kalyan|brand factory/i;
     return snapshot.shops.filter((shop) => landmarkShopPattern.test(shop.name || shop.tags.name || '')).slice(0, 24);
   }, [snapshot]);
-
+  const noUTurnSource = useMemo(
+    () => (snapshot ? getRestrictionFeatures(snapshot, 'no_u_turn') : null),
+    [snapshot]
+  );
+  const noUTurnGeometry = useMemo(
+    () => (noUTurnSource
+      ? createRibbonGeometry(noUTurnSource.roads, 1.45, getRoadSurfaceY)
+      : null),
+    [noUTurnSource]
+  );
+  const noUTurnLabelPosition = useMemo<[number, number, number]>(() => {
+    if (!noUTurnSource?.roads.length) return [-24, 3.4, 16];
+    const points = noUTurnSource.roads.flatMap((feature) => feature.geometry);
+    const [x, z] = points.reduce(
+      ([sumX, sumZ], [pointX, pointZ]) => [sumX + pointX, sumZ + pointZ],
+      [0, 0]
+    );
+    return [x / points.length, 3.4, z / points.length];
+  }, [noUTurnSource]);
   useEffect(() => () => {
     roadGeometry?.dispose();
     roadSurfaceGeometry?.dispose();
@@ -328,7 +371,8 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     buildingGeometry?.dispose();
     buildingOutlineGeometry?.dispose();
     namedAreaGeometry?.dispose();
-  }, [buildingGeometry, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry]);
+    noUTurnGeometry?.dispose();
+  }, [buildingGeometry, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, noUTurnGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry]);
 
   if (!snapshot) return null;
 
@@ -378,6 +422,16 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             transparent
             opacity={0.82}
           />
+        </mesh>
+      )}
+
+      {/* The source no_u_turn relation is evidence, not a legal movement
+          overlay. It stays red and source-labelled so the modelled amber
+          scenario connector cannot be mistaken for a verified real-world
+          turn permission. */}
+      {noUTurnGeometry && (
+        <mesh geometry={noUTurnGeometry} renderOrder={5}>
+          <meshBasicMaterial color="#ef4444" transparent opacity={0.62} depthWrite={false} />
         </mesh>
       )}
 
@@ -543,23 +597,28 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           );
         })}
 
-        {snapshot.turnRestrictions.some((restriction) => restriction.restriction === 'no_u_turn') && (
-          <Html position={[-24, 5.2, 16]} center distanceFactor={labelDistanceFactor} zIndexRange={[24, 0]}>
+        {noUTurnSource && (
+          <Html
+            position={noUTurnLabelPosition}
+            center
+            distanceFactor={Math.max(45, labelDistanceFactor * 0.9)}
+            zIndexRange={[26, 0]}
+          >
             <div
               style={{
-                background: 'rgba(69, 26, 3, 0.9)',
-                border: '1px solid rgba(251, 191, 36, 0.8)',
-                borderRadius: '5px',
-                color: '#fef3c7',
+                background: 'rgba(69, 10, 10, 0.9)',
+                border: '1px solid rgba(248, 113, 113, 0.9)',
+                borderRadius: '4px',
+                color: '#fee2e2',
                 fontFamily: 'monospace',
                 fontSize: '8px',
-                letterSpacing: '0.25px',
-                padding: '4px 7px',
+                letterSpacing: '0.18px',
+                padding: '3px 5px',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 3px 12px rgba(2, 6, 23, 0.4)'
+                boxShadow: '0 2px 10px rgba(2, 6, 23, 0.45)'
               }}
             >
-              OSM RULE · NO U-TURN · SCENARIO LINK NEEDS REVIEW
+              OSM RULE · NO U-TURN · {noUTurnSource.restriction.id.toUpperCase()}
             </div>
           </Html>
         )}

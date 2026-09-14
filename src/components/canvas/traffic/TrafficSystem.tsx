@@ -18,6 +18,7 @@ interface TrafficSystemProps {
   simSpeedMultiplier: number; // 1, 10, 60
   isNight: boolean;
   vehicleTotalCount: number;
+  scenarioOnly?: boolean;
 }
 
 interface LaneDefinition {
@@ -46,7 +47,8 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
   congestionRatio,
   simSpeedMultiplier,
   isNight,
-  vehicleTotalCount
+  vehicleTotalCount,
+  scenarioOnly = false
 }) => {
   const carsMeshRef = useRef<THREE.InstancedMesh>(null);
   const autosMeshRef = useRef<THREE.InstancedMesh>(null);
@@ -116,7 +118,15 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       closedLoop = false
     ) => {
       const vPoints = points.map((p) => new THREE.Vector3(...p));
-      const spline = new THREE.CatmullRomCurve3(vPoints, false, 'catmullrom', 0.2);
+      const isScenarioUTurn = id === U_TURN_CONNECTORS.north.id || id === U_TURN_CONNECTORS.south.id;
+      // Keep the scenario connector identical to the painted road and focus
+      // overlay: all three layers use the same centripetal curve and tension.
+      const spline = new THREE.CatmullRomCurve3(
+        vPoints,
+        false,
+        isScenarioUTurn ? 'centripetal' : 'catmullrom',
+        0.25
+      );
       list.push({
         id,
         spline,
@@ -321,6 +331,14 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     return list;
   }, []);
 
+  const spawnLaneIndices = useMemo(() => {
+    if (!scenarioOnly) return lanes.map((_, index) => index);
+    return lanes
+      .map((lane, index) => ({ lane, index }))
+      .filter(({ lane }) => lane.id === U_TURN_CONNECTORS.north.id || lane.id === U_TURN_CONNECTORS.south.id)
+      .map(({ index }) => index);
+  }, [lanes, scenarioOnly]);
+
   // ── Allocate Fleet of Vehicles ──
   const { counts, agents } = useMemo(() => {
     // The scene splits the configured fleet between this detailed junction
@@ -357,7 +375,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       getIdx: () => number
     ) => {
       for (let i = 0; i < count; i++) {
-        const laneIdx = Math.floor(nextRandom() * lanes.length);
+        const laneIdx = spawnLaneIndices[Math.floor(nextRandom() * spawnLaneIndices.length)];
         const t = 0.04 + nextRandom() * 0.88; // leave a small entry buffer at both ends
         list.push({
           id: idCounter++,
@@ -388,7 +406,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       },
       agents: list
     };
-  }, [vehicleTotalCount, lanes.length]);
+  }, [vehicleTotalCount, lanes.length, spawnLaneIndices]);
 
   // ── Initialize Per-Instance Color Palette Variation ──
   useEffect(() => {

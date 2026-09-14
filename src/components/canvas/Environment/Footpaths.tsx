@@ -6,7 +6,14 @@ import {
   getOrrOffsetPointAtZ,
   getOrrRoadFrameAtZ
 } from '../../../data/RealRoadData';
-import { MARATHAHALLI_SKYWALK_DECK_POINTS } from '../../../data/marathahalliDemo';
+import {
+  MARATHAHALLI_SKYWALK_DECK_POINTS,
+  MARATHAHALLI_SKYWALK_DECK_TOP_Y,
+  MARATHAHALLI_SKYWALK_GROUND_TOP_Y,
+  MARATHAHALLI_SKYWALK_STAIR_POINTS,
+  MARATHAHALLI_SKYWALK_STAIR_STEP_COUNTS,
+  VARTHUR_VIADUCT_DECK_TOP_Y
+} from '../../../data/marathahalliDemo';
 
 interface FootpathsProps {
   auditMode: boolean;
@@ -280,30 +287,79 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       description: 'Encroached by mobile chai stalls, fruit vendors, and customer bike parking'
     },
 
-    // ── Varthur Road West Approach Link (X: 28 to 120) ──
+    // ── Source-mapped skywalk and Varthur pedestrian footways ──
     {
-      id: 'varthur-n-approach',
-      name: 'Varthur Road North Footpath to Bridge',
-      axis: 'X',
-      start: 28,
-      end: 120,
-      offset: 13.0,
-      width: 2.8,
-      height: 0.25,
+      id: 'marathahalli-skywalk-deck',
+      name: 'OSM Marathahalli Skywalk Deck',
+      axis: 'Z',
+      start: -5,
+      end: 25,
+      offset: 64.5,
+      width: 3.0,
+      height: 0.08,
+      elevation: 7.93,
       status: 'paved',
-      description: 'Direct pedestrian link from junction crosswalk to Marathahalli Bridge'
+      sourcePath: [[63.9, -4.6], [66.2, 24.5]],
+      sourceWayIds: ['way/323729567', 'way/1221361667', 'way/1221361669'],
+      description: 'Source-mapped skywalk deck; access flights are rendered from their source step ways'
     },
     {
-      id: 'varthur-s-approach',
-      name: 'Varthur Road South Footpath to Bridge',
+      id: 'varthur-n-ground-approach',
+      name: 'OSM Varthur Road North Ground Footway',
       axis: 'X',
-      start: 28,
-      end: 120,
-      offset: -13.0,
+      start: 226,
+      end: 339,
+      offset: 0,
+      width: 2.8,
+      height: 0.08,
+      status: 'paved',
+      sourcePath: [[226.6, 5.1], [338.7, -1.3]],
+      sourceWayIds: ['way/1225572737'],
+      description: 'Source-mapped pedestrian approach to the elevated Varthur footway'
+    },
+    {
+      id: 'varthur-n-elevated-bridge',
+      name: 'OSM Varthur Road North Elevated Footway',
+      axis: 'X',
+      start: 339,
+      end: 415,
+      offset: 0,
       width: 2.6,
-      height: 0.22,
+      height: 0.08,
+      elevation: 8.54,
+      status: 'paved',
+      sourcePath: [[338.7, -1.3], [414.9, -6.8]],
+      sourceWayIds: ['way/1225572736'],
+      description: 'Source-mapped elevated footway running with the Varthur viaduct'
+    },
+    {
+      id: 'varthur-s-ground-approach',
+      name: 'OSM Varthur Road South Ground Footway',
+      axis: 'X',
+      start: 247,
+      end: 337,
+      offset: 0,
+      width: 2.6,
+      height: 0.08,
       status: 'encroached',
-      description: 'Footpath with auto parking and small shops leading to Munnekolala portal'
+      sourcePath: [[246.7, -19.4], [337.2, -23.1]],
+      sourceWayIds: ['way/1225572744'],
+      description: 'Source-mapped pedestrian approach; encroachment is a modelled inspection status'
+    },
+    {
+      id: 'varthur-s-elevated-bridge',
+      name: 'OSM Varthur Road South Elevated Footway',
+      axis: 'X',
+      start: 337,
+      end: 414,
+      offset: 0,
+      width: 2.6,
+      height: 0.08,
+      elevation: 8.54,
+      status: 'paved',
+      sourcePath: [[337.2, -23.1], [413.3, -29.1]],
+      sourceWayIds: ['way/1225572743'],
+      description: 'Source-mapped elevated footway running with the Varthur viaduct'
     },
 
     // ── Spice Garden / Munnekolala source-mapped footway audit ──
@@ -321,7 +377,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       width: 2.0,
       height: 0.08,
       status: 'paved',
-      sourcePath: [[414.9, -6.8], [583.2, -19.4], [661.9, -25.7], [749.3, -32.4], [811.4, -35.8], [840.6, -35.3]],
+      sourcePath: [[414.9, -6.8], [583.2, -19.4], [661.9, -25.7], [749.3, -32.4], [811.4, -35.8], [839.5, -35.6], [840.6, -35.6]],
       sourceWayIds: ['way/1225572738'],
       description: 'Source-mapped footway trace; surface condition still needs field verification'
     },
@@ -349,7 +405,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       width: 2.2,
       height: 0.08,
       status: 'encroached',
-      sourcePath: [[834.9, -70.6], [849.2, -67.6], [863.1, -68.2], [877.1, -70.4], [887.8, -69.9], [909.3, -77.1]],
+      sourcePath: [[834.9, -61.6], [841.8, -64.3], [849.2, -67.6], [863.1, -68.2], [870.7, -70.4], [877.1, -70.6], [887.8, -69.9], [895.6, -72.8], [909.3, -77.1]],
       sourceWayIds: ['way/1225572747', 'way/1225572746'],
       description: 'Source-mapped service-road footway near Spice Garden bus stop; field condition needs verification'
     },
@@ -377,7 +433,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       width: 1.8,
       height: 0.08,
       status: 'missing',
-      sourcePath: [[857.7, -20.8], [857.2, -18.2], [895.2, -27.8], [899.2, -39.4], [904.0, -47.5]],
+      sourcePath: [[904.0, -47.5], [900.5, -44.3], [899.2, -39.4], [896.5, -31.7], [895.2, -27.8], [892.3, -23.7], [888.4, -21.2], [887.0, -20.3], [881.8, -18.4], [869.6, -19.7], [857.7, -20.8]],
       sourceWayIds: ['way/1311089014'],
       description: 'Source-mapped inner-road trace; missing/unsafe status is a modelled field-audit scenario'
     }
@@ -385,7 +441,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
 
   return (
     <group name="MarathahalliFootpathNetwork">
-      {segments.map((seg) => seg.sourcePath ? (
+      {segments.filter((seg) => seg.sourcePath).map((seg) => seg.sourcePath ? (
         <SourceMappedFootpathAuditSegment key={seg.id} segment={seg} auditMode={auditMode} />
       ) : (
         <FootpathSegmentMesh key={seg.id} segment={seg} auditMode={auditMode} isNight={isNight} />
@@ -430,59 +486,72 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
   const position = useMemo(() => new THREE.Vector3(), []);
   const tangent = useMemo(() => new THREE.Vector3(), []);
 
-  // These routes use the same curved ORR frame as the footpath slabs. The
-  // intermediate points are deliberate: a walker should stay on the sidewalk
-  // through the junction bend instead of taking a straight chord across it.
   const routes = useMemo(() => {
-    const orrFootpathPoint = (z: number, semanticOffset: number): [number, number, number] => {
-      const lateralOffset = semanticOffset >= 0 ? -Math.abs(semanticOffset) : Math.abs(semanticOffset);
-      const [x, projectedZ] = getOrrOffsetPointAtZ(z, lateralOffset);
-      return [x, 0.35, projectedZ];
-    };
-    const skywalkDeckRoute: [number, number, number][] = MARATHAHALLI_SKYWALK_DECK_POINTS.map(
-      ([x, z]) => [x, 7.55, z]
+    const createStairRoute = (
+      ground: [number, number],
+      deck: [number, number],
+      stepCount: number
+    ): [number, number, number][] => Array.from({ length: stepCount + 1 }, (_, index) => {
+      const progress = index / stepCount;
+      return [
+        ground[0] + (deck[0] - ground[0]) * progress,
+        MARATHAHALLI_SKYWALK_GROUND_TOP_Y +
+          (MARATHAHALLI_SKYWALK_DECK_TOP_Y - MARATHAHALLI_SKYWALK_GROUND_TOP_Y) * progress,
+        ground[1] + (deck[1] - ground[1]) * progress
+      ];
+    });
+    const southStairRoute = createStairRoute(
+      MARATHAHALLI_SKYWALK_STAIR_POINTS[0].ground,
+      MARATHAHALLI_SKYWALK_STAIR_POINTS[0].deck,
+      MARATHAHALLI_SKYWALK_STAIR_STEP_COUNTS[0]
     );
+    const northStairRoute = createStairRoute(
+      MARATHAHALLI_SKYWALK_STAIR_POINTS[1].ground,
+      MARATHAHALLI_SKYWALK_STAIR_POINTS[1].deck,
+      MARATHAHALLI_SKYWALK_STAIR_STEP_COUNTS[1]
+    ).reverse();
+    const skywalkDeckRoute: [number, number, number][] = MARATHAHALLI_SKYWALK_DECK_POINTS.map(
+      ([x, z]) => [x, MARATHAHALLI_SKYWALK_DECK_TOP_Y, z]
+    );
+    const skywalkRoute = [
+      ...southStairRoute,
+      ...skywalkDeckRoute.slice(1),
+      ...northStairRoute.slice(1)
+    ];
+
+    // The source footways rise onto the Varthur viaduct without a mapped ramp.
+    // Keep ground and elevated sections as separate exact routes rather than
+    // animating a pedestrian through an invented vertical connection.
+    const varthurNorthGround: [number, number, number][] = [
+      [226.6, 0.35, 5.1],
+      [338.7, 0.35, -1.3]
+    ];
+    const varthurNorthBridge: [number, number, number][] = [
+      [338.7, VARTHUR_VIADUCT_DECK_TOP_Y + 0.35, -1.3],
+      [414.9, VARTHUR_VIADUCT_DECK_TOP_Y + 0.35, -6.8]
+    ];
+    const varthurSouthGround: [number, number, number][] = [
+      [246.7, 0.35, -19.4],
+      [337.2, 0.35, -23.1]
+    ];
+    const varthurSouthBridge: [number, number, number][] = [
+      [337.2, VARTHUR_VIADUCT_DECK_TOP_Y + 0.35, -23.1],
+      [413.3, VARTHUR_VIADUCT_DECK_TOP_Y + 0.35, -29.1]
+    ];
 
     return [
-      // ORR southbound footpath: Innovative Multiplex to the signal.
-      createPedestrianRoute([
-        orrFootpathPoint(-150, -23.5),
-        orrFootpathPoint(-92, -23.5),
-        orrFootpathPoint(-25, -23.5)
-      ], 3.2, '#1e3a8a'),
-      createPedestrianRoute([
-        orrFootpathPoint(-30, -23.5),
-        orrFootpathPoint(-82, -23.5),
-        orrFootpathPoint(-140, -23.5)
-      ], 2.8, '#b91c1c'),
-
-      // ORR northbound footpath: Kalamandir / Brand Factory to the signal.
-      createPedestrianRoute([
-        orrFootpathPoint(120, 23.5),
-        orrFootpathPoint(72, 23.5),
-        orrFootpathPoint(25, 23.5)
-      ], 3.0, '#047857'),
-      createPedestrianRoute([
-        orrFootpathPoint(30, 23.5),
-        orrFootpathPoint(78, 23.5),
-        orrFootpathPoint(140, 23.5)
-      ], 3.4, '#d97706'),
-
-      // HAL Road north footpath.
-      createPedestrianRoute([[-140, 0.35, 13.0], [-88, 0.35, 13.0], [-30, 0.35, 13.0]], 3.1, '#4338ca'),
-      createPedestrianRoute([[-35, 0.35, 13.0], [-82, 0.35, 13.0], [-135, 0.35, 13.0]], 2.9, '#c026d3'),
-
-      // Varthur Road north footpath: Spice Garden approach to the bridge.
-      createPedestrianRoute([[35, 0.35, 13.0], [74, 0.35, 13.0], [115, 0.35, 13.0]], 3.3, '#0284c7'),
-      createPedestrianRoute([[110, 0.35, 13.0], [72, 0.35, 13.0], [35, 0.35, 13.0]], 2.7, '#e11d48'),
-
-      // Source-mapped Marathahalli Skywalk flow: x≈65, z≈−5→25.
-      createPedestrianRoute(skywalkDeckRoute, 2.5, '#15803d'),
-      createPedestrianRoute([...skywalkDeckRoute].reverse(), 2.6, '#9333ea'),
-
-      // Varthur viaduct footway movement is supplied by the source-mapped
-      // bridge footways; the old invented ROB corridor is intentionally not
-      // animated here.
+      // Source-mapped Marathahalli Skywalk: ground → 27-step south flight →
+      // deck → 42-step north flight → ground, in both directions.
+      createPedestrianRoute(skywalkRoute, 2.5, '#15803d'),
+      createPedestrianRoute([...skywalkRoute].reverse(), 2.6, '#9333ea'),
+      createPedestrianRoute(varthurNorthGround, 3.0, '#0284c7'),
+      createPedestrianRoute([...varthurNorthGround].reverse(), 2.7, '#e11d48'),
+      createPedestrianRoute(varthurNorthBridge, 3.0, '#0e7490'),
+      createPedestrianRoute([...varthurNorthBridge].reverse(), 2.7, '#be123c'),
+      createPedestrianRoute(varthurSouthGround, 3.0, '#2563eb'),
+      createPedestrianRoute([...varthurSouthGround].reverse(), 2.7, '#db2777'),
+      createPedestrianRoute(varthurSouthBridge, 3.0, '#0369a1'),
+      createPedestrianRoute([...varthurSouthBridge].reverse(), 2.7, '#9f1239')
     ];
   }, []);
 
@@ -757,8 +826,8 @@ const SourceMappedFootpathAuditSegment: React.FC<{
     }
   }, [segment.status]);
   const geometry = useMemo(
-    () => createPathRibbonGeometry(segment.sourcePath || [], segment.width, 0.38),
-    [segment.sourcePath, segment.width]
+    () => createPathRibbonGeometry(segment.sourcePath || [], segment.width, segment.elevation ?? 0.38),
+    [segment.elevation, segment.sourcePath, segment.width]
   );
 
   useEffect(() => () => geometry.dispose(), [geometry]);

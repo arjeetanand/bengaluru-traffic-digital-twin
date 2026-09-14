@@ -66,7 +66,8 @@ function compactTags(tags) {
     'foot', 'bicycle', 'building', 'building:levels', 'height', 'shop', 'amenity',
     'public_transport', 'railway', 'bridge', 'tunnel', 'crossing', 'crossing:markings',
     'natural', 'barrier', 'lit', 'operator', 'addr:street', 'addr:housenumber', 'landuse',
-    'traffic_signals'
+    'traffic_signals', 'layer', 'step_count', 'width', 'incline', 'ramp', 'covered',
+    'handrail', 'smoothness', 'footway', 'embankment'
   ];
   return Object.fromEntries(allowed.filter((key) => tags[key] !== undefined).map((key) => [key, tags[key]]));
 }

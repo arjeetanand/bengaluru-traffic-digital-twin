@@ -4,14 +4,13 @@ export interface FootpathAuditSummary extends FootpathWalkabilityMetrics {
   segmentCount: number;
 }
 
-// Derived from the 25 authored/modelled audit segments in Footpaths.tsx. These
-// are condition estimates, separate from OSM's mapped footway geometry; the
-// Spice Garden entries now follow source-coordinate traces but still require
-// field verification for their condition labels.
+// Derived from the ten source-mapped audit groups rendered by Footpaths.tsx.
+// These condition labels remain field-verification scenarios; the geometry is
+// kept separate from OSM's authoritative road/footway surface layer.
 export const FOOTPATH_AUDIT_SUMMARY: FootpathAuditSummary = {
-  totalMeters: 2228,
-  pavedWalkablePct: 58,
-  missingUnpavedPct: 14,
-  blockedEncroachedPct: 28,
-  segmentCount: 25
+  totalMeters: 1548,
+  pavedWalkablePct: 47,
+  missingUnpavedPct: 15,
+  blockedEncroachedPct: 38,
+  segmentCount: 10
 };

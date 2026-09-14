@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { TilesRenderer } from '3d-tiles-renderer';
 import {
@@ -15,44 +16,24 @@ interface Google3DTilesProps {
   onError?: (err: string) => void;
 }
 
-// ── Persistent Browser CacheStorage for Google 3D Tiles ──
-// Intercepts tile downloads and caches them permanently in local browser storage.
-// Subsequent loads serve 100% from local disk with 0 network calls and 0 API quota cost.
-const CACHE_NAME = 'google-3d-tiles-cache-v1';
-let isFetchIntercepted = false;
+// The source snapshot spans roughly 2.1 km from Oracle Tech Hub to Spice
+// Garden. This wider mask keeps the optional provider layer useful for the
+// same route instead of silently dropping both corridor ends.
+const GOOGLE_TILES_REGION_CENTER: [number, number, number] = [0, 0, -700];
+const GOOGLE_TILES_REGION_RADIUS = 1550;
 
-function setupTilesCache() {
-  if (isFetchIntercepted || typeof window === 'undefined' || !window.caches) return;
-  isFetchIntercepted = true;
-
-  const originalFetch = window.fetch;
-  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : (input instanceof URL ? input.href : (input as Request).url);
-
-    if (url.includes('tile.googleapis.com') || url.includes('googleapis.com/v1/3dtiles')) {
-      try {
-        const cache = await caches.open(CACHE_NAME);
-        const cached = await cache.match(url);
-        if (cached) {
-          return cached;
-        }
-        const networkResp = await originalFetch(input, init);
-        if (networkResp.ok) {
-          cache.put(url, networkResp.clone());
-        }
-        return networkResp;
-      } catch (e) {
-        return originalFetch(input, init);
-      }
-    }
-    return originalFetch(input, init);
-  };
+function attributionText(value: unknown) {
+  return String(value)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError }) => {
   const { scene, camera, gl } = useThree();
   const tilesRef = useRef<TilesRenderer | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [attribution, setAttribution] = useState<string | null>(null);
 
   const effectiveKey = apiKey || (import.meta.env.VITE_GOOGLE_MAPS_KEY as string) || '';
 
@@ -60,12 +41,13 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
     if (!effectiveKey) {
       const msg = 'Google Maps API key missing. Add VITE_GOOGLE_MAPS_KEY to .env or enter your key to stream Photorealistic 3D Tiles.';
       setLoadError(msg);
+      setAttribution(null);
       onError?.(msg);
       return;
     }
 
     setLoadError(null);
-    setupTilesCache();
+    setAttribution(null);
 
     try {
       // Initialize 3D Tiles Renderer for Google Photorealistic 3D Tiles
@@ -81,19 +63,48 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
 
       // Reorient & georeference tiles centered onto Bengaluru Marathahalli junction
       const reorient = new ReorientationPlugin({
-        lat: ACTIVE_COORDINATES.lat,
-        lon: ACTIVE_COORDINATES.lng,
+        // ReorientationPlugin expects radians. The app's source snapshot is
+        // stored in metres with +X east / +Z north; the plugin's ENU frame is
+        // +X west / +Z north, so the app-frame reflection is applied below.
+        lat: THREE.MathUtils.degToRad(ACTIVE_COORDINATES.lat),
+        lon: THREE.MathUtils.degToRad(ACTIVE_COORDINATES.lng),
         height: 0,
         recenter: true
       });
       tiles.registerPlugin(reorient);
 
-      // ── Spatial Bounding: Restrict tile loading strictly to the 450m Marathahalli corridor ──
-      // Prevents streaming outside junction bounds, drastically saving download bandwidth & API cost
+      const applyAppCoordinateFrame = () => {
+        // Google tiles are right-handed ENU (+X west, +Z north), while the
+        // OSM/local scene contract is +X east, +Z north. Reflect only X so
+        // the optional Google layer lands on the same roads and landmarks.
+        tiles.group.scale.x *= -1;
+        tiles.group.updateMatrixWorld(true);
+      };
+      tiles.addEventListener('load-root-tileset', applyAppCoordinateFrame);
+
+      const updateAttribution = () => {
+        if (tiles.visibleTiles.size === 0) {
+          setAttribution(null);
+          return;
+        }
+        const sourceLines = tiles.getAttributions()
+          .filter((entry) => entry.type !== 'image')
+          .map((entry) => attributionText(entry.value))
+          .filter(Boolean);
+        const uniqueSources = [...new Set(sourceLines)];
+        setAttribution(['Google Maps', ...uniqueSources].join(' · '));
+      };
+      tiles.addEventListener('tile-visibility-change', updateAttribution);
+      tiles.addEventListener('load-tileset', updateAttribution);
+
+      // ── Spatial Bounding: keep loading inside the full Oracle → Spice Garden corridor ──
       const loadRegion = new LoadRegionPlugin();
       loadRegion.addRegion(
         new SphereRegion({
-          sphere: new THREE.Sphere(new THREE.Vector3(0, 0, 0), 450),
+          sphere: new THREE.Sphere(
+            new THREE.Vector3(...GOOGLE_TILES_REGION_CENTER),
+            GOOGLE_TILES_REGION_RADIUS
+          ),
           mask: true
         })
       );
@@ -106,13 +117,18 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
       scene.add(tiles.group);
 
       return () => {
+        tiles.removeEventListener('load-root-tileset', applyAppCoordinateFrame);
+        tiles.removeEventListener('tile-visibility-change', updateAttribution);
+        tiles.removeEventListener('load-tileset', updateAttribution);
         scene.remove(tiles.group);
         tiles.dispose();
         tilesRef.current = null;
+        setAttribution(null);
       };
     } catch (e: any) {
       console.error('Failed to initialize Google 3D Tiles:', e);
       setLoadError(e?.message || 'Failed to initialize Google 3D Tiles');
+      setAttribution(null);
       onError?.(e?.message || 'Failed to load Google 3D Tiles');
     }
   }, [effectiveKey, camera, gl, scene, onError]);
@@ -133,5 +149,28 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
     return null;
   }
 
-  return null;
+  return attribution ? (
+    <Html fullscreen style={{ pointerEvents: 'none' }} zIndexRange={[50, 0]}>
+      <div
+        aria-label="Google Maps data attribution"
+        style={{
+          position: 'absolute',
+          right: 20,
+          bottom: 112,
+          maxWidth: 'min(520px, calc(100vw - 40px))',
+          padding: '4px 7px',
+          borderRadius: 3,
+          background: 'rgba(3, 7, 18, 0.78)',
+          color: 'rgba(248, 250, 252, 0.9)',
+          fontFamily: 'monospace',
+          fontSize: 8,
+          lineHeight: 1.35,
+          textAlign: 'right',
+          textShadow: '0 1px 3px rgba(0, 0, 0, 0.9)'
+        }}
+      >
+        {attribution}
+      </div>
+    </Html>
+  ) : null;
 };

@@ -37,6 +37,14 @@ export const MARATHAHALLI_SKYWALK_STAIR_WAY_IDS = [
   'way/323729569'
 ] as const;
 
+// Source tags: the south flight is way/323729569 (27 steps) and the north
+// flight is way/323729566 (42 steps). These counts are used for the 3D treads;
+// the source way IDs above keep their geometry and metadata authoritative.
+export const MARATHAHALLI_SKYWALK_DECK_WIDTH = 3.0;
+export const MARATHAHALLI_SKYWALK_STAIR_STEP_COUNTS = [27, 42] as const;
+export const MARATHAHALLI_SKYWALK_DECK_TOP_Y = 7.55;
+export const MARATHAHALLI_SKYWALK_GROUND_TOP_Y = 0.16;
+
 export const MARATHAHALLI_SKYWALK_DECK_POINTS: readonly [number, number][] = [
   [63.9, -4.6],
   [66.2, 24.5]

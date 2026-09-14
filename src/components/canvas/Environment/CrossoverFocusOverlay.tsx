@@ -97,12 +97,12 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({ is
       <FocusLabel
         position={[32, 5.1, 34]}
         title="NORTH U-TURN"
-        detail="SCENARIO LINK · OSM RULE REVIEW"
+        detail="MODELLED ROUTE · OSM no_u_turn"
       />
       <FocusLabel
         position={[-3, 4.4, -7]}
         title="SOUTH U-TURN"
-        detail="SCENARIO LINK · OSM RULE REVIEW"
+        detail="MODELLED ROUTE · OSM no_u_turn"
       />
       <FocusLabel
         position={[-2, 8, 14]}

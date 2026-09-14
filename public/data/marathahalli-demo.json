@@ -809,7 +809,8 @@
     {
       "id": "way/152941102",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -842,7 +843,8 @@
     {
       "id": "way/152941110",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -11049,7 +11051,8 @@
     {
       "id": "way/343458767",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -16841,7 +16844,8 @@
     {
       "id": "way/343633354",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -217917,7 +217921,8 @@
     {
       "id": "way/1064821054",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -219529,7 +219534,8 @@
     {
       "id": "way/1066506640",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -220044,7 +220050,8 @@
     {
       "id": "way/1066506659",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -222422,7 +222429,8 @@
     {
       "id": "way/1072561554",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -249713,7 +249721,8 @@
     {
       "id": "way/1343417350",
       "tags": {
-        "building": "roof"
+        "building": "roof",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -260785,7 +260794,8 @@
     {
       "id": "way/1508372367",
       "tags": {
-        "building": "construction"
+        "building": "construction",
+        "layer": "2"
       },
       "geometry": [
         [
@@ -264327,7 +264337,8 @@
         "surface": "asphalt",
         "lanes": "3",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "embankment": "yes"
       },
       "geometry": [
         [
@@ -264360,7 +264371,8 @@
         "surface": "asphalt",
         "lanes": "3",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "embankment": "yes"
       },
       "geometry": [
         [
@@ -267001,7 +267013,8 @@
       "id": "way/97846704",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "width": "5"
       },
       "geometry": [
         [
@@ -268668,7 +268681,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "smoothness": "good"
       },
       "geometry": [
         [
@@ -275912,7 +275926,8 @@
       "id": "way/317481739",
       "tags": {
         "highway": "residential",
-        "surface": "paved"
+        "surface": "paved",
+        "incline": "down,_10%"
       },
       "geometry": [
         [
@@ -277153,7 +277168,8 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "foot": "no"
+        "foot": "no",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -277281,7 +277297,8 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "foot": "no"
+        "foot": "no",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -277397,7 +277414,9 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "tunnel": "yes"
+        "tunnel": "yes",
+        "layer": "-1",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -277488,7 +277507,8 @@
         "lanes": "3",
         "maxspeed": "60",
         "oneway": "yes",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -277524,7 +277544,9 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "tunnel": "yes"
+        "tunnel": "yes",
+        "layer": "-1",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -277552,7 +277574,8 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "foot": "no"
+        "foot": "no",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -277604,7 +277627,8 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "foot": "no"
+        "foot": "no",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -277660,7 +277684,8 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "foot": "no"
+        "foot": "no",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -277712,7 +277737,9 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "tunnel": "yes"
+        "tunnel": "yes",
+        "layer": "-1",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -277740,7 +277767,8 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "foot": "no"
+        "foot": "no",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -277788,7 +277816,8 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "foot": "no"
+        "foot": "no",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -277824,7 +277853,9 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "tunnel": "yes"
+        "tunnel": "yes",
+        "layer": "-1",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -277846,7 +277877,8 @@
       "tags": {
         "highway": "residential",
         "name": "1st Main Road",
-        "surface": "asphalt"
+        "surface": "asphalt",
+        "smoothness": "intermediate"
       },
       "geometry": [
         [
@@ -282776,7 +282808,8 @@
       "id": "way/656868919",
       "tags": {
         "highway": "residential",
-        "oneway": "yes"
+        "oneway": "yes",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -291043,7 +291076,8 @@
     {
       "id": "way/796557708",
       "tags": {
-        "highway": "residential"
+        "highway": "residential",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -292922,7 +292956,8 @@
         "lanes": "1",
         "oneway": "yes",
         "sidewalk": "no",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -293831,7 +293866,8 @@
         "lanes": "2",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "smoothness": "excellent"
       },
       "geometry": [
         [
@@ -294655,7 +294691,8 @@
         "highway": "trunk_link",
         "surface": "asphalt",
         "lanes": "2",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "smoothness": "ok"
       },
       "geometry": [
         [
@@ -294677,7 +294714,8 @@
       "tags": {
         "highway": "tertiary",
         "name": "Kariyamma Agrahara Road",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -297609,7 +297647,8 @@
       "id": "way/1113282100",
       "tags": {
         "highway": "residential",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -297962,7 +298001,8 @@
         "name": "Munekolala Underpass",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -298205,7 +298245,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "3",
-        "oneway": "yes"
+        "oneway": "yes",
+        "embankment": "yes"
       },
       "geometry": [
         [
@@ -298231,7 +298272,8 @@
         "lanes": "3",
         "oneway": "yes",
         "sidewalk": "separate",
-        "bridge": "viaduct"
+        "bridge": "viaduct",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -298260,7 +298302,8 @@
         "surface": "asphalt",
         "lanes": "3",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "embankment": "yes"
       },
       "geometry": [
         [
@@ -298290,7 +298333,8 @@
         "lanes": "3",
         "oneway": "yes",
         "sidewalk": "separate",
-        "bridge": "viaduct"
+        "bridge": "viaduct",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -298347,7 +298391,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "smoothness": "bad"
       },
       "geometry": [
         [
@@ -299234,7 +299279,8 @@
     {
       "id": "way/1186144950",
       "tags": {
-        "highway": "service"
+        "highway": "service",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -299258,7 +299304,8 @@
     {
       "id": "way/1186145424",
       "tags": {
-        "highway": "service"
+        "highway": "service",
+        "layer": "-1"
       },
       "geometry": [
         [
@@ -299995,7 +300042,8 @@
         "oneway": "yes",
         "sidewalk": "separate",
         "bridge": "yes",
-        "lit": "yes"
+        "lit": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -300068,7 +300116,8 @@
         "oneway": "yes",
         "sidewalk": "separate",
         "bridge": "yes",
-        "lit": "yes"
+        "lit": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -304526,7 +304575,8 @@
       "id": "way/1248881544",
       "tags": {
         "highway": "service",
-        "oneway": "yes"
+        "oneway": "yes",
+        "incline": "down"
       },
       "geometry": [
         [
@@ -310294,7 +310344,8 @@
       "id": "way/1488763235",
       "tags": {
         "highway": "residential",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -310343,7 +310394,8 @@
       "id": "way/1488763243",
       "tags": {
         "highway": "residential",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -311009,7 +311061,12 @@
       "tags": {
         "highway": "steps",
         "surface": "metal",
-        "lit": "yes"
+        "lit": "yes",
+        "step_count": "42",
+        "incline": "down",
+        "ramp": "no",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -311035,7 +311092,10 @@
         "foot": "yes",
         "bicycle": "no",
         "bridge": "viaduct",
-        "lit": "yes"
+        "lit": "yes",
+        "layer": "2",
+        "width": "3",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -311058,7 +311118,14 @@
         "highway": "steps",
         "surface": "metal",
         "bridge": "yes",
-        "lit": "yes"
+        "lit": "yes",
+        "layer": "1",
+        "step_count": "27",
+        "width": "3",
+        "incline": "down",
+        "ramp": "no",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -311081,7 +311148,8 @@
         "highway": "footway",
         "surface": "metal",
         "bridge": "yes",
-        "lit": "yes"
+        "lit": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -311687,7 +311755,9 @@
       "id": "way/649518098",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -312216,7 +312286,8 @@
     {
       "id": "way/769954113",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "access_aisle"
       },
       "geometry": [
         [
@@ -312239,7 +312310,8 @@
         "highway": "footway",
         "foot": "yes",
         "crossing": "marked",
-        "crossing:markings": "yes"
+        "crossing:markings": "yes",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -312312,7 +312384,11 @@
       "id": "way/1066377870",
       "tags": {
         "highway": "steps",
-        "surface": "metal"
+        "surface": "metal",
+        "incline": "down",
+        "ramp": "no",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -312332,7 +312408,10 @@
     {
       "id": "way/1066377871",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "down",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -312362,7 +312441,10 @@
       "tags": {
         "highway": "footway",
         "surface": "metal",
-        "bridge": "viaduct"
+        "bridge": "viaduct",
+        "layer": "1",
+        "width": "3",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -312390,7 +312472,10 @@
     {
       "id": "way/1066921706",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "down",
+        "ramp": "no",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -312419,7 +312504,11 @@
       "id": "way/1066921707",
       "tags": {
         "highway": "steps",
-        "surface": "metal"
+        "surface": "metal",
+        "incline": "down",
+        "ramp": "no",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -312441,7 +312530,9 @@
       "tags": {
         "highway": "footway",
         "surface": "concrete",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -312465,7 +312556,11 @@
     {
       "id": "way/1066921710",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "down",
+        "ramp": "no",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -312485,7 +312580,11 @@
     {
       "id": "way/1066921711",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "down",
+        "ramp": "no",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -312514,7 +312613,9 @@
       "id": "way/1072948581",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -312566,7 +312667,8 @@
     {
       "id": "way/1072948582",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -312591,7 +312693,8 @@
       "id": "way/1072948595",
       "tags": {
         "highway": "footway",
-        "surface": "concrete"
+        "surface": "concrete",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -312615,7 +312718,8 @@
     {
       "id": "way/1072948598",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -312676,7 +312780,9 @@
       "id": "way/1072948599",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -312904,7 +313010,8 @@
     {
       "id": "way/1072948600",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -312933,7 +313040,8 @@
       "id": "way/1072948601",
       "tags": {
         "highway": "footway",
-        "surface": "concrete"
+        "surface": "concrete",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -312973,7 +313081,8 @@
     {
       "id": "way/1074411731",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313017,7 +313126,8 @@
     {
       "id": "way/1074411732",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313148,7 +313258,8 @@
         "highway": "footway",
         "surface": "asphalt",
         "crossing": "uncontrolled",
-        "crossing:markings": "zebra"
+        "crossing:markings": "zebra",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -313172,7 +313283,8 @@
     {
       "id": "way/1075360679",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313228,7 +313340,10 @@
     {
       "id": "way/1082504532",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "down",
+        "ramp": "no",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -313248,7 +313363,8 @@
     {
       "id": "way/1086238612",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313331,7 +313447,8 @@
         "highway": "footway",
         "surface": "asphalt",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -313359,7 +313476,8 @@
     {
       "id": "way/1086238615",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313381,7 +313499,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -313410,7 +313529,9 @@
       "id": "way/1086238617",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313435,7 +313556,9 @@
       "id": "way/1086238618",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313477,7 +313600,8 @@
       "tags": {
         "highway": "footway",
         "surface": "metal",
-        "bridge": "viaduct"
+        "bridge": "viaduct",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -313498,7 +313622,11 @@
       "id": "way/1092536514",
       "tags": {
         "highway": "steps",
-        "surface": "metal"
+        "surface": "metal",
+        "incline": "down",
+        "ramp": "no",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -313519,7 +313647,11 @@
       "id": "way/1092536515",
       "tags": {
         "highway": "steps",
-        "surface": "metal"
+        "surface": "metal",
+        "incline": "down",
+        "ramp": "no",
+        "covered": "yes",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -313540,7 +313672,8 @@
       "id": "way/1092536516",
       "tags": {
         "highway": "footway",
-        "foot": "yes"
+        "foot": "yes",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313572,7 +313705,8 @@
     {
       "id": "way/1092536517",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313592,7 +313726,8 @@
     {
       "id": "way/1092536518",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -313800,7 +313935,8 @@
     {
       "id": "way/1108916846",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314153,7 +314289,9 @@
       "id": "way/1152477166",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314181,7 +314319,8 @@
     {
       "id": "way/1190145098",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314221,7 +314360,8 @@
     {
       "id": "way/1211313257",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314245,7 +314385,8 @@
     {
       "id": "way/1211313258",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314270,7 +314411,8 @@
       "id": "way/1221361667",
       "tags": {
         "highway": "footway",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -314290,7 +314432,8 @@
     {
       "id": "way/1221361668",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314311,7 +314454,8 @@
       "id": "way/1221361669",
       "tags": {
         "highway": "footway",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -314364,7 +314508,8 @@
       "id": "way/1225569417",
       "tags": {
         "highway": "path",
-        "surface": "concrete"
+        "surface": "concrete",
+        "smoothness": "intermediate"
       },
       "geometry": [
         [
@@ -314386,7 +314531,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "uncontrolled",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -314412,7 +314558,10 @@
       "tags": {
         "highway": "footway",
         "surface": "concrete",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314433,7 +314582,10 @@
       "id": "way/1225572737",
       "tags": {
         "highway": "footway",
-        "surface": "concrete"
+        "surface": "concrete",
+        "smoothness": "good",
+        "footway": "sidewalk",
+        "embankment": "yes"
       },
       "geometry": [
         [
@@ -314454,7 +314606,10 @@
       "id": "way/1225572738",
       "tags": {
         "highway": "footway",
-        "surface": "concrete"
+        "surface": "concrete",
+        "smoothness": "good",
+        "footway": "sidewalk",
+        "embankment": "yes"
       },
       "geometry": [
         [
@@ -314496,7 +314651,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "uncontrolled",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -314520,7 +314676,8 @@
     {
       "id": "way/1225572742",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314590,7 +314747,10 @@
       "tags": {
         "highway": "footway",
         "surface": "concrete",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314611,7 +314771,10 @@
       "id": "way/1225572744",
       "tags": {
         "highway": "footway",
-        "surface": "concrete"
+        "surface": "concrete",
+        "smoothness": "good",
+        "footway": "sidewalk",
+        "embankment": "yes"
       },
       "geometry": [
         [
@@ -314633,7 +314796,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "uncontrolled",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -314658,7 +314822,9 @@
       "id": "way/1225572747",
       "tags": {
         "highway": "footway",
-        "surface": "concrete"
+        "surface": "concrete",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314718,7 +314884,8 @@
     {
       "id": "way/1226676593",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314738,7 +314905,8 @@
     {
       "id": "way/1226676594",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314760,7 +314928,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "uncontrolled",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -314784,7 +314953,8 @@
     {
       "id": "way/1226676597",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314804,7 +314974,8 @@
     {
       "id": "way/1226676598",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314824,7 +314995,8 @@
     {
       "id": "way/1226676599",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314846,7 +315018,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "uncontrolled",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -314876,7 +315049,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "uncontrolled",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -314904,7 +315078,8 @@
     {
       "id": "way/1226676603",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314924,7 +315099,8 @@
     {
       "id": "way/1226676604",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -314946,7 +315122,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "uncontrolled",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -315014,7 +315191,8 @@
     {
       "id": "way/1226676608",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -315034,7 +315212,8 @@
     {
       "id": "way/1226676609",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -315054,7 +315233,8 @@
     {
       "id": "way/1226676610",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -315100,7 +315280,8 @@
     {
       "id": "way/1227331943",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -315133,7 +315314,10 @@
       "id": "way/1231738940",
       "tags": {
         "highway": "footway",
-        "surface": "concrete"
+        "surface": "concrete",
+        "smoothness": "good",
+        "footway": "sidewalk",
+        "embankment": "yes"
       },
       "geometry": [
         [
@@ -315165,7 +315349,8 @@
     {
       "id": "way/1234946464",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -315203,7 +315388,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -315229,7 +315415,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -315254,7 +315441,8 @@
       "id": "way/1234946467",
       "tags": {
         "highway": "footway",
-        "foot": "yes"
+        "foot": "yes",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316018,7 +316206,8 @@
       "tags": {
         "highway": "footway",
         "surface": "dirt",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -316041,7 +316230,8 @@
         "highway": "footway",
         "surface": "asphalt",
         "crossing": "uncontrolled",
-        "crossing:markings": "zebra"
+        "crossing:markings": "zebra",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316069,7 +316259,8 @@
     {
       "id": "way/1252217956",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316089,7 +316280,8 @@
     {
       "id": "way/1252217957",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316125,7 +316317,8 @@
     {
       "id": "way/1252217958",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316161,7 +316354,8 @@
     {
       "id": "way/1252217959",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316181,7 +316375,8 @@
     {
       "id": "way/1252217960",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316274,7 +316469,8 @@
       "id": "way/1258976727",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316338,7 +316534,8 @@
         "highway": "footway",
         "surface": "asphalt",
         "crossing": "traffic_signals",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316372,7 +316569,8 @@
       "tags": {
         "highway": "footway",
         "surface": "asphalt",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316394,7 +316592,8 @@
       "tags": {
         "highway": "footway",
         "surface": "asphalt",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316414,7 +316613,8 @@
     {
       "id": "way/1290202945",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316438,7 +316638,8 @@
     {
       "id": "way/1290202946",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316458,7 +316659,8 @@
     {
       "id": "way/1290202947",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316482,7 +316684,8 @@
     {
       "id": "way/1290202948",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316505,7 +316708,8 @@
         "highway": "footway",
         "surface": "asphalt",
         "crossing": "uncontrolled",
-        "crossing:markings": "zebra"
+        "crossing:markings": "zebra",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316529,7 +316733,8 @@
     {
       "id": "way/1290202950",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316557,7 +316762,8 @@
     {
       "id": "way/1290202951",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316581,7 +316787,8 @@
     {
       "id": "way/1290202952",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316601,7 +316808,8 @@
     {
       "id": "way/1290202953",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316623,7 +316831,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316649,7 +316858,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316675,7 +316885,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316703,7 +316914,8 @@
     {
       "id": "way/1310890526",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316724,7 +316936,8 @@
       "id": "way/1310890527",
       "tags": {
         "highway": "footway",
-        "crossing": "traffic_signals"
+        "crossing": "traffic_signals",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316752,7 +316965,8 @@
     {
       "id": "way/1310890528",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316773,7 +316987,8 @@
       "id": "way/1310890529",
       "tags": {
         "highway": "footway",
-        "crossing": "traffic_signals"
+        "crossing": "traffic_signals",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316802,7 +317017,9 @@
       "id": "way/1311089011",
       "tags": {
         "highway": "footway",
-        "surface": "concrete:plates"
+        "surface": "concrete:plates",
+        "smoothness": "bad",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316834,7 +317051,8 @@
     {
       "id": "way/1311089012",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -316900,7 +317118,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -316925,7 +317144,9 @@
       "id": "way/1311089014",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "smoothness": "bad",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317003,7 +317224,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -317027,7 +317249,8 @@
     {
       "id": "way/1311089017",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317047,7 +317270,8 @@
     {
       "id": "way/1311089018",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317091,7 +317315,8 @@
     {
       "id": "way/1311156063",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "up"
       },
       "geometry": [
         [
@@ -317167,7 +317392,8 @@
     {
       "id": "way/1313994824",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317203,7 +317429,8 @@
     {
       "id": "way/1313994825",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317227,7 +317454,8 @@
     {
       "id": "way/1313994826",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317248,7 +317476,8 @@
       "id": "way/1313994827",
       "tags": {
         "highway": "footway",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -317272,7 +317501,8 @@
     {
       "id": "way/1313994828",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317297,7 +317527,8 @@
       "id": "way/1313994829",
       "tags": {
         "highway": "footway",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -317671,7 +317902,8 @@
     {
       "id": "way/1370873372",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317697,7 +317929,8 @@
       "tags": {
         "highway": "footway",
         "crossing": "unmarked",
-        "crossing:markings": "no"
+        "crossing:markings": "no",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -317722,7 +317955,9 @@
       "id": "way/1370873374",
       "tags": {
         "highway": "footway",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1",
+        "covered": "yes"
       },
       "geometry": [
         [
@@ -317742,7 +317977,9 @@
     {
       "id": "way/1370873375",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "up",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -317762,7 +317999,9 @@
     {
       "id": "way/1370873376",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "down",
+        "handrail": "yes"
       },
       "geometry": [
         [
@@ -317782,7 +318021,8 @@
     {
       "id": "way/1370873377",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317810,7 +318050,8 @@
     {
       "id": "way/1385520133",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -317850,7 +318091,8 @@
     {
       "id": "way/1385520134",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317874,7 +318116,8 @@
     {
       "id": "way/1385520135",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317894,7 +318137,8 @@
     {
       "id": "way/1385520136",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "crossing"
       },
       "geometry": [
         [
@@ -317934,7 +318178,8 @@
     {
       "id": "way/1385520137",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -317998,7 +318243,8 @@
     {
       "id": "way/1433959854",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -318018,7 +318264,8 @@
     {
       "id": "way/1433959855",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -318251,7 +318498,8 @@
       "id": "way/1457066717",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -318283,7 +318531,8 @@
     {
       "id": "way/1457066718",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -318304,7 +318553,9 @@
       "id": "way/1464756117",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "smoothness": "good",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -318351,7 +318602,8 @@
     {
       "id": "way/1467333271",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -318372,7 +318624,8 @@
       "id": "way/1467333272",
       "tags": {
         "highway": "footway",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -318392,7 +318645,8 @@
     {
       "id": "way/1467333297",
       "tags": {
-        "highway": "footway"
+        "highway": "footway",
+        "footway": "sidewalk"
       },
       "geometry": [
         [
@@ -318472,7 +318726,8 @@
     {
       "id": "way/1496035656",
       "tags": {
-        "highway": "steps"
+        "highway": "steps",
+        "incline": "up"
       },
       "geometry": [
         [
@@ -342654,7 +342909,8 @@
       "tags": {
         "name": "Bangalore-Salem railway",
         "railway": "rail",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -342755,7 +343011,8 @@
       "tags": {
         "name": "Bangalore-Salem railway",
         "railway": "rail",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -342827,7 +343084,8 @@
       "tags": {
         "name": "Bangalore-Salem railway",
         "railway": "rail",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -342849,7 +343107,8 @@
       "tags": {
         "name": "Bangalore-Salem railway",
         "railway": "rail",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -342871,7 +343130,8 @@
       "tags": {
         "name": "Bangalore-Salem railway",
         "railway": "rail",
-        "bridge": "yes"
+        "bridge": "yes",
+        "layer": "1"
       },
       "geometry": [
         [
@@ -342894,7 +343154,8 @@
         "name": "Namma Metro - Phase 2A",
         "maxspeed": "80",
         "railway": "subway",
-        "bridge": "viaduct"
+        "bridge": "viaduct",
+        "layer": "2"
       },
       "geometry": [
         [

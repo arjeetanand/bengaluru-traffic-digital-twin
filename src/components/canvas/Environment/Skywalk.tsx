@@ -2,16 +2,20 @@ import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import {
   MARATHAHALLI_SKYWALK_DECK_POINTS,
-  MARATHAHALLI_SKYWALK_STAIR_POINTS
+  MARATHAHALLI_SKYWALK_DECK_TOP_Y,
+  MARATHAHALLI_SKYWALK_DECK_WIDTH,
+  MARATHAHALLI_SKYWALK_GROUND_TOP_Y,
+  MARATHAHALLI_SKYWALK_STAIR_POINTS,
+  MARATHAHALLI_SKYWALK_STAIR_STEP_COUNTS
 } from '../../../data/marathahalliDemo';
 
 interface SkywalkProps {
   isNight: boolean;
 }
 
-const DECK_TOP_Y = 7.55;
-const DECK_WIDTH = 3.4;
-const DECK_CLEARANCE = 7.2;
+const DECK_TOP_Y = MARATHAHALLI_SKYWALK_DECK_TOP_Y;
+const DECK_WIDTH = MARATHAHALLI_SKYWALK_DECK_WIDTH;
+const GROUND_TOP_Y = MARATHAHALLI_SKYWALK_GROUND_TOP_Y;
 
 type SourcePoint = [number, number];
 
@@ -93,6 +97,7 @@ export const Skywalk: React.FC<SkywalkProps> = ({ isNight }) => {
           key={index}
           deck={deck}
           ground={ground}
+          stepCount={MARATHAHALLI_SKYWALK_STAIR_STEP_COUNTS[index]}
           isNight={isNight}
           name={index === 0 ? 'south' : 'north'}
         />
@@ -104,14 +109,14 @@ export const Skywalk: React.FC<SkywalkProps> = ({ isNight }) => {
 const SourceStairFlight: React.FC<{
   deck: SourcePoint;
   ground: SourcePoint;
+  stepCount: number;
   isNight: boolean;
   name: string;
-}> = ({ deck, ground, isNight, name }) => {
+}> = ({ deck, ground, stepCount, isNight, name }) => {
   const dx = ground[0] - deck[0];
   const dz = ground[1] - deck[1];
   const length = Math.hypot(dx, dz);
   const yaw = Math.atan2(dx, dz);
-  const stepCount = Math.max(8, Math.round(length / 1.8));
   const stepDepth = length / stepCount;
 
   return (
@@ -121,12 +126,15 @@ const SourceStairFlight: React.FC<{
       rotation={[0, yaw, 0]}
     >
       {Array.from({ length: stepCount }, (_, index) => {
-        const progress = (index + 0.5) / stepCount;
-        const height = DECK_CLEARANCE * (1 - progress);
+        // The first tread meets the mapped deck top and the last tread meets
+        // the ground landing. Using the source step count preserves the
+        // measured stair rhythm instead of replacing it with a generic ramp.
+        const progress = stepCount <= 1 ? 0 : index / (stepCount - 1);
+        const height = DECK_TOP_Y + (GROUND_TOP_Y - DECK_TOP_Y) * progress;
         return (
           <mesh
             key={index}
-            position={[0, Math.max(0.12, height / 2), stepDepth * (index + 0.5)]}
+            position={[0, height / 2, stepDepth * (index + 0.5)]}
             castShadow
             receiveShadow
           >

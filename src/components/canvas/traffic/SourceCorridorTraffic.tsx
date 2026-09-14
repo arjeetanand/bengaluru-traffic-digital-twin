@@ -107,7 +107,7 @@ function buildSourceRoutes(snapshot: MarathahalliDemoSnapshot): SourceRoute[] {
         && feature.centroid[1] <= 520;
       return inWalkEnvelope
         && SOURCE_ROAD_HIGHWAYS.has(highway)
-        && !/underpass|footbridge|pedestrian/i.test(name)
+        && !/footbridge|pedestrian/i.test(name)
         && length >= 55
         && feature.geometry.length >= 2;
     })
