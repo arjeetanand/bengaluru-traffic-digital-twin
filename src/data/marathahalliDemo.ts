@@ -170,6 +170,7 @@ export interface MarathahalliDemoSnapshot {
   source: {
     provider: string;
     file: string;
+    inputSha256: string;
     snapshotTimestamp: string | null;
     attribution: string;
     license: string;

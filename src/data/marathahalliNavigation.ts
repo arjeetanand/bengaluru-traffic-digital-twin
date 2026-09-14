@@ -422,6 +422,18 @@ function buildSourceWalkRouteConnections(routes: readonly SourceWalkRoute[]) {
     const leftEnd = left.points[left.points.length - 1];
     for (let rightIndex = leftIndex + 1; rightIndex < routes.length; rightIndex += 1) {
       const right = routes[rightIndex];
+      const shareSourceNode = Boolean(left.sourceNodeRefs?.some((nodeRef) => right.sourceNodeRefs?.includes(nodeRef)));
+      // A shared OSM node is a stronger topology signal than a small visual
+      // endpoint tolerance. Only use it for routes on the same modeled
+      // surface; an overpass and a ground footway can share plan coordinates
+      // without being physically walkable from one another.
+      if (shareSourceNode) {
+        if (Math.abs(left.elevation - right.elevation) < 0.75) {
+          connections.get(sourceWalkRouteKey(left))?.add(sourceWalkRouteKey(right));
+          connections.get(sourceWalkRouteKey(right))?.add(sourceWalkRouteKey(left));
+        }
+        continue;
+      }
       const rightStart = right.points[0];
       const rightEnd = right.points[right.points.length - 1];
       const joins = [
@@ -476,6 +488,7 @@ export function registerSnapshotWalkRoutes(footways: readonly OSMPolylineFeature
       const elevation = getSourceWalkElevation(feature);
       return {
         sourceWayIds: [feature.id],
+        sourceNodeRefs: feature.nodeRefs,
         points: feature.geometry,
         width: parseSourceWidth(feature),
         elevation,

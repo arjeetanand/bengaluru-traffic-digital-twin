@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const projectRoot = process.cwd();
@@ -6,6 +7,7 @@ const inputPath = path.join(projectRoot, 'marathahalli_osm.xml');
 const outputPath = path.join(projectRoot, 'public', 'data', 'marathahalli-demo.json');
 
 const xml = await readFile(inputPath, 'utf8');
+const inputSha256 = createHash('sha256').update(xml).digest('hex');
 
 function attr(attrs, key) {
   const match = attrs.match(new RegExp(`\\b${key}="([^"]*)"`));
@@ -311,6 +313,7 @@ const dataset = {
   source: {
     provider: 'OpenStreetMap',
     file: 'marathahalli_osm.xml',
+    inputSha256: `sha256:${inputSha256}`,
     snapshotTimestamp: latestTimestamp || null,
     attribution: '© OpenStreetMap contributors',
     license: 'ODbL-1.0',

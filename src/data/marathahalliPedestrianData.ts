@@ -1,3 +1,5 @@
+import { VARTHUR_VIADUCT_DECK_TOP_Y } from './marathahalliDemo';
+
 /**
  * Compact pedestrian navigation data copied from the compiled OSM snapshot.
  *
@@ -8,6 +10,7 @@
 
 export interface SourceWalkRoute {
   sourceWayIds: readonly string[];
+  sourceNodeRefs?: readonly string[];
   points: readonly [number, number][];
   width: number;
   elevation: number;
@@ -100,14 +103,16 @@ export const SOURCE_ELEVATED_WALK_ROUTES: readonly SourceWalkRoute[] = [
     sourceWayIds: ['way/1225572736'],
     points: [[338.7, -1.3], [414.9, -6.8]],
     width: 2.6,
-    elevation: 8.54,
+    // Source layer=1 is relative ordering only. Match the OSM layer and
+    // navigation's explicit modeled footway datum.
+    elevation: VARTHUR_VIADUCT_DECK_TOP_Y + 0.16,
     connectedToGrade: false
   },
   {
     sourceWayIds: ['way/1225572743'],
     points: [[413.3, -29.1], [337.2, -23.1]],
     width: 2.6,
-    elevation: 8.54,
+    elevation: VARTHUR_VIADUCT_DECK_TOP_Y + 0.16,
     connectedToGrade: false
   }
 ] as const;

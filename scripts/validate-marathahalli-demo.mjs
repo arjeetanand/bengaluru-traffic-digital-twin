@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const datasetPath = path.join(process.cwd(), 'public', 'data', 'marathahalli-demo.json');
+const sourceXmlPath = path.join(process.cwd(), 'marathahalli_osm.xml');
 const dataset = JSON.parse(await readFile(datasetPath, 'utf8'));
 const errors = [];
 const warnings = [];
@@ -89,6 +91,14 @@ if (!SUPPORTED_SCHEMA_VERSIONS.includes(dataset.schemaVersion)) errors.push('uns
 if (dataset.source?.provider !== 'OpenStreetMap') errors.push('source.provider must be OpenStreetMap');
 if (!dataset.source?.attribution?.includes('OpenStreetMap contributors')) errors.push('OSM attribution is missing');
 if (dataset.source?.license !== 'ODbL-1.0') errors.push('OSM license must be ODbL-1.0');
+if (dataset.source?.inputSha256 !== undefined) {
+  const sourceHash = createHash('sha256').update(await readFile(sourceXmlPath)).digest('hex');
+  if (dataset.source.inputSha256 !== `sha256:${sourceHash}`) {
+    errors.push('source.inputSha256 does not match marathahalli_osm.xml');
+  }
+} else if (dataset.schemaVersion >= 4) {
+  errors.push('source.inputSha256 is missing');
+}
 
 for (const key of ['lat', 'lon']) finite(dataset.origin?.[key], `origin.${key}`);
 for (const key of ['minLat', 'minLon', 'maxLat', 'maxLon']) finite(dataset.bounds?.[key], `bounds.${key}`);

@@ -26,6 +26,11 @@ also tagged with provenance: an OSM height tag, a height derived from OSM
 building levels, or a modelled fallback. The numeric fallback keeps the demo
 renderable; it is not a claim about the real building height.
 
+The snapshot also carries a SHA-256 digest of the committed
+`marathahalli_osm.xml`; `data:validate` recomputes it before the scene is
+accepted. This keeps the source file, compiled snapshot, and rendered map on a
+single reproducible input rather than silently mixing refreshes.
+
 The metro alignment audit is reproducible with:
 
 ```bash

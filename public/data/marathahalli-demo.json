@@ -3,6 +3,7 @@
   "source": {
     "provider": "OpenStreetMap",
     "file": "marathahalli_osm.xml",
+    "inputSha256": "sha256:1ac0195e859ee7074290e8bc9e7bdb85ee6a5f13db70173a1deac23811c15d33",
     "snapshotTimestamp": "2026-09-13T06:37:59Z",
     "attribution": "© OpenStreetMap contributors",
     "license": "ODbL-1.0",
