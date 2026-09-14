@@ -232,8 +232,10 @@ export const GOOGLE_MAPS_PROMINENT_STORES: GoogleMapsStore[] = [
     name: 'Spice Garden BMTC Bus Stop',
     kannadaName: 'ಸ್ಪೈಸ್ ಗಾರ್ಡನ್ ಬಸ್ ನಿಲ್ದಾಣ',
     category: 'transit',
-    lat: 12.956750,
-    lng: 77.703575,
+    // Source-backed BMTC platform node/2477336839 from the widened OSM
+    // extract; the previous coordinate was an old junction-local placeholder.
+    lat: 12.9562995,
+    lng: 77.7088804,
     rating: 4.2,
     reviewCount: 1950,
     address: 'Varthur Main Rd, Munnekolala, Marathahalli, Bengaluru 560037',
@@ -279,7 +281,8 @@ export function getStoreCameraFraming(store: GoogleMapsStore): {
     case 'kalyan_jewellers':
       return { position: [-474.6, 16, 2], target: [-474.6, 9, -29.9] };
     case 'spice_garden_bus_stop':
-      return { position: [215, 12, 12], target: [260.2, 3, -9.9] };
+      // OSM-backed Spice Garden BMTC platform (x≈836m, z≈-60m).
+      return { position: [745, 30, 50], target: [835.8, 4, -59.8] };
     default: {
       const target: [number, number, number] = [sx, sy + store.dimensions.height * 0.4, sz];
       const dx = sx > 0 ? -35 : 35;

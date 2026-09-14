@@ -27,7 +27,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   simSpeedMultiplier
 }) => {
   const controlsRef = useRef<OrbitControlsImpl>(null);
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
 
   // Smooth camera position transitions between presets
   const initialView = getCameraView(cameraPreset, cameraMode);
@@ -72,7 +72,15 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if typing in input or modal
       const activeEl = document.activeElement;
-      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.tagName === 'SELECT' ||
+          activeEl.tagName === 'BUTTON' ||
+          activeEl.tagName === 'A' ||
+          activeEl.closest('[role="dialog"], [contenteditable="true"]'))
+      ) {
         return;
       }
 
@@ -229,6 +237,67 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       unsubscribeFlyTo();
     };
   }, []);
+
+  // Person mode uses a first-person drag gesture instead of OrbitControls'
+  // orbit-around-target gesture. This keeps the eye fixed at street height
+  // while still allowing mouse, trackpad, and touch look-around navigation.
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const pointerId = { current: null as number | null };
+    const lastPointer = { x: 0, y: 0 };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (cameraModeRef.current !== 'walk' || event.button !== 0) return;
+      pointerId.current = event.pointerId;
+      lastPointer.x = event.clientX;
+      lastPointer.y = event.clientY;
+      canvas.setPointerCapture(event.pointerId);
+      isTransitioning.current = false;
+      event.preventDefault();
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (cameraModeRef.current !== 'walk' || pointerId.current !== event.pointerId) return;
+
+      const deltaX = event.clientX - lastPointer.x;
+      const deltaY = event.clientY - lastPointer.y;
+      lastPointer.x = event.clientX;
+      lastPointer.y = event.clientY;
+
+      camera.getWorldDirection(cameraDirection.current);
+      cameraDirection.current.applyAxisAngle(worldUp.current, -deltaX * 0.0045);
+      cameraRight.current.crossVectors(cameraDirection.current, worldUp.current);
+      if (cameraRight.current.lengthSq() > 0.001) {
+        cameraRight.current.normalize();
+        cameraDirection.current.applyAxisAngle(cameraRight.current, -deltaY * 0.004);
+      }
+      cameraDirection.current.y = Math.max(-0.92, Math.min(0.92, cameraDirection.current.y));
+      cameraDirection.current.normalize();
+      camera.position.y = WALK_EYE_HEIGHT;
+      targetLookAt.current.copy(camera.position).addScaledVector(cameraDirection.current, WALK_LOOK_DISTANCE);
+      controlsRef.current?.target.copy(targetLookAt.current);
+      camera.lookAt(targetLookAt.current);
+      event.preventDefault();
+    };
+
+    const releasePointer = (event: PointerEvent) => {
+      if (pointerId.current !== event.pointerId) return;
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      pointerId.current = null;
+    };
+
+    canvas.addEventListener('pointerdown', handlePointerDown, { passive: false });
+    canvas.addEventListener('pointermove', handlePointerMove, { passive: false });
+    canvas.addEventListener('pointerup', releasePointer);
+    canvas.addEventListener('pointercancel', releasePointer);
+
+    return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerup', releasePointer);
+      canvas.removeEventListener('pointercancel', releasePointer);
+    };
+  }, [gl]);
 
   // Update the shared, named camera anchor when either the preset or the
   // inspection mode changes. Walk mode derives a short eye-level look vector;
@@ -438,9 +507,8 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       minPolarAngle={cameraMode === 'walk' ? 0.15 : 0.001}
       maxPolarAngle={cameraMode === 'walk' ? Math.PI - 0.15 : Math.PI - 0.001}
       // Keep walk-mode transitions unconstrained while OrbitControls is still
-      // settling from a bird view. Zoom/rotate/pan are disabled in this mode,
-      // and the render loop restores the fixed eight-metre look-ahead after
-      // every first-person turn.
+      // settling from a bird view. Custom canvas drag-to-look handles person
+      // rotation; OrbitControls zoom and pan remain disabled in this mode.
       minDistance={cameraMode === 'walk' ? 0.1 : 1.5}
       maxDistance={cameraMode === 'walk' ? 1000 : 5000}
       onStart={() => {

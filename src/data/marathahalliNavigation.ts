@@ -35,7 +35,7 @@ const createOrrWalkAnchor = (
 // Source-backed anchors from the widened OSM extract. These are kept in the
 // same local metre projection as the junction scene so the corridor view and
 // person mode share one coordinate contract.
-const ORACLE_HUB_LOCAL: [number, number, number] = [-745, WALK_EYE_HEIGHT, -1732];
+const ORACLE_HUB_LOCAL: [number, number, number] = [-746.6, WALK_EYE_HEIGHT, -1779.2];
 
 const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
   overview: {
@@ -79,8 +79,10 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     target: [48, 12, 58]
   },
   spicegarden: {
-    position: [210, 22, 45],
-    target: [260, 4, -10]
+    // OSM-backed Spice Garden restaurant point (12.9570571, 77.7091042),
+    // east of the Marathahalli junction on the actual HAL Airport Road.
+    position: [930, 48, 80],
+    target: [860, 6, 24]
   },
   crossover: {
     // Deliberately pulled back and above the source-backed massing so the
@@ -90,13 +92,14 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
   },
   corridor: {
     // Full source corridor: Oracle Tech Hub → Marathahalli junction →
-    // Kalamandir/Spice Garden. The camera is deliberately high enough to
-    // keep the 2.1 km north-south route in one navigable frame.
-    position: [1500, 2400, 1700],
+    // Kalamandir/Spice Garden. Framing is tightened so source building
+    // massing and the named road spine remain legible without losing the
+    // 2.1 km route from the bird view.
+    position: [1250, 1800, 1450],
     target: [-120, 0, -720]
   },
   oraclehub: {
-    position: [-470, 150, -1450],
+    position: [-470, 150, -1498],
     target: ORACLE_HUB_LOCAL
   }
 };
@@ -112,10 +115,12 @@ const WALK_STARTS: Record<CameraPreset, CameraView> = {
   cinematic: createOrrWalkAnchor(-38, 5, -26.5),
   flyover: { position: [125, 1.7, 8], target: [175, 1.7, 0] },
   ground: createOrrWalkAnchor(-38, 5, -26.5),
-  multiplex: { position: [-220, WALK_EYE_HEIGHT, -535], target: [-275, WALK_EYE_HEIGHT, -535] },
-  kalamandir: { position: [22, 1.7, 332.5], target: [46, 1.7, 332.5] },
+  multiplex: { position: [-220, WALK_EYE_HEIGHT, -535], target: [-226.3, WALK_EYE_HEIGHT, -537.8] },
+  kalamandir: { position: [22, WALK_EYE_HEIGHT, 332.5], target: [40, WALK_EYE_HEIGHT, 332.5] },
   brandfactory: { position: [15, 1.7, 58], target: [48, 1.7, 58] },
-  spicegarden: { position: [220, 1.7, 15], target: [260, 1.7, -10] },
+  // Start on the mapped Spice Garden Road footway near the source restaurant
+  // point instead of teleporting back to the junction scene.
+  spicegarden: { position: [835, WALK_EYE_HEIGHT, 58], target: [850, WALK_EYE_HEIGHT, 30] },
   crossover: createOrrWalkAnchor(-38, 5, -26.5),
   corridor: { position: [-24, WALK_EYE_HEIGHT, -260], target: [-24, WALK_EYE_HEIGHT, -252] },
   oraclehub: { position: [-470, WALK_EYE_HEIGHT, -1740], target: [-500, WALK_EYE_HEIGHT, -1740] }

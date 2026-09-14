@@ -90,17 +90,24 @@ function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
   const maxX = Math.max(...features.map((feature) => feature.centroid[0]));
   const minZ = Math.min(...features.map((feature) => feature.centroid[1]));
   const maxZ = Math.max(...features.map((feature) => feature.centroid[1]));
-  const grid = new Map<string, OSMPolylineFeature>();
+  const grid = new Map<string, OSMPolylineFeature[]>();
 
+  // A 16×16 spatial sample with a few representatives per cell keeps named
+  // buildings and local massing visible at both ends of the widened
+  // Oracle→Spice corridor instead of spending the budget almost entirely
+  // near the junction origin.
   for (const feature of byDistance) {
-    const gridX = Math.min(7, Math.max(0, Math.floor(((feature.centroid[0] - minX) / Math.max(1, maxX - minX)) * 8)));
-    const gridZ = Math.min(7, Math.max(0, Math.floor(((feature.centroid[1] - minZ) / Math.max(1, maxZ - minZ)) * 8)));
+    const gridX = Math.min(15, Math.max(0, Math.floor(((feature.centroid[0] - minX) / Math.max(1, maxX - minX)) * 16)));
+    const gridZ = Math.min(15, Math.max(0, Math.floor(((feature.centroid[1] - minZ) / Math.max(1, maxZ - minZ)) * 16)));
     const key = `${gridX}:${gridZ}`;
-    if (!grid.has(key)) grid.set(key, feature);
+    const cell = grid.get(key) || [];
+    if (cell.length < 3) cell.push(feature);
+    grid.set(key, cell);
   }
 
   const named = features.filter((feature) => feature.name || feature.tags.name);
-  const representative = [...named, ...grid.values(), ...byDistance];
+  const spatialRepresentatives = [...grid.values()].flat();
+  const representative = [...named, ...spatialRepresentatives, ...byDistance];
   const selected: OSMPolylineFeature[] = [];
   const selectedIds = new Set<string>();
   for (const feature of representative) {
@@ -195,6 +202,10 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     () => (snapshot ? createRibbonGeometry(snapshot.footways, 1.8, 0.14) : null),
     [snapshot]
   );
+  const railwayGeometry = useMemo(
+    () => (snapshot ? createPolylineGeometry(snapshot.railways) : null),
+    [snapshot]
+  );
   const buildingGeometry = useMemo(
     () => (snapshot && showBuildings ? createBuildingGeometry(snapshot.buildings, buildingLimit) : null),
     [buildingLimit, showBuildings, snapshot]
@@ -209,9 +220,10 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     roadSurfaceGeometry?.dispose();
     footwayGeometry?.dispose();
     footwaySurfaceGeometry?.dispose();
+    railwayGeometry?.dispose();
     buildingGeometry?.dispose();
     namedAreaGeometry?.dispose();
-  }, [buildingGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, roadGeometry, roadSurfaceGeometry]);
+  }, [buildingGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry]);
 
   if (!snapshot) return null;
 
@@ -224,7 +236,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             roughness={0.92}
             metalness={0.05}
             transparent
-            opacity={0.48}
+            opacity={0.62}
           />
         </mesh>
       )}
@@ -274,6 +286,15 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       {footwayGeometry && (
         <lineSegments geometry={footwayGeometry} renderOrder={3}>
           <lineBasicMaterial color={isNight ? '#fbbf24' : '#b45309'} transparent opacity={0.85} />
+        </lineSegments>
+      )}
+
+      {/* Compiled source rail/viaduct ways are rendered separately from the
+          authored junction rail scene so the long corridor view includes the
+          mapped Bangalore-Salem railway and Namma Metro Phase 2A alignment. */}
+      {railwayGeometry && (
+        <lineSegments geometry={railwayGeometry} position={[0, 0.2, 0]} renderOrder={4}>
+          <lineBasicMaterial color={isNight ? '#fbbf24' : '#7c3aed'} transparent opacity={0.74} />
         </lineSegments>
       )}
 

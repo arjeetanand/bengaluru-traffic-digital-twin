@@ -15,8 +15,13 @@ import {
   Move
 } from 'lucide-react';
 import { cameraControlBus, CameraInputState } from '../../services/cameraControlBus';
+import { CameraMode } from '../../types';
 
-export const NavigationWidget: React.FC = () => {
+interface NavigationWidgetProps {
+  cameraMode: CameraMode;
+}
+
+export const NavigationWidget: React.FC<NavigationWidgetProps> = ({ cameraMode }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [speedMultiplier, setSpeedMultiplier] = useState<1 | 2 | 4>(1);
   const [activeButton, setActiveButton] = useState<string | null>(null);
@@ -76,6 +81,7 @@ export const NavigationWidget: React.FC = () => {
         <button
           className="nav-minimize-btn"
           onClick={() => setIsOpen(true)}
+          aria-label="Open camera controller"
           title="Open 3D Camera Movement & Rotation Pad"
         >
           <Compass size={16} />
@@ -95,6 +101,7 @@ export const NavigationWidget: React.FC = () => {
         <button
           className="nav-close-btn"
           onClick={() => setIsOpen(false)}
+          aria-label="Minimize camera controller"
           title="Minimize Navigation Pad"
         >
           <X size={12} />
@@ -117,6 +124,7 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'forward', 'fwd')}
                 onPointerUp={(event) => handlePointerUp(event, 'forward')}
                 onPointerCancel={handlePointerCancel}
+                aria-label="Move forward"
                 title="Move Forward [W]"
               >
                 <ChevronUp size={16} />
@@ -128,6 +136,7 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'left', 'left')}
                 onPointerUp={(event) => handlePointerUp(event, 'left')}
                 onPointerCancel={handlePointerCancel}
+                aria-label="Strafe left"
                 title="Strafe Left [A]"
               >
                 <ChevronLeft size={16} />
@@ -135,6 +144,7 @@ export const NavigationWidget: React.FC = () => {
               <button
                 className="d-pad-btn center-btn"
                 onClick={handleResetCenter}
+                aria-label="Center camera view"
                 title="Center View [Reset]"
               >
                 <Crosshair size={13} />
@@ -144,6 +154,7 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'right', 'right')}
                 onPointerUp={(event) => handlePointerUp(event, 'right')}
                 onPointerCancel={handlePointerCancel}
+                aria-label="Strafe right"
                 title="Strafe Right [D]"
               >
                 <ChevronRight size={16} />
@@ -155,6 +166,7 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'backward', 'back')}
                 onPointerUp={(event) => handlePointerUp(event, 'backward')}
                 onPointerCancel={handlePointerCancel}
+                aria-label="Move backward"
                 title="Move Backward [S]"
               >
                 <ChevronDown size={16} />
@@ -176,6 +188,7 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'tiltUp', 'tiltUp')}
                 onPointerUp={(event) => handlePointerUp(event, 'tiltUp')}
                 onPointerCancel={handlePointerCancel}
+                aria-label="Tilt camera up"
                 title="Tilt Up [Look up at Flyover/Metro/Sky]"
               >
                 <ChevronUp size={16} />
@@ -187,6 +200,7 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'turnLeft', 'rotL')}
                 onPointerUp={(event) => handlePointerUp(event, 'turnLeft')}
                 onPointerCancel={handlePointerCancel}
+                aria-label="Turn camera left"
                 title="Turn Left 360° [←]"
               >
                 <RotateCcw size={13} />
@@ -197,6 +211,7 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'turnRight', 'rotR')}
                 onPointerUp={(event) => handlePointerUp(event, 'turnRight')}
                 onPointerCancel={handlePointerCancel}
+                aria-label="Turn camera right"
                 title="Turn Right 360° [→]"
               >
                 <RotateCw size={13} />
@@ -208,6 +223,7 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'tiltDown', 'tiltDown')}
                 onPointerUp={(event) => handlePointerUp(event, 'tiltDown')}
                 onPointerCancel={handlePointerCancel}
+                aria-label="Tilt camera down"
                 title="Tilt Down [Look down at Underpass/Road]"
               >
                 <ChevronDown size={16} />
@@ -227,6 +243,9 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'up', 'up')}
                 onPointerUp={(event) => handlePointerUp(event, 'up')}
                 onPointerCancel={handlePointerCancel}
+                disabled={cameraMode === 'walk'}
+                aria-label="Increase camera altitude"
+                aria-disabled={cameraMode === 'walk'}
                 title="Elevate Up [E / Space]"
               >
                 <ArrowUp size={11} />
@@ -237,6 +256,9 @@ export const NavigationWidget: React.FC = () => {
                 onPointerDown={(event) => handlePointerDown(event, 'down', 'down')}
                 onPointerUp={(event) => handlePointerUp(event, 'down')}
                 onPointerCancel={handlePointerCancel}
+                disabled={cameraMode === 'walk'}
+                aria-label="Decrease camera altitude"
+                aria-disabled={cameraMode === 'walk'}
                 title="Lower Down [Q / C]"
               >
                 <ArrowDown size={11} />
@@ -250,6 +272,7 @@ export const NavigationWidget: React.FC = () => {
             <button
               className="nav-speed-btn"
               onClick={toggleSpeed}
+              aria-label={`Camera speed multiplier ${speedMultiplier} times`}
               title="Toggle Flight Speed Multiplier"
             >
               <Gauge size={12} />

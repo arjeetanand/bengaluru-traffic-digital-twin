@@ -41,6 +41,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       <button
         className={`control-btn ${isStoreDrawerOpen ? 'active' : ''}`}
         onClick={onToggleStoreDrawer}
+        aria-pressed={isStoreDrawerOpen}
         title="Explore mapped corridor points of interest and review their GPS placement"
         style={{
           borderColor: isStoreDrawerOpen ? '#38bdf8' : undefined,
@@ -52,7 +53,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       </button>
 
       {/* ── Person / Bird's-eye inspection mode ── */}
-      <div className="btn-group camera-mode-group" aria-label="Camera inspection mode">
+      <div className="btn-group camera-mode-group" role="group" aria-label="Camera inspection mode">
         <button
           className={`group-item ${mode.cameraMode === 'walk' ? 'active' : ''}`}
           aria-pressed={mode.cameraMode === 'walk'}
@@ -77,6 +78,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       <button
         className={`control-btn ${mode.footpathAuditMode ? 'audit-active' : ''}`}
         onClick={() => onUpdateMode({ footpathAuditMode: !mode.footpathAuditMode })}
+        aria-pressed={mode.footpathAuditMode}
         title="Toggle Footpath Walkability Audit: Green (Paved), Red (Missing), Amber (Blocked/Encroached)"
       >
         <Footprints size={15} />
@@ -100,6 +102,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
             onUpdateMode({ buildingMode: next });
           }
         }}
+        aria-pressed={mode.buildingMode === 'google-tiles'}
         title={
           mode.buildingMode === 'google-tiles'
             ? 'Active: Google Photorealistic 3D Tiles. Click to switch to OSM Digital Twin.'
@@ -114,6 +117,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       <button
         className={`control-btn ${mode.isNight ? 'active' : ''}`}
         onClick={() => onUpdateMode({ isNight: !mode.isNight })}
+        aria-pressed={mode.isNight}
         title={mode.isNight ? 'Switch to Golden Hour Day' : 'Switch to Night View'}
       >
         {mode.isNight ? <Moon size={15} /> : <Sun size={15} />}
@@ -124,6 +128,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       <button
         className={`control-btn ${mode.isRaining ? 'active' : ''}`}
         onClick={() => onUpdateMode({ isRaining: !mode.isRaining })}
+        aria-pressed={mode.isRaining}
         title={mode.isRaining ? 'Clear Weather' : 'Simulate Rain & Wet Roads'}
       >
         {mode.isRaining ? <CloudRain size={15} /> : <Cloud size={15} />}
@@ -134,6 +139,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       <button
         className={`control-btn ${mode.isCinematic ? 'active' : ''}`}
         onClick={() => onUpdateMode({ isCinematic: !mode.isCinematic })}
+        aria-pressed={mode.isCinematic}
         title="Toggle automatic cinematic camera rotation"
       >
         <Video size={15} />
@@ -141,12 +147,13 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       </button>
 
       {/* ── Camera View Angle Presets (Corridors & Landmarks) ── */}
-      <div className="btn-group">
+      <div className="btn-group" role="group" aria-label="Camera preset">
         {(['overview', 'corridor', 'oraclehub', 'crossover', 'brandfactory', 'kalamandir', 'multiplex', 'spicegarden', 'underpass'] as const).map((preset) => (
           <button
             key={preset}
             className={`group-item ${mode.cameraPreset === preset ? 'active' : ''}`}
             onClick={() => onUpdateMode({ cameraPreset: preset })}
+            aria-pressed={mode.cameraPreset === preset}
             title={`Switch to ${preset} view`}
           >
             {preset === 'spicegarden'
@@ -161,7 +168,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       </div>
 
       {/* ── Simulation Speed 1x / 10x / 60x ── */}
-      <div className="btn-group">
+      <div className="btn-group" role="group" aria-label="Simulation speed">
         <button
           className={`group-item ${mode.simSpeed === 1 ? 'active' : ''}`}
           onClick={() => onUpdateMode({ simSpeed: 1 })}
@@ -192,6 +199,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       <button
         className={`control-btn live-toggle-btn ${!isDemo ? 'active-live' : 'active-demo'}`}
         onClick={onToggleDemo}
+        aria-pressed={!isDemo}
         title="Toggle between Live TomTom API data and Baked Demo Traffic"
       >
         <Radio size={14} className={!isDemo ? 'pulse-live' : ''} />

@@ -1083,6 +1083,8 @@ canvas:active {
   border: none;
   color: #64748b;
   cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
   padding: 2px;
   border-radius: 4px;
   display: flex;
@@ -1221,6 +1223,8 @@ canvas:active {
   font-size: 8px;
   font-weight: 700;
   padding: 4px 6px;
+  min-width: 44px;
+  min-height: 44px;
   cursor: pointer;
   transition: all 0.1s ease;
   touch-action: manipulation;
@@ -1239,6 +1243,12 @@ canvas:active {
   transform: scale(0.94);
 }
 
+.alt-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  filter: saturate(0.35);
+}
+
 .speed-toggle-ctrl {
   display: flex;
   align-items: center;
@@ -1254,6 +1264,8 @@ canvas:active {
   border-radius: 4px;
   color: #38bdf8;
   padding: 4px 7px;
+  min-width: 44px;
+  min-height: 44px;
   font-family: inherit;
   font-size: 9px;
   font-weight: 700;
@@ -1421,7 +1433,7 @@ input:focus-visible {
 
   .camera-mode-group .group-item,
   .controls-bar-container > .btn-group .group-item {
-    min-height: 38px;
+    min-height: 44px;
   }
 
   .source-attribution {

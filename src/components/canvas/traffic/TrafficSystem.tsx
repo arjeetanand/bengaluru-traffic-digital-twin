@@ -326,10 +326,10 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
 
   // ── Allocate Fleet of Vehicles ──
   const { counts, agents } = useMemo(() => {
-    const total = Math.max(
-      SIMULATION_CONFIG.minVehicleCount,
-      Math.min(SIMULATION_CONFIG.maxVehicleCount, vehicleTotalCount)
-    );
+    // The scene splits the configured fleet between this detailed junction
+    // network and the source-road corridor layer. Respect the exact allocation
+    // here so the HUD's configured vehicle count stays a real total.
+    const total = Math.max(0, Math.min(SIMULATION_CONFIG.maxVehicleCount, vehicleTotalCount));
 
     const carCount = Math.round(total * SIMULATION_CONFIG.vehicleDistribution.car);
     const twoWheelerCount = Math.round(total * SIMULATION_CONFIG.vehicleDistribution.twoWheeler);

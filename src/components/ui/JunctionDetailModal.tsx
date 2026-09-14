@@ -56,11 +56,11 @@ export const JunctionDetailModal: React.FC<JunctionDetailModalProps> = ({
           </button>
         </div>
 
-        {/* Live Traffic Flow Telemetry */}
+        {/* Live or modelled traffic flow telemetry */}
         <div className="modal-section">
           <div className="section-title">
             <Activity size={14} className="text-cyan" />
-            <span>LIVE FLOW TELEMETRY ({flowData.isDemo ? 'DEMO TWIN' : 'TOMTOM LIVE'})</span>
+            <span>{flowData.isDemo ? 'MODELLED FLOW TELEMETRY (DEMO TWIN)' : 'LIVE FLOW TELEMETRY (TOMTOM LIVE)'}</span>
           </div>
 
           <div className="telemetry-grid">
@@ -69,7 +69,7 @@ export const JunctionDetailModal: React.FC<JunctionDetailModalProps> = ({
               <div className="telemetry-value text-emerald">
                 {flowData.currentSpeed} <span className="telemetry-unit">km/h</span>
               </div>
-              <span className="telemetry-sub">Live Road Velocity</span>
+              <span className="telemetry-sub">{flowData.isDemo ? 'Modelled road velocity' : 'Live road velocity'}</span>
             </div>
 
             <div className="telemetry-card">
@@ -135,7 +135,7 @@ export const JunctionDetailModal: React.FC<JunctionDetailModalProps> = ({
               <div className="telemetry-value text-emerald">
                 {flowData.roadClosure ? 'CLOSED' : 'OPEN'}
               </div>
-              <span className="telemetry-sub">TomTom FRC: {flowData.frc || 'FRC2'}</span>
+              <span className="telemetry-sub">{flowData.isDemo ? 'Modelled road class' : `TomTom FRC: ${flowData.frc || 'FRC2'}`}</span>
             </div>
           </div>
         </div>
@@ -177,9 +177,9 @@ export const JunctionDetailModal: React.FC<JunctionDetailModalProps> = ({
               <span className="telemetry-label">DATA CONFIDENCE</span>
               <div className="telemetry-value text-emerald">
                 <Shield size={14} style={{ display: 'inline', marginRight: 4 }} />
-                {Math.round(flowData.confidence * 100)}%
+                {flowData.isDemo ? 'MODEL' : `${Math.round(flowData.confidence * 100)}%`}
               </div>
-              <span className="telemetry-sub">Sensor feed reliability</span>
+              <span className="telemetry-sub">{flowData.isDemo ? 'Scenario input quality' : 'Sensor feed reliability'}</span>
             </div>
           </div>
         </div>

@@ -247,7 +247,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* ── Floating Interactive Navigation Controller ── */}
       <div className="hud-dock-right">
-        <NavigationWidget />
+        <NavigationWidget cameraMode={mode.cameraMode} />
       </div>
 
       <div className="source-attribution" aria-label="Map data attribution">

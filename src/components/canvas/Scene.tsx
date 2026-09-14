@@ -29,6 +29,7 @@ import { StreetFurniture } from './Environment/StreetFurniture';
 import { Greenery } from './Environment/Greenery';
 import { RainParticles } from './Environment/RainParticles';
 import { TrafficSystem } from './traffic/TrafficSystem';
+import { SourceCorridorTraffic } from './traffic/SourceCorridorTraffic';
 import { OsmSnapshotLayer } from './Environment/OsmSnapshotLayer';
 
 interface SceneProps {
@@ -76,6 +77,8 @@ export const Scene: React.FC<SceneProps> = ({
   const hemiIntensity = isNight ? 0.2 : (isRaining ? 0.6 : 0.85);
 
   const isLongCorridorView = cameraPreset === 'corridor';
+  const corridorVehicleCount = Math.min(vehicleCount, Math.max(32, Math.round(vehicleCount * 0.18)));
+  const junctionVehicleCount = Math.max(0, vehicleCount - corridorVehicleCount);
   const fogDensity = isLongCorridorView
     ? (isNight ? 0.00018 : (isRaining ? 0.00034 : 0.00012))
     : (isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY));
@@ -147,8 +150,8 @@ export const Scene: React.FC<SceneProps> = ({
           <OsmSnapshotLayer
             isNight={isNight}
             showBuildings
-            buildingLimit={500}
-            labelDistanceFactor={cameraPreset === 'corridor' ? 2400 : (cameraPreset === 'oraclehub' ? 260 : 65)}
+            buildingLimit={800}
+            labelDistanceFactor={cameraPreset === 'corridor' ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65))}
           />
 
           {/* ── 3D Stylized Realistic Ground & Underpass Network ── */}
@@ -233,7 +236,15 @@ export const Scene: React.FC<SceneProps> = ({
             congestionRatio={congestionRatio}
             simSpeedMultiplier={simSpeed}
             isNight={isNight}
-            vehicleTotalCount={vehicleCount}
+            vehicleTotalCount={junctionVehicleCount}
+          />
+
+          {/* Source-road vehicles extend the configured modelled fleet across
+              the widened Oracle → junction → Spice Garden OSM envelope. */}
+          <SourceCorridorTraffic
+            simSpeedMultiplier={simSpeed}
+            isNight={isNight}
+            vehicleTotalCount={corridorVehicleCount}
           />
 
           {/* ── Interactive Junction Beacon / Clickable Trigger ── */}

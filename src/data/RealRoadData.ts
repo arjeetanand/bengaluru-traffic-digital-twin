@@ -92,6 +92,16 @@ export function getOrrOffsetPointAtZ(zCoord: number, lateralOffset: number): [nu
   ];
 }
 
+// The source snapshot contains separate ORR carriageways. The modeled metro
+// follows their local median, not the western carriageway centerline used by
+// the underpass spline. Calibrated from the paired source carriageways near
+// the signal: roughly 6.3m east of the canonical reference line.
+export const ORR_MEDIAN_LATERAL_OFFSET = -6.3;
+
+export function getOrrMedianPointAtZ(zCoord: number): [number, number] {
+  return getOrrOffsetPointAtZ(zCoord, ORR_MEDIAN_LATERAL_OFFSET);
+}
+
 /**
  * Build a ribbon section offset from the curved ORR centerline. The caller's
  * lateral sign follows the road frame: positive is west of the northbound

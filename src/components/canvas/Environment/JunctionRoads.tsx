@@ -129,9 +129,13 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
 
   return (
     <group name="MarathahalliUndergroundAndSurfaceSystem">
-      {/* ── Wide Ground Terrain Base ── */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
-        <planeGeometry args={[750, 750]} />
+      {/* ── Ground Terrain Base ──
+          The OSM extract now spans the complete Oracle → Spice Garden
+          envelope. Keep one broad, low-cost ground tile under that same
+          extent so source roads, footways and building massing do not float
+          against the background in the corridor bird view. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -690]} receiveShadow>
+        <planeGeometry args={[2300, 2600]} />
         <meshStandardMaterial
           color={isRaining ? '#1a221a' : '#263326'}
           roughness={0.96}
