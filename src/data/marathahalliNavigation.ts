@@ -43,11 +43,11 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     target: CAMERA_DEFAULT_TARGET
   },
   underpass: {
-    // Street-level inspection starts beside the mapped ORR ramp so the
-    // underpass opening, traffic lanes, and elevated supports are visible
-    // immediately; users can raise the bird camera with the altitude pad.
-    position: [-18, 9, 65],
-    target: [0, -4.5, 5]
+    // Approach the south portal obliquely. This keeps the trench opening,
+    // curved carriageway, surface crossover, and overhead supports in one
+    // legible frame instead of placing the camera behind a metro pier.
+    position: [-24, 5, -125],
+    target: [-28, -4, -50]
   },
   surface: {
     position: [-34, 8, 24],
@@ -88,10 +88,11 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     target: [860, 6, 24]
   },
   crossover: {
-    // Higher east-side oblique angle keeps the source-aligned U-turn loops
-    // and the curved metro deck in frame while shrinking the ROB foreground.
-    position: [170, 150, 250],
-    target: [0, 4, 18]
+    // East-side oblique angle keeps both source-aligned U-turn loops and the
+    // curved metro deck in frame without letting the foreground structures
+    // swallow the signal crossover.
+    position: [130, 108, 190],
+    target: [0, 3, 12]
   },
   corridor: {
     // Full source corridor: Oracle Tech Hub → Marathahalli junction →

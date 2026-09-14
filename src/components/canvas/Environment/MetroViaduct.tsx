@@ -12,7 +12,10 @@ interface MetroViaductProps {
   isNight: boolean;
 }
 
-const METRO_PATH_Z_COORDS = [-225, -210, -165, -120, -75, -42, 42, 75, 120, 165, 205] as const;
+const METRO_PATH_Z_COORDS = [
+  -225, -210, -185, -150, -120, -90, -60, -42, -28, -14, 0, 14, 28, 42,
+  60, 90, 120, 150, 180, 205
+] as const;
 
 interface MetroBeamSpec {
   lateralOffset: number;
@@ -82,8 +85,8 @@ function getMetroPathAngle(z: number) {
 }
 
 export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
-  const metroHeight = 15.5; // elevated cleanly above underpass (-7.5m), surface (0m), and skywalk (7.2m)
-  const metroWidth = 6.8;   // corrected: real BMRCL U-girder width (was 9.8m — too wide)
+  const metroHeight = 13.2; // median viaduct clearance above the surface and skywalk
+  const metroWidth = 7.2;   // paired-track U-girder envelope
   const metroTrainRef = useRef<THREE.Group>(null);
   const metroTrainZRef = useRef(-120);
 
@@ -113,7 +116,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
 
   const concreteMat = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: '#cbd5e1',
+      color: '#b9c4cf',
       roughness: 0.85,
       metalness: 0.1
     });
@@ -199,46 +202,46 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
         >
           {/* Main cylindrical column */}
           <mesh position={[0, metroHeight / 2, 0]} castShadow receiveShadow material={concreteMat}>
-            <cylinderGeometry args={[1.18, 1.38, metroHeight, 16]} />
+            <cylinderGeometry args={[0.92, 1.1, metroHeight, 16]} />
           </mesh>
 
           {/* Heavy Hammerhead Pier Cap (supporting U-girders) */}
           <mesh position={[0, metroHeight - 0.7, 0]} castShadow receiveShadow material={concreteMat}>
-            <boxGeometry args={[metroWidth + 0.45, 1.25, 2.9]} />
+            <boxGeometry args={[metroWidth + 0.35, 1.05, 2.65]} />
           </mesh>
 
           {/* Pier base pedestal */}
           <mesh position={[0, 0.5, 0]} castShadow receiveShadow material={concreteMat}>
-            <cylinderGeometry args={[1.95, 2.25, 0.9, 16]} />
+            <cylinderGeometry args={[1.7, 1.95, 0.82, 16]} />
           </mesh>
 
           {/* ── BMRCL Ground-Level Construction Barricades enclosing Pier Foundation ── */}
           {Math.abs(zCoord) > 35 && (
             <group position={[0, 0, 0]}>
               {/* North & South Barricades */}
-              <mesh position={[0, 0.82, 2.7]} castShadow>
-                <boxGeometry args={[5.4, 1.55, 0.1]} />
+              <mesh position={[0, 0.82, 2.4]} castShadow>
+                <boxGeometry args={[4.8, 1.55, 0.1]} />
                 <meshStandardMaterial color="#eab308" roughness={0.6} metalness={0.3} />
               </mesh>
-              <mesh position={[0, 0.82, -2.7]} castShadow>
-                <boxGeometry args={[5.4, 1.55, 0.1]} />
+              <mesh position={[0, 0.82, -2.4]} castShadow>
+                <boxGeometry args={[4.8, 1.55, 0.1]} />
                 <meshStandardMaterial color="#eab308" roughness={0.6} metalness={0.3} />
               </mesh>
               {/* East & West Barricades (Blue BMRCL) */}
-              <mesh position={[2.7, 0.82, 0]} castShadow>
-                <boxGeometry args={[0.1, 1.55, 5.4]} />
+              <mesh position={[2.4, 0.82, 0]} castShadow>
+                <boxGeometry args={[0.1, 1.55, 4.8]} />
                 <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.3} />
               </mesh>
-              <mesh position={[-2.7, 0.82, 0]} castShadow>
-                <boxGeometry args={[0.1, 1.55, 5.4]} />
+              <mesh position={[-2.4, 0.82, 0]} castShadow>
+                <boxGeometry args={[0.1, 1.55, 4.8]} />
                 <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.3} />
               </mesh>
               {/* BMRCL Logo White Stripe */}
-              <mesh position={[2.76, 1.0, 0]}>
+              <mesh position={[2.46, 1.0, 0]}>
                 <boxGeometry args={[0.02, 0.3, 4.8]} />
                 <meshStandardMaterial color="#ffffff" />
               </mesh>
-              <mesh position={[-2.76, 1.0, 0]}>
+              <mesh position={[-2.46, 1.0, 0]}>
                 <boxGeometry args={[0.02, 0.3, 4.8]} />
                 <meshStandardMaterial color="#ffffff" />
               </mesh>
@@ -250,8 +253,8 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
               </mesh>
 
               {/* Warning hazard blinkers on barricade corners */}
-              {[-2.6, 2.6].map((xP, i) => (
-                <group key={i} position={[xP, 1.68, 2.6]}>
+              {[-2.3, 2.3].map((xP, i) => (
+                <group key={i} position={[xP, 1.68, 2.3]}>
                   <mesh>
                     <boxGeometry args={[0.2, 0.25, 0.2]} />
                     <meshStandardMaterial
@@ -304,12 +307,12 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
         >
           {/* Platform Deck Expansion */}
           <mesh position={[0, 0.2, 0]} receiveShadow material={concreteMat}>
-            <boxGeometry args={[18, 0.8, 58]} />
+            <boxGeometry args={[16, 0.8, 48]} />
           </mesh>
 
           {/* Station Arched Canopy Roof (low-profile so the junction remains legible) */}
-          <mesh position={[0, 4.6, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[3.9, 3.9, 34, 24, 1, true, 0, Math.PI]} />
+          <mesh position={[0, 4.1, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[3.2, 3.2, 30, 24, 1, true, 0, Math.PI]} />
             <meshStandardMaterial
               color="#1e3a5f"
               metalness={0.45}
@@ -320,27 +323,27 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
               side={THREE.DoubleSide}
             />
           </mesh>
-          <mesh position={[-3.65, 4.25, 0]}>
-            <boxGeometry args={[0.18, 0.22, 34]} />
+          <mesh position={[-3.0, 3.78, 0]}>
+            <boxGeometry args={[0.18, 0.22, 30]} />
             <meshStandardMaterial color="#0284c7" metalness={0.55} roughness={0.32} />
           </mesh>
-          <mesh position={[3.65, 4.25, 0]}>
-            <boxGeometry args={[0.18, 0.22, 34]} />
+          <mesh position={[3.0, 3.78, 0]}>
+            <boxGeometry args={[0.18, 0.22, 30]} />
             <meshStandardMaterial color="#0284c7" metalness={0.55} roughness={0.32} />
           </mesh>
 
           {/* Lower Concourse Level (y = -5.0m below track deck = 10.5m above ground) */}
           <mesh position={[0, -4.8, 0]} receiveShadow material={concreteMat}>
-            <boxGeometry args={[16, 0.6, 46]} />
+            <boxGeometry args={[14, 0.6, 40]} />
           </mesh>
 
           {/* Station Signage Boards */}
-          <mesh position={[0, 3.8, -29.2]}>
-            <boxGeometry args={[14, 1.4, 0.2]} />
+          <mesh position={[0, 3.4, -24.2]}>
+            <boxGeometry args={[12, 1.25, 0.2]} />
             <meshStandardMaterial color="#0284c7" emissive="#0369a1" emissiveIntensity={0.6} />
           </mesh>
-          <mesh position={[0, 3.8, 29.2]}>
-            <boxGeometry args={[14, 1.4, 0.2]} />
+          <mesh position={[0, 3.4, 24.2]}>
+            <boxGeometry args={[12, 1.25, 0.2]} />
             <meshStandardMaterial color="#0284c7" emissive="#0369a1" emissiveIntensity={0.6} />
           </mesh>
 

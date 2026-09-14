@@ -90,7 +90,8 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
       U_TURN_CONNECTORS.north.points.map(([x, _y, z]) => [x, z]),
       3.5,
       () => 0.13,
-      64
+      64,
+      'centripetal'
     ),
     []
   );
@@ -100,30 +101,35 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
       U_TURN_CONNECTORS.south.points.map(([x, _y, z]) => [x, z]),
       3.5,
       () => 0.13,
-      64
+      64,
+      'centripetal'
     ),
     []
   );
 
-  const northUTurnEdgeGeom = useMemo(
-    () => createCurveLineGeometry(
+  const northUTurnEdgeGeoms = useMemo(() => [-1.52, 1.52].map((lateralOffset) => (
+    createCurveLineGeometry(
       U_TURN_CONNECTORS.north.points.map(([x, _y, z]) => [x, z]),
-      0,
+      lateralOffset,
       () => 0.19,
-      0.16,
-      64
-    ),
+      0.18,
+      64,
+      'centripetal'
+    )
+  )),
     []
   );
 
-  const southUTurnEdgeGeom = useMemo(
-    () => createCurveLineGeometry(
+  const southUTurnEdgeGeoms = useMemo(() => [-1.52, 1.52].map((lateralOffset) => (
+    createCurveLineGeometry(
       U_TURN_CONNECTORS.south.points.map(([x, _y, z]) => [x, z]),
-      0,
+      lateralOffset,
       () => 0.19,
-      0.16,
-      64
-    ),
+      0.18,
+      64,
+      'centripetal'
+    )
+  )),
     []
   );
 
@@ -185,12 +191,18 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
         <mesh geometry={southUTurnGeom} receiveShadow renderOrder={1}>
           <meshStandardMaterial color={isRaining ? '#15181d' : '#30343b'} roughness={0.78} />
         </mesh>
-        <mesh geometry={northUTurnEdgeGeom} renderOrder={2}>
-          <meshBasicMaterial color="#fbbf24" transparent opacity={0.9} />
-        </mesh>
-        <mesh geometry={southUTurnEdgeGeom} renderOrder={2}>
-          <meshBasicMaterial color="#fbbf24" transparent opacity={0.9} />
-        </mesh>
+        {northUTurnEdgeGeoms.map((geometry, index) => (
+          <mesh key={`north-u-turn-edge-${index}`} geometry={geometry} renderOrder={2}>
+            <meshBasicMaterial color="#fbbf24" transparent opacity={0.9} />
+          </mesh>
+        ))}
+        {southUTurnEdgeGeoms.map((geometry, index) => (
+          <mesh key={`south-u-turn-edge-${index}`} geometry={geometry} renderOrder={2}>
+            <meshBasicMaterial color="#fbbf24" transparent opacity={0.9} />
+          </mesh>
+        ))}
+        <UturnFlowMarkers points={U_TURN_CONNECTORS.north.points} id="north" />
+        <UturnFlowMarkers points={U_TURN_CONNECTORS.south.points} id="south" />
 
         {/* ── Zebra Crossings on the Surface Crossroads (at real 21m half-junction) ── */}
         <ZebraCrossing position={[0, 0.08, halfNS + 1]} rotation={[0, 0, 0]} width={22} stripes={14} />
@@ -347,6 +359,48 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
           <meshBasicMaterial color={congestionAccentColor} transparent opacity={0.7} />
         </mesh>
       </group>
+    </group>
+  );
+};
+
+// Directional chevrons make the shared U-turn route readable from a bird view
+// and at street level. Their centers use the same source-aligned control
+// points consumed by TrafficSystem, so the visual instruction never drifts
+// away from the asphalt vehicle path.
+const UturnFlowMarkers: React.FC<{
+  id: string;
+  points: readonly [number, number, number][];
+}> = ({ id, points }) => {
+  const markers = useMemo(() => {
+    const markerIndices = points
+      .map((_, index) => index)
+      .filter((index) => index > 1 && index < points.length - 2 && index % 2 === 0);
+
+    return markerIndices.map((index) => {
+      const point = points[index];
+      const previous = points[index - 1];
+      const next = points[index + 1];
+      return {
+        angle: Math.atan2(next[0] - previous[0], next[2] - previous[2]),
+        position: [point[0], 0.25, point[2]] as [number, number, number]
+      };
+    });
+  }, [points]);
+
+  return (
+    <group name={`UturnFlowMarkers-${id}`}>
+      {markers.map((marker, index) => (
+        <group key={`${id}-u-turn-chevron-${index}`} position={marker.position} rotation={[0, marker.angle, 0]}>
+          <mesh position={[-0.22, 0, 0.16]} rotation={[0, -0.62, 0]}>
+            <boxGeometry args={[0.16, 0.04, 0.72]} />
+            <meshBasicMaterial color="#f8fafc" transparent opacity={0.92} />
+          </mesh>
+          <mesh position={[0.22, 0, 0.16]} rotation={[0, 0.62, 0]}>
+            <boxGeometry args={[0.16, 0.04, 0.72]} />
+            <meshBasicMaterial color="#f8fafc" transparent opacity={0.92} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 };

@@ -25,6 +25,9 @@ interface SourceRoute {
   id: string;
   curve: THREE.CatmullRomCurve3;
   length: number;
+  // OSM way order is the travel direction for one-way roads. Bidirectional
+  // ways may still use either direction for the modelled visual fleet.
+  preferredDirection: 1 | -1 | null;
 }
 
 interface SourceVehicleAgent {
@@ -134,7 +137,13 @@ function buildSourceRoutes(snapshot: MarathahalliDemoSnapshot): SourceRoute[] {
     .map((feature) => {
       const points = feature.geometry.map(([x, z]) => new THREE.Vector3(x, 0.1, z));
       const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.18);
-      return { id: feature.id, curve, length: curve.getLength() };
+      const oneway = feature.tags.oneway;
+      const preferredDirection: 1 | -1 | null = oneway === 'yes' || oneway === '1'
+        ? 1
+        : oneway === '-1'
+          ? -1
+          : null;
+      return { id: feature.id, curve, length: curve.getLength(), preferredDirection };
     })
     .filter((route) => route.length >= 45);
 }
@@ -228,12 +237,14 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
     ) => {
       for (let index = 0; index < count; index += 1) {
         if (!routes.length) break;
+        const routeIdx = Math.floor(nextRandom() * routes.length);
         list.push({
           id: idCounter++,
           type,
-          routeIdx: Math.floor(nextRandom() * routes.length),
+          routeIdx,
           t: 0.04 + nextRandom() * 0.9,
-          direction: nextRandom() > 0.5 ? 1 : -1,
+          direction: routes[routeIdx].preferredDirection
+            || (nextRandom() > 0.5 ? 1 : -1),
           speed: maxSpeed * (0.68 + nextRandom() * 0.18),
           meshIdx: nextMeshIndex(),
           lateralOffset: (nextRandom() > 0.5 ? 1 : -1) * (0.55 + nextRandom() * 0.55),
@@ -295,7 +306,9 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
       agent.t += (agent.speed * dt) / route.length;
       if (agent.t > 1) {
         agent.t = 0.02 + (agent.id % 7) * 0.006;
-        agent.direction = agent.direction === 1 ? -1 : 1;
+        // Preserve mapped flow on one-way ways. Only bidirectional source
+        // roads reverse at the end of their visual loop.
+        agent.direction = route.preferredDirection || (agent.direction === 1 ? -1 : 1);
       }
 
       route.curve.getPointAt(progress, position);

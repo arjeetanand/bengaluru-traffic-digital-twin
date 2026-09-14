@@ -15,13 +15,13 @@ interface OsmSnapshotLayerProps {
   labelDistanceFactor?: number;
 }
 
-function createPolylineGeometry(features: OSMPolylineFeature[]) {
+function createPolylineGeometry(features: OSMPolylineFeature[], y = 0.12) {
   const positions: number[] = [];
   for (const feature of features) {
     for (let index = 1; index < feature.geometry.length; index += 1) {
       const previous = feature.geometry[index - 1];
       const current = feature.geometry[index];
-      positions.push(previous[0], 0.12, previous[1], current[0], 0.12, current[1]);
+      positions.push(previous[0], y, previous[1], current[0], y, current[1]);
     }
   }
 
@@ -77,6 +77,10 @@ function getRoadRibbonWidth(feature: OSMPolylineFeature) {
   if (['secondary', 'tertiary'].includes(feature.tags.highway || '')) return 8;
   if (feature.tags.highway === 'service') return 4.2;
   return 5.4;
+}
+
+function isSourceElevatedRoad(feature: OSMPolylineFeature) {
+  return feature.tags.bridge === 'yes' || feature.tags.bridge === 'viaduct';
 }
 
 function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
@@ -148,6 +152,23 @@ function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
   return merged;
 }
 
+function createBuildingOutlineGeometry(features: OSMPolylineFeature[]) {
+  const positions: number[] = [];
+  for (const feature of features) {
+    if (feature.geometry.length < 2) continue;
+    for (let index = 1; index <= feature.geometry.length; index += 1) {
+      const previous = feature.geometry[index - 1];
+      const current = feature.geometry[index % feature.geometry.length];
+      positions.push(previous[0], 0.2, previous[1], current[0], 0.2, current[1]);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
 function createNamedAreaGeometry(features: OSMPolylineFeature[]) {
   const sourceNamedAreas = features.filter((feature) => {
     const name = feature.name?.toLowerCase() || '';
@@ -194,6 +215,18 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     () => (snapshot ? createRibbonGeometry(snapshot.roads, getRoadRibbonWidth, 0.075) : null),
     [snapshot]
   );
+  const sourceBridgeFeatures = useMemo(
+    () => snapshot?.roads.filter(isSourceElevatedRoad) || [],
+    [snapshot]
+  );
+  const sourceBridgeSurfaceGeometry = useMemo(
+    () => (snapshot ? createRibbonGeometry(sourceBridgeFeatures, getRoadRibbonWidth, 5.2) : null),
+    [snapshot, sourceBridgeFeatures]
+  );
+  const sourceBridgeGeometry = useMemo(
+    () => (snapshot ? createPolylineGeometry(sourceBridgeFeatures, 5.34) : null),
+    [snapshot, sourceBridgeFeatures]
+  );
   const footwayGeometry = useMemo(
     () => (snapshot ? createPolylineGeometry(snapshot.footways) : null),
     [snapshot]
@@ -210,6 +243,10 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     () => (snapshot && showBuildings ? createBuildingGeometry(snapshot.buildings, buildingLimit) : null),
     [buildingLimit, showBuildings, snapshot]
   );
+  const buildingOutlineGeometry = useMemo(
+    () => (snapshot && showBuildings ? createBuildingOutlineGeometry(snapshot.buildings) : null),
+    [showBuildings, snapshot]
+  );
   const namedAreaGeometry = useMemo(
     () => (snapshot && showBuildings ? createNamedAreaGeometry(snapshot.places) : null),
     [showBuildings, snapshot]
@@ -218,12 +255,15 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   useEffect(() => () => {
     roadGeometry?.dispose();
     roadSurfaceGeometry?.dispose();
+    sourceBridgeGeometry?.dispose();
+    sourceBridgeSurfaceGeometry?.dispose();
     footwayGeometry?.dispose();
     footwaySurfaceGeometry?.dispose();
     railwayGeometry?.dispose();
     buildingGeometry?.dispose();
+    buildingOutlineGeometry?.dispose();
     namedAreaGeometry?.dispose();
-  }, [buildingGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry]);
+  }, [buildingGeometry, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry]);
 
   if (!snapshot) return null;
 
@@ -232,13 +272,24 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       {buildingGeometry && (
         <mesh geometry={buildingGeometry} position={[0, 0, 0]}>
           <meshStandardMaterial
-            color={isNight ? '#243b53' : '#64748b'}
+            color={isNight ? '#243b53' : '#71879a'}
             roughness={0.92}
             metalness={0.05}
             transparent
-            opacity={0.62}
+            opacity={0.5}
           />
         </mesh>
+      )}
+
+      {buildingOutlineGeometry && (
+        <lineSegments geometry={buildingOutlineGeometry} renderOrder={1}>
+          <lineBasicMaterial
+            color={isNight ? '#64748b' : '#a8bac8'}
+            transparent
+            opacity={isNight ? 0.22 : 0.32}
+            depthWrite={false}
+          />
+        </lineSegments>
       )}
 
       {namedAreaGeometry && (
@@ -263,6 +314,27 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             opacity={0.82}
           />
         </mesh>
+      )}
+
+      {/* Source-mapped bridge/viaduct ways are lifted above the base road
+          layer. Supports are intentionally not invented here: the source
+          geometry is authoritative for plan position, while the central
+          metro structure remains an explicitly modelled transport layer. */}
+      {sourceBridgeSurfaceGeometry && (
+        <mesh geometry={sourceBridgeSurfaceGeometry} renderOrder={1}>
+          <meshStandardMaterial
+            color={isNight ? '#475569' : '#a8b4bf'}
+            roughness={0.82}
+            metalness={0.12}
+            transparent
+            opacity={0.78}
+          />
+        </mesh>
+      )}
+      {sourceBridgeGeometry && (
+        <lineSegments geometry={sourceBridgeGeometry} renderOrder={2}>
+          <lineBasicMaterial color={isNight ? '#cbd5e1' : '#64748b'} transparent opacity={0.82} />
+        </lineSegments>
       )}
 
       {footwaySurfaceGeometry && (

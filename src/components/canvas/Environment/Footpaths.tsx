@@ -392,10 +392,43 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
 };
 
 // ── Subcomponent: Animated Pedestrians walking along footpaths and crossings ──
+interface PedestrianRoute {
+  curve: THREE.CatmullRomCurve3;
+  length: number;
+  start: [number, number, number];
+  speed: number;
+  color: string;
+}
+
+function createPedestrianRoute(
+  points: [number, number, number][],
+  speed: number,
+  color: string
+): PedestrianRoute {
+  const curve = new THREE.CatmullRomCurve3(
+    points.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
+    false,
+    'centripetal',
+    0.18
+  );
+
+  return {
+    curve,
+    length: Math.max(1, curve.getLength()),
+    start: points[0],
+    speed,
+    color
+  };
+}
+
 const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
   const pedestriansRef = useRef<THREE.Group>(null);
-  
-  // Define pedestrian routes along major footpaths and crossings
+  const position = useMemo(() => new THREE.Vector3(), []);
+  const tangent = useMemo(() => new THREE.Vector3(), []);
+
+  // These routes use the same curved ORR frame as the footpath slabs. The
+  // intermediate points are deliberate: a walker should stay on the sidewalk
+  // through the junction bend instead of taking a straight chord across it.
   const routes = useMemo(() => {
     const orrFootpathPoint = (z: number, semanticOffset: number): [number, number, number] => {
       const lateralOffset = semanticOffset >= 0 ? -Math.abs(semanticOffset) : Math.abs(semanticOffset);
@@ -404,58 +437,74 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
     };
 
     return [
-    // 1. Southbound ORR footpath (Multiplex to signal)
-    { start: orrFootpathPoint(-150, -23.5), end: orrFootpathPoint(-25, -23.5), speed: 3.2, dir: 1, color: '#1e3a8a' },
-    { start: orrFootpathPoint(-30, -23.5), end: orrFootpathPoint(-140, -23.5), speed: 2.8, dir: -1, color: '#b91c1c' },
-    // 2. Northbound ORR footpath (Kalamandir/Brand Factory to signal)
-    { start: orrFootpathPoint(120, 23.5), end: orrFootpathPoint(25, 23.5), speed: 3.0, dir: -1, color: '#047857' },
-    { start: orrFootpathPoint(30, 23.5), end: orrFootpathPoint(140, 23.5), speed: 3.4, dir: 1, color: '#d97706' },
-    // 3. HAL Road North footpath
-    { start: [-140, 0.35, 13.0], end: [-30, 0.35, 13.0], speed: 3.1, dir: 1, color: '#4338ca' },
-    { start: [-35, 0.35, 13.0], end: [-135, 0.35, 13.0], speed: 2.9, dir: -1, color: '#c026d3' },
-    // 4. Varthur Road North footpath (Spice Garden to bridge)
-    { start: [35, 0.35, 13.0], end: [115, 0.35, 13.0], speed: 3.3, dir: 1, color: '#0284c7' },
-    { start: [110, 0.35, 13.0], end: [35, 0.35, 13.0], speed: 2.7, dir: -1, color: '#e11d48' },
-    // 5. Skywalk pedestrian flow (elevated at y = 7.5)
-    { start: [-18, 7.55, 32], end: [18, 7.55, 32], speed: 2.5, dir: 1, color: '#15803d' },
-    { start: [16, 7.55, 32], end: [-16, 7.55, 32], speed: 2.6, dir: -1, color: '#9333ea' },
-    // 6. ROB bridge sidewalk
-    { start: [125, 7.8, 7.2], end: [190, 7.8, 7.2], speed: 3.0, dir: 1, color: '#f59e0b' },
-    { start: [185, 7.8, -7.2], end: [125, 7.8, -7.2], speed: 2.9, dir: -1, color: '#64748b' }
+      // ORR southbound footpath: Innovative Multiplex to the signal.
+      createPedestrianRoute([
+        orrFootpathPoint(-150, -23.5),
+        orrFootpathPoint(-92, -23.5),
+        orrFootpathPoint(-25, -23.5)
+      ], 3.2, '#1e3a8a'),
+      createPedestrianRoute([
+        orrFootpathPoint(-30, -23.5),
+        orrFootpathPoint(-82, -23.5),
+        orrFootpathPoint(-140, -23.5)
+      ], 2.8, '#b91c1c'),
+
+      // ORR northbound footpath: Kalamandir / Brand Factory to the signal.
+      createPedestrianRoute([
+        orrFootpathPoint(120, 23.5),
+        orrFootpathPoint(72, 23.5),
+        orrFootpathPoint(25, 23.5)
+      ], 3.0, '#047857'),
+      createPedestrianRoute([
+        orrFootpathPoint(30, 23.5),
+        orrFootpathPoint(78, 23.5),
+        orrFootpathPoint(140, 23.5)
+      ], 3.4, '#d97706'),
+
+      // HAL Road north footpath.
+      createPedestrianRoute([[-140, 0.35, 13.0], [-88, 0.35, 13.0], [-30, 0.35, 13.0]], 3.1, '#4338ca'),
+      createPedestrianRoute([[-35, 0.35, 13.0], [-82, 0.35, 13.0], [-135, 0.35, 13.0]], 2.9, '#c026d3'),
+
+      // Varthur Road north footpath: Spice Garden approach to the bridge.
+      createPedestrianRoute([[35, 0.35, 13.0], [74, 0.35, 13.0], [115, 0.35, 13.0]], 3.3, '#0284c7'),
+      createPedestrianRoute([[110, 0.35, 13.0], [72, 0.35, 13.0], [35, 0.35, 13.0]], 2.7, '#e11d48'),
+
+      // Skywalk flow, elevated over the surface crossing.
+      createPedestrianRoute([[-18, 7.55, 32], [0, 7.55, 32], [18, 7.55, 32]], 2.5, '#15803d'),
+      createPedestrianRoute([[16, 7.55, 32], [0, 7.55, 32], [-16, 7.55, 32]], 2.6, '#9333ea'),
+
+      // ROB sidewalks.
+      createPedestrianRoute([[125, 7.8, 7.2], [157, 7.8, 7.2], [190, 7.8, 7.2]], 3.0, '#f59e0b'),
+      createPedestrianRoute([[185, 7.8, -7.2], [156, 7.8, -7.2], [125, 7.8, -7.2]], 2.9, '#64748b')
     ];
   }, []);
 
-  // Track progress of each pedestrian
-  const progress = useRef(routes.map((_, i) => (i * 0.15) % 1.0));
+  const progress = useRef(routes.map((_, index) => (index * 0.15) % 1));
 
   useFrame((_, delta) => {
     if (!pedestriansRef.current) return;
     const safeDelta = Math.min(delta, 0.1);
-    
-    pedestriansRef.current.children.forEach((child, idx) => {
-      const route = routes[idx];
-      const dist = Math.hypot(route.end[0] - route.start[0], route.end[2] - route.start[2]);
-      const advance = (route.speed * safeDelta) / dist;
-      
-      progress.current[idx] = (progress.current[idx] + advance) % 1.0;
-      const t = progress.current[idx];
-      
-      const px = route.start[0] + (route.end[0] - route.start[0]) * t;
-      const py = route.start[1];
-      const pz = route.start[2] + (route.end[2] - route.start[2]) * t;
-      
-      child.position.set(px, py, pz);
+
+    pedestriansRef.current.children.forEach((child, index) => {
+      const route = routes[index];
+      progress.current[index] = (progress.current[index] + (route.speed * safeDelta) / route.length) % 1;
+      const t = progress.current[index];
+
+      route.curve.getPointAt(t, position);
+      route.curve.getTangentAt(t, tangent).normalize();
+      child.position.copy(position);
+      child.rotation.y = Math.atan2(tangent.x, tangent.z);
     });
   });
 
   return (
     <group ref={pedestriansRef} name="PedestrianWalkers">
-      {routes.map((r, i) => (
-        <group key={i} position={r.start as [number, number, number]}>
-          {/* Person Torso */}
+      {routes.map((route, index) => (
+        <group key={index} position={route.start}>
+          {/* Person torso */}
           <mesh position={[0, 0.65, 0]} castShadow>
             <cylinderGeometry args={[0.16, 0.18, 0.85, 8]} />
-            <meshStandardMaterial color={r.color} roughness={0.7} />
+            <meshStandardMaterial color={route.color} roughness={0.7} />
           </mesh>
           {/* Head */}
           <mesh position={[0, 1.25, 0]}>

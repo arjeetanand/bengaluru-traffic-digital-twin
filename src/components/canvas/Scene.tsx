@@ -150,7 +150,7 @@ export const Scene: React.FC<SceneProps> = ({
           <OsmSnapshotLayer
             isNight={isNight}
             showBuildings
-            buildingLimit={800}
+            buildingLimit={1000}
             labelDistanceFactor={cameraPreset === 'corridor' ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65))}
           />
 

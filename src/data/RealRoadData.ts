@@ -192,11 +192,12 @@ export function createRoadRibbonGeometry(
   controlPoints: [number, number][],
   width: number,
   elevationFn: (t: number, x: number, z: number) => number = () => 0.08,
-  sampleSteps = 120
+  sampleSteps = 120,
+  curveType: 'catmullrom' | 'centripetal' | 'chordal' = 'catmullrom'
 ): THREE.BufferGeometry {
   // Build 3D vector points for CatmullRom curve interpolation
   const v3Points = controlPoints.map((p) => new THREE.Vector3(p[0], 0, p[1]));
-  const curve = new THREE.CatmullRomCurve3(v3Points, false, 'catmullrom', 0.25);
+  const curve = new THREE.CatmullRomCurve3(v3Points, false, curveType, 0.25);
 
   const halfWidth = width / 2;
   const positions: number[] = [];
@@ -261,10 +262,11 @@ export function createCurveLineGeometry(
   lateralOffset: number,
   elevationFn: (t: number, x: number, z: number) => number = () => 0.1,
   lineWidth = 0.25,
-  sampleSteps = 120
+  sampleSteps = 120,
+  curveType: 'catmullrom' | 'centripetal' | 'chordal' = 'catmullrom'
 ): THREE.BufferGeometry {
   const v3Points = controlPoints.map((p) => new THREE.Vector3(p[0], 0, p[1]));
-  const curve = new THREE.CatmullRomCurve3(v3Points, false, 'catmullrom', 0.25);
+  const curve = new THREE.CatmullRomCurve3(v3Points, false, curveType, 0.25);
 
   const halfLineWidth = lineWidth / 2;
   const positions: number[] = [];
