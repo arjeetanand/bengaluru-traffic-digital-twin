@@ -1,6 +1,11 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import {
+  createOrrOffsetRibbonGeometry,
+  getOrrOffsetPointAtZ,
+  getOrrRoadFrameAtZ
+} from '../../../data/RealRoadData';
 
 interface FootpathsProps {
   auditMode: boolean;
@@ -391,13 +396,20 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
   const pedestriansRef = useRef<THREE.Group>(null);
   
   // Define pedestrian routes along major footpaths and crossings
-  const routes = useMemo(() => [
+  const routes = useMemo(() => {
+    const orrFootpathPoint = (z: number, semanticOffset: number): [number, number, number] => {
+      const lateralOffset = semanticOffset >= 0 ? -Math.abs(semanticOffset) : Math.abs(semanticOffset);
+      const [x, projectedZ] = getOrrOffsetPointAtZ(z, lateralOffset);
+      return [x, 0.35, projectedZ];
+    };
+
+    return [
     // 1. Southbound ORR footpath (Multiplex to signal)
-    { start: [-23.5, 0.35, -150], end: [-23.5, 0.35, -25], speed: 3.2, dir: 1, color: '#1e3a8a' },
-    { start: [-23.5, 0.35, -30], end: [-23.5, 0.35, -140], speed: 2.8, dir: -1, color: '#b91c1c' },
+    { start: orrFootpathPoint(-150, -23.5), end: orrFootpathPoint(-25, -23.5), speed: 3.2, dir: 1, color: '#1e3a8a' },
+    { start: orrFootpathPoint(-30, -23.5), end: orrFootpathPoint(-140, -23.5), speed: 2.8, dir: -1, color: '#b91c1c' },
     // 2. Northbound ORR footpath (Kalamandir/Brand Factory to signal)
-    { start: [23.5, 0.35, 120], end: [23.5, 0.35, 25], speed: 3.0, dir: -1, color: '#047857' },
-    { start: [23.5, 0.35, 30], end: [23.5, 0.35, 140], speed: 3.4, dir: 1, color: '#d97706' },
+    { start: orrFootpathPoint(120, 23.5), end: orrFootpathPoint(25, 23.5), speed: 3.0, dir: -1, color: '#047857' },
+    { start: orrFootpathPoint(30, 23.5), end: orrFootpathPoint(140, 23.5), speed: 3.4, dir: 1, color: '#d97706' },
     // 3. HAL Road North footpath
     { start: [-140, 0.35, 13.0], end: [-30, 0.35, 13.0], speed: 3.1, dir: 1, color: '#4338ca' },
     { start: [-35, 0.35, 13.0], end: [-135, 0.35, 13.0], speed: 2.9, dir: -1, color: '#c026d3' },
@@ -410,7 +422,8 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
     // 6. ROB bridge sidewalk
     { start: [125, 7.8, 7.2], end: [190, 7.8, 7.2], speed: 3.0, dir: 1, color: '#f59e0b' },
     { start: [185, 7.8, -7.2], end: [125, 7.8, -7.2], speed: 2.9, dir: -1, color: '#64748b' }
-  ], []);
+    ];
+  }, []);
 
   // Track progress of each pedestrian
   const progress = useRef(routes.map((_, i) => (i * 0.15) % 1.0));
@@ -525,13 +538,66 @@ const FootpathSegmentMesh: React.FC<{
   const sizeX = isXAxis ? length : width;
   const sizeZ = isXAxis ? width : length;
   const posY = elevation + height / 2;
+  const isOrrCurve = axis === 'Z' && segment.id.startsWith('orr-');
+  const lateralOffset = isOrrCurve
+    ? (offset >= 0 ? -Math.abs(offset) : Math.abs(offset))
+    : 0;
+  const roadFrame = isOrrCurve ? getOrrRoadFrameAtZ(centerCoord) : null;
+  const projectedCenter = isOrrCurve
+    ? getOrrOffsetPointAtZ(centerCoord, lateralOffset)
+    : null;
+  const renderPosX = projectedCenter?.[0] ?? posX;
+  const renderPosZ = projectedCenter?.[1] ?? posZ;
+  const renderRotation = roadFrame ? Math.atan2(roadFrame.tangentX, roadFrame.tangentZ) : 0;
+
+  const curvedSurfaceGeometry = useMemo(() => {
+    if (!isOrrCurve) return null;
+    const geometry = createOrrOffsetRibbonGeometry(
+      start,
+      end,
+      lateralOffset,
+      width,
+      height / 2 + 0.01,
+      36
+    );
+    geometry.translate(-renderPosX, 0, -renderPosZ);
+    // The parent rotates local +Z to the road tangent for the curb,
+    // tactile strip, and obstruction details. Counter-rotate the already
+    // curved world-space ribbon so it is not rotated a second time.
+    geometry.rotateY(-renderRotation);
+    return geometry;
+  }, [end, height, isOrrCurve, lateralOffset, renderPosX, renderPosZ, renderRotation, start, width]);
+
+  const curvedAuditGeometry = useMemo(() => {
+    if (!isOrrCurve) return null;
+    const geometry = createOrrOffsetRibbonGeometry(
+      start,
+      end,
+      lateralOffset,
+      width,
+      height / 2 + 0.16,
+      36
+    );
+    geometry.translate(-renderPosX, 0, -renderPosZ);
+    geometry.rotateY(-renderRotation);
+    return geometry;
+  }, [end, height, isOrrCurve, lateralOffset, renderPosX, renderPosZ, renderRotation, start, width]);
 
   return (
-    <group position={[posX, posY, posZ]}>
+    <group position={[renderPosX, posY, renderPosZ]} rotation={[0, renderRotation, 0]}>
       {/* ── Main Footpath Surface Slab ── */}
-      <mesh receiveShadow castShadow={status === 'paved' || status === 'encroached'} material={surfaceMat}>
-        <boxGeometry args={[sizeX, height, sizeZ]} />
-      </mesh>
+      {curvedSurfaceGeometry ? (
+        <mesh
+          geometry={curvedSurfaceGeometry}
+          receiveShadow
+          castShadow={status === 'paved' || status === 'encroached'}
+          material={surfaceMat}
+        />
+      ) : (
+        <mesh receiveShadow castShadow={status === 'paved' || status === 'encroached'} material={surfaceMat}>
+          <boxGeometry args={[sizeX, height, sizeZ]} />
+        </mesh>
+      )}
 
       {/* ── Raised Curb Stone along Road Edge (Only if Paved or Encroached) ── */}
       {(status === 'paved' || status === 'encroached') && (
@@ -576,17 +642,30 @@ const FootpathSegmentMesh: React.FC<{
       {auditMode && (
         <group position={[0, height / 2 + 0.15, 0]}>
           {/* Glowing Status Ribbon */}
-          <mesh>
-            <boxGeometry args={[sizeX, 0.08, sizeZ]} />
-            <meshStandardMaterial
-              color={auditColor}
-              emissive={auditColor}
-              emissiveIntensity={2.4}
-              transparent
-              opacity={0.88}
-              roughness={0.2}
-            />
-          </mesh>
+          {curvedAuditGeometry ? (
+            <mesh geometry={curvedAuditGeometry} position={[0, -(height / 2 + 0.15), 0]} renderOrder={4}>
+              <meshStandardMaterial
+                color={auditColor}
+                emissive={auditColor}
+                emissiveIntensity={2.4}
+                transparent
+                opacity={0.88}
+                roughness={0.2}
+              />
+            </mesh>
+          ) : (
+            <mesh>
+              <boxGeometry args={[sizeX, 0.08, sizeZ]} />
+              <meshStandardMaterial
+                color={auditColor}
+                emissive={auditColor}
+                emissiveIntensity={2.4}
+                transparent
+                opacity={0.88}
+                roughness={0.2}
+              />
+            </mesh>
+          )}
 
           {/* Pulsing Status Core Dot at center */}
           <mesh position={[0, 0.4, 0]}>

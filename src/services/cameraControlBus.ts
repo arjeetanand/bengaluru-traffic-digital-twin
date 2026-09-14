@@ -58,6 +58,10 @@ class CameraControlBus {
     this.state.tiltDown = false;
   }
 
+  public releaseAllInputs() {
+    this.resetInputs();
+  }
+
   public triggerResetView() {
     this.resetListeners.forEach((cb) => {
       try {
@@ -97,4 +101,3 @@ class CameraControlBus {
 }
 
 export const cameraControlBus = new CameraControlBus();
-

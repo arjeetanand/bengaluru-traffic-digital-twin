@@ -20,6 +20,7 @@ import { FallbackBanner } from './FallbackBanner';
 import { NavigationWidget } from './NavigationWidget';
 import { GoogleMapsStoreDrawer } from './GoogleMapsStoreDrawer';
 import { GoogleMapsStore } from '../../data/GoogleMapsStoreRegistry';
+import { FOOTPATH_AUDIT_SUMMARY } from '../../data/footpathAudit';
 
 interface HUDProps {
   flowData: TrafficFlowData;
@@ -92,6 +93,14 @@ export const HUD: React.FC<HUDProps> = ({
 
         {/* Signal state pill in header */}
         <div className="hud-header-right">
+          <div
+            className={`traffic-source-chip ${flowData.isDemo ? 'is-modelled' : 'is-live'}`}
+            aria-label={flowData.isDemo ? 'Modelled traffic using the OSM snapshot' : 'Live TomTom traffic feed'}
+          >
+            <span className="traffic-source-dot" aria-hidden="true" />
+            <span>{flowData.isDemo ? 'MODELLED' : 'LIVE'}</span>
+            <small>{flowData.isDemo ? 'OSM SNAPSHOT' : 'TOMTOM'}</small>
+          </div>
           <div className="signal-pill">
             <span className="signal-label">SIGNAL:</span>
             <div className="signal-indicators">
@@ -200,14 +209,15 @@ export const HUD: React.FC<HUDProps> = ({
             <Footprints size={13} className="widget-icon" style={{ color: mode.footpathAuditMode ? '#22c55e' : undefined }} />
           </div>
           <div className="metric-row">
-            <span className="metric-value text-emerald">54%</span>
+            <span className="metric-value text-emerald">{FOOTPATH_AUDIT_SUMMARY.pavedWalkablePct}%</span>
             <span className="metric-unit">Walkable</span>
           </div>
           <div className="footpath-breakdown">
-            <span className="footpath-status paved"><i aria-hidden="true" />Paved 54%</span>
-            <span className="footpath-status missing"><i aria-hidden="true" />Missing 26%</span>
-            <span className="footpath-status blocked"><i aria-hidden="true" />Blocked 20%</span>
+            <span className="footpath-status paved"><i aria-hidden="true" />Paved {FOOTPATH_AUDIT_SUMMARY.pavedWalkablePct}%</span>
+            <span className="footpath-status missing"><i aria-hidden="true" />Missing {FOOTPATH_AUDIT_SUMMARY.missingUnpavedPct}%</span>
+            <span className="footpath-status blocked"><i aria-hidden="true" />Blocked {FOOTPATH_AUDIT_SUMMARY.blockedEncroachedPct}%</span>
           </div>
+          <div className="widget-sub">MODELLED AUDIT · {(FOOTPATH_AUDIT_SUMMARY.totalMeters / 1000).toFixed(2)} km · {FOOTPATH_AUDIT_SUMMARY.segmentCount} segments</div>
           <div className="widget-caption-tag" style={{ marginTop: 4, color: mode.footpathAuditMode ? '#4ade80' : undefined }}>
             {mode.footpathAuditMode ? '3D AUDIT OVERLAY ACTIVE' : 'CLICK TO AUDIT • FIELD VERIFY'}
           </div>
@@ -220,6 +230,8 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ── 3D Camera Controls Movement Guide Pill ── */}
       <div className="camera-hint-pill">
         <span className="hint-tag">CONTROLS</span>
+        <span className="camera-mode-label">{mode.cameraMode === 'walk' ? 'PERSON · 1.7M EYE' : 'BIRD · ORBIT'}</span>
+        <span className="hint-divider">•</span>
         <span><b>WASD:</b> Move / Glide</span>
         <span className="hint-divider">•</span>
         <span><b>Drag:</b> Rotate Any Angle 360°</span>

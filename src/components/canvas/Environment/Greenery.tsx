@@ -1,5 +1,6 @@
 import React, { useMemo, useLayoutEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { getOrrOffsetPointAtZ } from '../../../data/RealRoadData';
 
 interface GreeneryProps {
   isRaining: boolean;
@@ -237,8 +238,16 @@ function buildTreePositions(corridors: TreeCorridor[]): TreeEntry[] {
       // Deterministic micro-jitter via sine – no Math.random(), fully reproducible
       const jitter = Math.sin(pos * 0.37 + cIdx * 2.1) * xzJitter;
 
-      const x = axis === 'Z' ? sideOffset + jitter : pos;
-      const z = axis === 'Z' ? pos : sideOffset + jitter;
+      let x = axis === 'Z' ? sideOffset + jitter : pos;
+      let z = axis === 'Z' ? pos : sideOffset + jitter;
+
+      // ORR tree corridors follow the source-backed road curve. The corridor
+      // definitions retain their semantic east/west sign, while the road
+      // frame uses positive lateral distance on the west side.
+      if (axis === 'Z' && corridor.id.startsWith('orr-')) {
+        const lateralOffset = sideOffset >= 0 ? -Math.abs(sideOffset) : Math.abs(sideOffset);
+        [x, z] = getOrrOffsetPointAtZ(pos, lateralOffset + jitter);
+      }
 
       // Deterministic scale ±15% per tree
       const scale = 0.88 + Math.abs(Math.sin(seed * 0.77 + cIdx)) * 0.24;

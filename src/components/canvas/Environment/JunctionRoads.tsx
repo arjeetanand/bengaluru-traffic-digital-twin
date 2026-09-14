@@ -5,8 +5,10 @@ import {
   ORR_CENTERLINE_PTS,
   HAL_TO_SPICEGARDEN_PTS,
   createRoadRibbonGeometry,
-  createCurveLineGeometry
+  createCurveLineGeometry,
+  getOrrOffsetPointAtZ
 } from '../../../data/RealRoadData';
+import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
 
 interface JunctionRoadsProps {
   isRaining: boolean;
@@ -45,7 +47,7 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
   // 1. East Service Road (Northbound along ORR towards Kalamandir)
   const eastServiceRoadGeom = useMemo(() => {
     return createRoadRibbonGeometry(
-      ORR_CENTERLINE_PTS.map(([x, z]) => [x + 14.5, z]),
+      ORR_CENTERLINE_PTS.map(([, z]) => getOrrOffsetPointAtZ(z, -14.5)),
       11.5,
       () => 0.05,
       120
@@ -55,7 +57,7 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
   // 2. West Service Road (Southbound along ORR towards Multiplex)
   const westServiceRoadGeom = useMemo(() => {
     return createRoadRibbonGeometry(
-      ORR_CENTERLINE_PTS.map(([x, z]) => [x - 14.5, z]),
+      ORR_CENTERLINE_PTS.map(([, z]) => getOrrOffsetPointAtZ(z, 14.5)),
       11.5,
       () => 0.05,
       120
@@ -82,6 +84,48 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
       140
     );
   }, []);
+
+  const northUTurnGeom = useMemo(
+    () => createRoadRibbonGeometry(
+      U_TURN_CONNECTORS.north.points.map(([x, _y, z]) => [x, z]),
+      3.5,
+      () => 0.13,
+      64
+    ),
+    []
+  );
+
+  const southUTurnGeom = useMemo(
+    () => createRoadRibbonGeometry(
+      U_TURN_CONNECTORS.south.points.map(([x, _y, z]) => [x, z]),
+      3.5,
+      () => 0.13,
+      64
+    ),
+    []
+  );
+
+  const northUTurnEdgeGeom = useMemo(
+    () => createCurveLineGeometry(
+      U_TURN_CONNECTORS.north.points.map(([x, _y, z]) => [x, z]),
+      0,
+      () => 0.19,
+      0.16,
+      64
+    ),
+    []
+  );
+
+  const southUTurnEdgeGeom = useMemo(
+    () => createCurveLineGeometry(
+      U_TURN_CONNECTORS.south.points.map(([x, _y, z]) => [x, z]),
+      0,
+      () => 0.19,
+      0.16,
+      64
+    ),
+    []
+  );
 
   return (
     <group name="MarathahalliUndergroundAndSurfaceSystem">
@@ -127,6 +171,21 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
         {/* ── Real Curved ORR West Service Road (Southbound towards Multiplex) ── */}
         <mesh geometry={westServiceRoadGeom} receiveShadow>
           <meshStandardMaterial {...asphaltProps} />
+        </mesh>
+
+        {/* Shared drivable U-turn connectors. The traffic fleet consumes the
+            same points, keeping the visible asphalt and vehicle route aligned. */}
+        <mesh geometry={northUTurnGeom} receiveShadow renderOrder={1}>
+          <meshStandardMaterial color={isRaining ? '#15181d' : '#30343b'} roughness={0.78} />
+        </mesh>
+        <mesh geometry={southUTurnGeom} receiveShadow renderOrder={1}>
+          <meshStandardMaterial color={isRaining ? '#15181d' : '#30343b'} roughness={0.78} />
+        </mesh>
+        <mesh geometry={northUTurnEdgeGeom} renderOrder={2}>
+          <meshBasicMaterial color="#fbbf24" transparent opacity={0.9} />
+        </mesh>
+        <mesh geometry={southUTurnEdgeGeom} renderOrder={2}>
+          <meshBasicMaterial color="#fbbf24" transparent opacity={0.9} />
         </mesh>
 
         {/* ── Zebra Crossings on the Surface Crossroads (at real 21m half-junction) ── */}

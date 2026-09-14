@@ -37,6 +37,7 @@ interface SceneProps {
   simSpeed: 1 | 10 | 60;
   isCinematic: boolean;
   cameraPreset: CameraPreset;
+  cameraMode: 'walk' | 'overview';
   footpathAuditMode: boolean;
   buildingMode?: 'osm' | 'google-tiles';
   googleMapsApiKey?: string;
@@ -54,6 +55,7 @@ export const Scene: React.FC<SceneProps> = ({
   simSpeed,
   isCinematic,
   cameraPreset,
+  cameraMode,
   footpathAuditMode,
   buildingMode = 'osm',
   googleMapsApiKey,
@@ -95,8 +97,10 @@ export const Scene: React.FC<SceneProps> = ({
 
         {/* Camera Rig & OrbitControls */}
         <CameraController
+          key={`${cameraPreset}-${cameraMode}`}
           isCinematic={isCinematic}
           cameraPreset={cameraPreset}
+          cameraMode={cameraMode}
           simSpeedMultiplier={simSpeed}
         />
 
@@ -199,7 +203,7 @@ export const Scene: React.FC<SceneProps> = ({
           {buildingMode === 'google-tiles' ? (
             <Google3DTiles apiKey={googleMapsApiKey} />
           ) : (
-            <Buildings isNight={isNight} />
+          <Buildings isNight={isNight} includeSurroundingBuildings={false} />
           )}
 
           <StreetFurniture

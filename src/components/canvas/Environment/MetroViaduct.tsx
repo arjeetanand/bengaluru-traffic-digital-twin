@@ -12,9 +12,11 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   const metroWidth = 6.8;   // corrected: real BMRCL U-girder width (was 9.8m — too wide)
   const metroTrainRef = useRef<THREE.Group>(null);
 
-  // Metro pier coordinates along the median (Z-axis, every 45m)
+  // Metro pier coordinates along the median. The two inner supports are
+  // pushed just beyond the underpass/skywalk clear zone so foundations do not
+  // sit in the sunken carriageway or cut through the pedestrian deck.
   const pierZCoords = useMemo(
-    () => [-210, -165, -120, -75, -30, 30, 75, 120, 165],
+    () => [-210, -165, -120, -75, -42, 42, 75, 120, 165],
     []
   );
 

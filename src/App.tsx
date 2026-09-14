@@ -27,6 +27,7 @@ export const App: React.FC = () => {
     isCinematic: false,
     vehicleCount: SIMULATION_CONFIG.defaultVehicleCount,
     cameraPreset: 'overview',
+    cameraMode: 'overview',
     footpathAuditMode: false,
     buildingMode: 'osm',
     googleMapsApiKey: (import.meta.env.VITE_GOOGLE_MAPS_KEY as string) || ''
@@ -142,6 +143,7 @@ export const App: React.FC = () => {
         simSpeed={mode.simSpeed}
         isCinematic={mode.isCinematic}
         cameraPreset={mode.cameraPreset}
+        cameraMode={mode.cameraMode}
         footpathAuditMode={mode.footpathAuditMode}
         buildingMode={mode.buildingMode}
         googleMapsApiKey={mode.googleMapsApiKey}

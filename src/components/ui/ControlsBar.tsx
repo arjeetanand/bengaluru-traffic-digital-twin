@@ -51,6 +51,28 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
         <span>MAP STORES</span>
       </button>
 
+      {/* ── Person / Bird's-eye inspection mode ── */}
+      <div className="btn-group camera-mode-group" aria-label="Camera inspection mode">
+        <button
+          className={`group-item ${mode.cameraMode === 'walk' ? 'active' : ''}`}
+          aria-pressed={mode.cameraMode === 'walk'}
+          onClick={() => onUpdateMode({ cameraMode: 'walk' })}
+          title="Person mode: walk the modeled roads and footpaths at 1.7m eye height"
+        >
+          <Footprints size={13} />
+          <span>PERSON</span>
+        </button>
+        <button
+          className={`group-item ${mode.cameraMode === 'overview' ? 'active' : ''}`}
+          aria-pressed={mode.cameraMode === 'overview'}
+          onClick={() => onUpdateMode({ cameraMode: 'overview' })}
+          title="Bird's-eye mode: orbit and survey the full corridor"
+        >
+          <MapPin size={13} />
+          <span>BIRD VIEW</span>
+        </button>
+      </div>
+
       {/* ── Footpath Walkability Audit Toggle ── */}
       <button
         className={`control-btn ${mode.footpathAuditMode ? 'audit-active' : ''}`}

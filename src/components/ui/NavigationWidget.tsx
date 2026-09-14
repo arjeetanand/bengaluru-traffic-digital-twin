@@ -28,7 +28,7 @@ export const NavigationWidget: React.FC = () => {
   useEffect(() => {
     const handleGlobalPointerUp = () => {
       setActiveButton(null);
-      cameraControlBus.resetInputs();
+      cameraControlBus.releaseAllInputs();
     };
     window.addEventListener('pointerup', handleGlobalPointerUp);
     window.addEventListener('pointercancel', handleGlobalPointerUp);
@@ -38,19 +38,27 @@ export const NavigationWidget: React.FC = () => {
     };
   }, []);
 
-  const handlePointerDown = (key: keyof CameraInputState, buttonId: string) => {
+  const handlePointerDown = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    key: keyof CameraInputState,
+    buttonId: string
+  ) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
     setActiveButton(buttonId);
     cameraControlBus.setInput({ [key]: true });
   };
 
-  const handlePointerUp = (key: keyof CameraInputState) => {
+  const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>, key: keyof CameraInputState) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     setActiveButton(null);
     cameraControlBus.setInput({ [key]: false });
   };
 
   const handlePointerCancel = () => {
     setActiveButton(null);
-    cameraControlBus.resetInputs();
+    cameraControlBus.releaseAllInputs();
   };
 
   const handleResetCenter = () => {
@@ -78,10 +86,7 @@ export const NavigationWidget: React.FC = () => {
   }
 
   return (
-    <div
-      className="nav-widget-card"
-      onPointerLeave={handlePointerCancel}
-    >
+    <div className="nav-widget-card">
       <div className="nav-widget-header">
         <div className="nav-widget-title">
           <Compass size={13} className="text-cyan" />
@@ -109,8 +114,9 @@ export const NavigationWidget: React.FC = () => {
               <div />
               <button
                 className={`d-pad-btn ${activeButton === 'fwd' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('forward', 'fwd')}
-                onPointerUp={() => handlePointerUp('forward')}
+                onPointerDown={(event) => handlePointerDown(event, 'forward', 'fwd')}
+                onPointerUp={(event) => handlePointerUp(event, 'forward')}
+                onPointerCancel={handlePointerCancel}
                 title="Move Forward [W]"
               >
                 <ChevronUp size={16} />
@@ -119,8 +125,9 @@ export const NavigationWidget: React.FC = () => {
 
               <button
                 className={`d-pad-btn ${activeButton === 'left' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('left', 'left')}
-                onPointerUp={() => handlePointerUp('left')}
+                onPointerDown={(event) => handlePointerDown(event, 'left', 'left')}
+                onPointerUp={(event) => handlePointerUp(event, 'left')}
+                onPointerCancel={handlePointerCancel}
                 title="Strafe Left [A]"
               >
                 <ChevronLeft size={16} />
@@ -134,8 +141,9 @@ export const NavigationWidget: React.FC = () => {
               </button>
               <button
                 className={`d-pad-btn ${activeButton === 'right' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('right', 'right')}
-                onPointerUp={() => handlePointerUp('right')}
+                onPointerDown={(event) => handlePointerDown(event, 'right', 'right')}
+                onPointerUp={(event) => handlePointerUp(event, 'right')}
+                onPointerCancel={handlePointerCancel}
                 title="Strafe Right [D]"
               >
                 <ChevronRight size={16} />
@@ -144,8 +152,9 @@ export const NavigationWidget: React.FC = () => {
               <div />
               <button
                 className={`d-pad-btn ${activeButton === 'back' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('backward', 'back')}
-                onPointerUp={() => handlePointerUp('backward')}
+                onPointerDown={(event) => handlePointerDown(event, 'backward', 'back')}
+                onPointerUp={(event) => handlePointerUp(event, 'backward')}
+                onPointerCancel={handlePointerCancel}
                 title="Move Backward [S]"
               >
                 <ChevronDown size={16} />
@@ -164,8 +173,9 @@ export const NavigationWidget: React.FC = () => {
               <div />
               <button
                 className={`d-pad-btn ${activeButton === 'tiltUp' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('tiltUp', 'tiltUp')}
-                onPointerUp={() => handlePointerUp('tiltUp')}
+                onPointerDown={(event) => handlePointerDown(event, 'tiltUp', 'tiltUp')}
+                onPointerUp={(event) => handlePointerUp(event, 'tiltUp')}
+                onPointerCancel={handlePointerCancel}
                 title="Tilt Up [Look up at Flyover/Metro/Sky]"
               >
                 <ChevronUp size={16} />
@@ -174,8 +184,9 @@ export const NavigationWidget: React.FC = () => {
 
               <button
                 className={`d-pad-btn ${activeButton === 'rotL' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('turnLeft', 'rotL')}
-                onPointerUp={() => handlePointerUp('turnLeft')}
+                onPointerDown={(event) => handlePointerDown(event, 'turnLeft', 'rotL')}
+                onPointerUp={(event) => handlePointerUp(event, 'turnLeft')}
+                onPointerCancel={handlePointerCancel}
                 title="Turn Left 360° [←]"
               >
                 <RotateCcw size={13} />
@@ -183,8 +194,9 @@ export const NavigationWidget: React.FC = () => {
               <div className="d-pad-center-tag">360°</div>
               <button
                 className={`d-pad-btn ${activeButton === 'rotR' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('turnRight', 'rotR')}
-                onPointerUp={() => handlePointerUp('turnRight')}
+                onPointerDown={(event) => handlePointerDown(event, 'turnRight', 'rotR')}
+                onPointerUp={(event) => handlePointerUp(event, 'turnRight')}
+                onPointerCancel={handlePointerCancel}
                 title="Turn Right 360° [→]"
               >
                 <RotateCw size={13} />
@@ -193,8 +205,9 @@ export const NavigationWidget: React.FC = () => {
               <div />
               <button
                 className={`d-pad-btn ${activeButton === 'tiltDown' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('tiltDown', 'tiltDown')}
-                onPointerUp={() => handlePointerUp('tiltDown')}
+                onPointerDown={(event) => handlePointerDown(event, 'tiltDown', 'tiltDown')}
+                onPointerUp={(event) => handlePointerUp(event, 'tiltDown')}
+                onPointerCancel={handlePointerCancel}
                 title="Tilt Down [Look down at Underpass/Road]"
               >
                 <ChevronDown size={16} />
@@ -211,8 +224,9 @@ export const NavigationWidget: React.FC = () => {
             <div className="btn-pair">
               <button
                 className={`alt-btn ${activeButton === 'up' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('up', 'up')}
-                onPointerUp={() => handlePointerUp('up')}
+                onPointerDown={(event) => handlePointerDown(event, 'up', 'up')}
+                onPointerUp={(event) => handlePointerUp(event, 'up')}
+                onPointerCancel={handlePointerCancel}
                 title="Elevate Up [E / Space]"
               >
                 <ArrowUp size={11} />
@@ -220,8 +234,9 @@ export const NavigationWidget: React.FC = () => {
               </button>
               <button
                 className={`alt-btn ${activeButton === 'down' ? 'btn-active' : ''}`}
-                onPointerDown={() => handlePointerDown('down', 'down')}
-                onPointerUp={() => handlePointerUp('down')}
+                onPointerDown={(event) => handlePointerDown(event, 'down', 'down')}
+                onPointerUp={(event) => handlePointerUp(event, 'down')}
+                onPointerCancel={handlePointerCancel}
                 title="Lower Down [Q / C]"
               >
                 <ArrowDown size={11} />

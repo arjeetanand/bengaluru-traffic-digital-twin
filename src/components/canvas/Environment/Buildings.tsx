@@ -16,11 +16,16 @@ import {
 
 interface BuildingsProps {
   isNight: boolean;
+  includeSurroundingBuildings?: boolean;
 }
 
-export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
+export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundingBuildings = false }) => {
   // ── 1. Batch-merge surrounding OSM buildings by category for render performance ──
   const { commercialBatch, retailBatch, apartmentsBatch } = useMemo(() => {
+    if (!includeSurroundingBuildings) {
+      return { commercialBatch: null, retailBatch: null, apartmentsBatch: null };
+    }
+
     const commercialGeoms: THREE.BufferGeometry[] = [];
     const retailGeoms: THREE.BufferGeometry[] = [];
     const residentialGeoms: THREE.BufferGeometry[] = [];
@@ -96,7 +101,7 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
       retailBatch: safeMerge(retailGeoms),
       apartmentsBatch: safeMerge(residentialGeoms)
     };
-  }, []);
+  }, [includeSurroundingBuildings]);
 
   // Textures for surrounding buildings
   const curtainTexture = useMemo(() => createGlassCurtainTexture(isNight), [isNight]);
@@ -111,8 +116,8 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
 
   return (
     <group name="MarathahalliRealOsmBuildings">
-      {/* ── Surrounding OSM Merged Buildings ── */}
-      {commercialBatch && (
+      {/* ── Optional legacy merged surroundings; the OSM snapshot is the default source layer. ── */}
+      {includeSurroundingBuildings && commercialBatch && (
         <mesh geometry={commercialBatch} castShadow receiveShadow>
           <meshStandardMaterial
             map={curtainTexture}
@@ -124,7 +129,7 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
         </mesh>
       )}
 
-      {retailBatch && (
+      {includeSurroundingBuildings && retailBatch && (
         <mesh geometry={retailBatch} castShadow receiveShadow>
           <meshStandardMaterial
             map={commercialTexture}
@@ -136,7 +141,7 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
         </mesh>
       )}
 
-      {apartmentsBatch && (
+      {includeSurroundingBuildings && apartmentsBatch && (
         <mesh geometry={apartmentsBatch} castShadow receiveShadow>
           <meshStandardMaterial
             map={apartmentTexture}

@@ -9,6 +9,8 @@ import {
   createBusGeometry,
   createTwoWheelerGeometry
 } from './VehicleModels';
+import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
+import { getOrrOffsetPointAtZ } from '../../../data/RealRoadData';
 
 interface TrafficSystemProps {
   signalStatus: SignalStatus;
@@ -24,6 +26,7 @@ interface LaneDefinition {
   length: number;
   controlledBy: 'NS' | 'EW' | 'FREE';
   stopT: number; // progress t at stop line
+  closedLoop: boolean;
 }
 
 interface VehicleAgent {
@@ -97,12 +100,26 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
   const lanes: LaneDefinition[] = useMemo(() => {
     const list: LaneDefinition[] = [];
 
+    const orrPoint = (z: number, lateralOffset: number, y: number): [number, number, number] => {
+      const [x, projectedZ] = getOrrOffsetPointAtZ(z, lateralOffset);
+      return [x, y, projectedZ];
+    };
+
+    const underpassY = (z: number) => {
+      const absZ = Math.abs(z);
+      if (absZ <= 35) return -5.1;
+      if (absZ >= 150) return 0.1;
+      const progress = (absZ - 35) / (150 - 35);
+      return -5.1 * (1 - progress) + 0.1 * progress;
+    };
+
     // Helper to register spline
     const addLane = (
       id: string,
       points: [number, number, number][],
       controlledBy: 'NS' | 'EW' | 'FREE',
-      stopT: number = 0.45
+      stopT: number = 0.45,
+      closedLoop = false
     ) => {
       const vPoints = points.map((p) => new THREE.Vector3(...p));
       const spline = new THREE.CatmullRomCurve3(vPoints, false, 'catmullrom', 0.2);
@@ -111,104 +128,105 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
         spline,
         length: spline.getLength(),
         controlledBy,
-        stopT
+        stopT,
+        closedLoop
       });
     };
 
     // 1, 2, 3. Underpass Northbound Express Lanes (ORR subterranean through-highway, free-flowing at y = -5.1m)
     addLane('underpass-nb-1', [
-      [2.7, 0.1, -170],
-      [2.7, -0.6, -115],
-      [2.7, -5.1, -40],
-      [2.7, -5.1, 0],
-      [2.7, -5.1, 40],
-      [2.7, -0.6, 115],
-      [2.7, 0.1, 170]
+      orrPoint(-170, -2.7, underpassY(-170)),
+      orrPoint(-115, -2.7, underpassY(-115)),
+      orrPoint(-40, -2.7, underpassY(-40)),
+      orrPoint(0, -2.7, underpassY(0)),
+      orrPoint(40, -2.7, underpassY(40)),
+      orrPoint(115, -2.7, underpassY(115)),
+      orrPoint(170, -2.7, underpassY(170))
     ], 'FREE');
 
     addLane('underpass-nb-2', [
-      [5.4, 0.1, -170],
-      [5.4, -0.6, -115],
-      [5.4, -5.1, -40],
-      [5.4, -5.1, 0],
-      [5.4, -5.1, 40],
-      [5.4, -0.6, 115],
-      [5.4, 0.1, 170]
+      orrPoint(-170, -5.4, underpassY(-170)),
+      orrPoint(-115, -5.4, underpassY(-115)),
+      orrPoint(-40, -5.4, underpassY(-40)),
+      orrPoint(0, -5.4, underpassY(0)),
+      orrPoint(40, -5.4, underpassY(40)),
+      orrPoint(115, -5.4, underpassY(115)),
+      orrPoint(170, -5.4, underpassY(170))
     ], 'FREE');
 
     addLane('underpass-nb-3', [
-      [7.8, 0.1, -170],
-      [7.8, -0.6, -115],
-      [7.8, -5.1, -40],
-      [7.8, -5.1, 0],
-      [7.8, -5.1, 40],
-      [7.8, -0.6, 115],
-      [7.8, 0.1, 170]
+      orrPoint(-170, -7.8, underpassY(-170)),
+      orrPoint(-115, -7.8, underpassY(-115)),
+      orrPoint(-40, -7.8, underpassY(-40)),
+      orrPoint(0, -7.8, underpassY(0)),
+      orrPoint(40, -7.8, underpassY(40)),
+      orrPoint(115, -7.8, underpassY(115)),
+      orrPoint(170, -7.8, underpassY(170))
     ], 'FREE');
 
     // 4, 5, 6. Underpass Southbound Express Lanes (ORR subterranean through-highway, free-flowing at y = -5.1m)
     addLane('underpass-sb-1', [
-      [-2.7, 0.1, 170],
-      [-2.7, -0.6, 115],
-      [-2.7, -5.1, 40],
-      [-2.7, -5.1, 0],
-      [-2.7, -5.1, -40],
-      [-2.7, -0.6, -115],
-      [-2.7, 0.1, -170]
+      orrPoint(170, 2.7, underpassY(170)),
+      orrPoint(115, 2.7, underpassY(115)),
+      orrPoint(40, 2.7, underpassY(40)),
+      orrPoint(0, 2.7, underpassY(0)),
+      orrPoint(-40, 2.7, underpassY(-40)),
+      orrPoint(-115, 2.7, underpassY(-115)),
+      orrPoint(-170, 2.7, underpassY(-170))
     ], 'FREE');
 
     addLane('underpass-sb-2', [
-      [-5.4, 0.1, 170],
-      [-5.4, -0.6, 115],
-      [-5.4, -5.1, 40],
-      [-5.4, -5.1, 0],
-      [-5.4, -5.1, -40],
-      [-5.4, -0.6, -115],
-      [-5.4, 0.1, -170]
+      orrPoint(170, 5.4, underpassY(170)),
+      orrPoint(115, 5.4, underpassY(115)),
+      orrPoint(40, 5.4, underpassY(40)),
+      orrPoint(0, 5.4, underpassY(0)),
+      orrPoint(-40, 5.4, underpassY(-40)),
+      orrPoint(-115, 5.4, underpassY(-115)),
+      orrPoint(-170, 5.4, underpassY(-170))
     ], 'FREE');
 
     addLane('underpass-sb-3', [
-      [-7.8, 0.1, 170],
-      [-7.8, -0.6, 115],
-      [-7.8, -5.1, 40],
-      [-7.8, -5.1, 0],
-      [-7.8, -5.1, -40],
-      [-7.8, -0.6, -115],
-      [-7.8, 0.1, -170]
+      orrPoint(170, 7.8, underpassY(170)),
+      orrPoint(115, 7.8, underpassY(115)),
+      orrPoint(40, 7.8, underpassY(40)),
+      orrPoint(0, 7.8, underpassY(0)),
+      orrPoint(-40, 7.8, underpassY(-40)),
+      orrPoint(-115, 7.8, underpassY(-115)),
+      orrPoint(-170, 7.8, underpassY(-170))
     ], 'FREE');
 
     // 7 & 8. Surface ORR Northbound Service Road (Stops at NS Signal before z = -18)
     addLane('surface-nb-1', [
-      [14.5, 0.1, -170],
-      [14.5, 0.1, -25],
-      [14.5, 0.1, 0],
-      [14.5, 0.1, 35],
-      [14.5, 0.1, 170]
+      orrPoint(-170, -14.5, 0.1),
+      orrPoint(-25, -14.5, 0.1),
+      orrPoint(0, -14.5, 0.1),
+      orrPoint(35, -14.5, 0.1),
+      orrPoint(170, -14.5, 0.1)
     ], 'NS', 0.44);
 
     addLane('surface-nb-2', [
-      [17.5, 0.1, -170],
-      [17.5, 0.1, -25],
-      [17.5, 0.1, 0],
-      [17.5, 0.1, 35],
-      [17.5, 0.1, 170]
+      orrPoint(-170, -17.5, 0.1),
+      orrPoint(-25, -17.5, 0.1),
+      orrPoint(0, -17.5, 0.1),
+      orrPoint(35, -17.5, 0.1),
+      orrPoint(170, -17.5, 0.1)
     ], 'NS', 0.44);
 
     // 9 & 10. Surface ORR Southbound Service Road (Stops at NS Signal before z = +18)
     addLane('surface-sb-1', [
-      [-14.5, 0.1, 170],
-      [-14.5, 0.1, 25],
-      [-14.5, 0.1, 0],
-      [-14.5, 0.1, -35],
-      [-14.5, 0.1, -170]
+      orrPoint(170, 14.5, 0.1),
+      orrPoint(25, 14.5, 0.1),
+      orrPoint(0, 14.5, 0.1),
+      orrPoint(-35, 14.5, 0.1),
+      orrPoint(-170, 14.5, 0.1)
     ], 'NS', 0.44);
 
     addLane('surface-sb-2', [
-      [-17.5, 0.1, 170],
-      [-17.5, 0.1, 25],
-      [-17.5, 0.1, 0],
-      [-17.5, 0.1, -35],
-      [-17.5, 0.1, -170]
+      orrPoint(170, 17.5, 0.1),
+      orrPoint(25, 17.5, 0.1),
+      orrPoint(0, 17.5, 0.1),
+      orrPoint(-35, 17.5, 0.1),
+      orrPoint(-170, 17.5, 0.1)
     ], 'NS', 0.44);
 
     // 11 & 12. HAL Old Airport Road to Varthur Road Eastbound (Direct Surface Road at y = 0.1, stops at EW signal)
@@ -288,6 +306,21 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       [-17.5, 0.1, -170]
     ], 'FREE');
 
+    // 19 & 20. Source-aligned surface U-turn connectors. These are shared
+    // with JunctionRoads so modelled vehicles follow a visible route.
+    addLane(
+      U_TURN_CONNECTORS.north.id,
+      U_TURN_CONNECTORS.north.points,
+      'NS',
+      U_TURN_CONNECTORS.north.stopT
+    );
+    addLane(
+      U_TURN_CONNECTORS.south.id,
+      U_TURN_CONNECTORS.south.points,
+      'NS',
+      U_TURN_CONNECTORS.south.stopT
+    );
+
     return list;
   }, []);
 
@@ -309,6 +342,14 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     let autoIdx = 0;
     let busIdx = 0;
     let twIdx = 0;
+    let randomState = (0x4d415241 ^ (vehicleTotalCount * 2654435761)) >>> 0;
+    const nextRandom = () => {
+      randomState = (randomState + 0x6d2b79f5) >>> 0;
+      let value = randomState;
+      value = Math.imul(value ^ (value >>> 15), value | 1);
+      value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+      return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    };
 
     // Helper to spawn a batch of vehicles of a type
     const spawnType = (
@@ -319,8 +360,8 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       getIdx: () => number
     ) => {
       for (let i = 0; i < count; i++) {
-        const laneIdx = Math.floor(Math.random() * lanes.length);
-        const t = Math.random(); // distributed along spline
+        const laneIdx = Math.floor(nextRandom() * lanes.length);
+        const t = 0.04 + nextRandom() * 0.88; // leave a small entry buffer at both ends
         list.push({
           id: idCounter++,
           type,
@@ -461,7 +502,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
         if (v > 0) {
           const vehAhead = vehList[v - 1];
           let gapMeters = (vehAhead.t - veh.t) * lane.length;
-          if (gapMeters < 0) gapMeters += lane.length; // wrap-around distance
+          if (gapMeters < 0 && lane.closedLoop) gapMeters += lane.length; // wrap-around only for closed circuits
 
           const minSafeGap = veh.lengthMeters + 3.0; // tight Indian traffic queue gap
           if (gapMeters < 35) {
@@ -485,9 +526,16 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
         const advanceT = (veh.speed * dt) / lane.length;
         veh.t += advanceT;
         if (veh.t > 1.0) {
-          // A high simulation multiplier can advance more than one lap in a
-          // fixed step; modulo keeps the lane position bounded and stable.
-          veh.t %= 1.0;
+          if (lane.closedLoop) {
+            // A high simulation multiplier can advance more than one lap in a
+            // fixed step; modulo keeps closed circuits bounded and stable.
+            veh.t %= 1.0;
+          } else {
+            // Open corridor lanes respawn at their signed entry instead of
+            // teleporting from an exit back through the middle of the map.
+            veh.t = 0.02 + (veh.id % 5) * 0.008;
+            veh.speed = veh.maxSpeed * 0.55;
+          }
         }
 
         // Calculate 3D position and tangent

@@ -38,6 +38,92 @@ export const ORR_CENTERLINE_PTS: [number, number][] = [
   [35.0, 470.0]
 ];
 
+export interface RoadFrame {
+  x: number;
+  z: number;
+  tangentX: number;
+  tangentZ: number;
+}
+
+// The ORR is the canonical north/south reference for the corridor. Keeping a
+// sampled frame beside the authored road ribbon lets footpaths, trees, and
+// pedestrians share the same curved alignment instead of drifting back to a
+// straight x = constant approximation.
+const ORR_CURVE = new THREE.CatmullRomCurve3(
+  ORR_CENTERLINE_PTS.map(([x, z]) => new THREE.Vector3(x, 0, z)),
+  false,
+  'catmullrom',
+  0.25
+);
+const ORR_FRAME_SAMPLES = ORR_CURVE.getPoints(640);
+
+export function getOrrRoadFrameAtZ(zCoord: number): RoadFrame {
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+
+  for (let index = 0; index < ORR_FRAME_SAMPLES.length; index += 1) {
+    const distance = Math.abs(ORR_FRAME_SAMPLES[index].z - zCoord);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = index;
+    }
+  }
+
+  const current = ORR_FRAME_SAMPLES[nearestIndex];
+  const previous = ORR_FRAME_SAMPLES[Math.max(0, nearestIndex - 1)];
+  const next = ORR_FRAME_SAMPLES[Math.min(ORR_FRAME_SAMPLES.length - 1, nearestIndex + 1)];
+  const tangent = new THREE.Vector2(next.x - previous.x, next.z - previous.z).normalize();
+
+  return {
+    x: current.x,
+    z: current.z,
+    tangentX: tangent.x,
+    tangentZ: tangent.y
+  };
+}
+
+export function getOrrOffsetPointAtZ(zCoord: number, lateralOffset: number): [number, number] {
+  const frame = getOrrRoadFrameAtZ(zCoord);
+  const normalX = -frame.tangentZ;
+  const normalZ = frame.tangentX;
+  return [
+    frame.x + normalX * lateralOffset,
+    frame.z + normalZ * lateralOffset
+  ];
+}
+
+/**
+ * Build a ribbon section offset from the curved ORR centerline. The caller's
+ * lateral sign follows the road frame: positive is west of the northbound
+ * tangent and negative is east.
+ */
+export function createOrrOffsetRibbonGeometry(
+  startZ: number,
+  endZ: number,
+  lateralOffset: number,
+  width: number,
+  surfaceY = 0.1,
+  sampleSteps = 36
+): THREE.BufferGeometry {
+  const pointCount = Math.max(3, Math.min(12, Math.ceil(Math.abs(endZ - startZ) / 22) + 1));
+  const controlPoints: [number, number][] = [];
+
+  for (let index = 0; index < pointCount; index += 1) {
+    const progress = pointCount === 1 ? 0 : index / (pointCount - 1);
+    const z = startZ + (endZ - startZ) * progress;
+    controlPoints.push(getOrrOffsetPointAtZ(z, lateralOffset));
+  }
+
+  const geometry = createRoadRibbonGeometry(
+    controlPoints,
+    width,
+    () => surfaceY,
+    sampleSteps
+  );
+
+  return geometry;
+}
+
 /**
  * 2. East-West Arterial Corridor:
  * HAL Old Airport Road (West) ──► Surface Junction ──► Marathahalli ROB Bridge ──► Spice Garden (East)

@@ -38,6 +38,8 @@ export type CameraPreset =
   | 'spicegarden'
   | 'crossover';
 
+export type CameraMode = 'walk' | 'overview';
+
 export type BuildingRenderMode = 'osm' | 'google-tiles';
 
 export interface SimulationMode {
@@ -47,6 +49,7 @@ export interface SimulationMode {
   isCinematic: boolean;
   vehicleCount: number;
   cameraPreset: CameraPreset;
+  cameraMode: CameraMode;
   footpathAuditMode: boolean;
   buildingMode: BuildingRenderMode;
   googleMapsApiKey?: string;
