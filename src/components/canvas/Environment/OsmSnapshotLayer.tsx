@@ -55,29 +55,80 @@ function createRibbonGeometry(
 ) {
   const positions: number[] = [];
   for (const feature of features) {
-    for (let index = 1; index < feature.geometry.length; index += 1) {
-      const previous = feature.geometry[index - 1];
-      const current = feature.geometry[index];
-      const dx = current[0] - previous[0];
-      const dz = current[1] - previous[1];
-      const length = Math.hypot(dx, dz);
-      if (length < 0.05) continue;
-      const halfWidth = (typeof width === 'function' ? width(feature) : width) / 2;
-      const nx = -dz / length;
-      const nz = dx / length;
-      const ax = previous[0] + nx * halfWidth;
-      const az = previous[1] + nz * halfWidth;
-      const bx = previous[0] - nx * halfWidth;
-      const bz = previous[1] - nz * halfWidth;
-      const cx = current[0] + nx * halfWidth;
-      const cz = current[1] + nz * halfWidth;
-      const dx2 = current[0] - nx * halfWidth;
-      const dz2 = current[1] - nz * halfWidth;
-      const previousY = typeof y === 'function' ? y(feature, previous) : y;
-      const currentY = typeof y === 'function' ? y(feature, current) : y;
+    if (feature.geometry.length < 2) continue;
+
+    const halfWidth = (typeof width === 'function' ? width(feature) : width) / 2;
+    const stripEdges = feature.geometry.map((point, index) => {
+      const previous = feature.geometry[Math.max(0, index - 1)];
+      const next = feature.geometry[Math.min(feature.geometry.length - 1, index + 1)];
+      const previousDx = point[0] - previous[0];
+      const previousDz = point[1] - previous[1];
+      const nextDx = next[0] - point[0];
+      const nextDz = next[1] - point[1];
+      const previousLength = Math.hypot(previousDx, previousDz);
+      const nextLength = Math.hypot(nextDx, nextDz);
+
+      // Degenerate source vertices occasionally occur in OSM ways. Use the
+      // non-zero adjacent segment so one bad vertex cannot collapse the
+      // entire strip.
+      const tangentDx = nextLength >= 0.05
+        ? nextDx / nextLength
+        : previousLength >= 0.05
+          ? previousDx / previousLength
+          : 1;
+      const tangentDz = nextLength >= 0.05
+        ? nextDz / nextLength
+        : previousLength >= 0.05
+          ? previousDz / previousLength
+          : 0;
+      const nextNormalX = -tangentDz;
+      const nextNormalZ = tangentDx;
+
+      let miterX = nextNormalX;
+      let miterZ = nextNormalZ;
+      let miterScale = halfWidth;
+      if (previousLength >= 0.05 && nextLength >= 0.05) {
+        const previousTangentX = previousDx / previousLength;
+        const previousTangentZ = previousDz / previousLength;
+        const previousNormalX = -previousTangentZ;
+        const previousNormalZ = previousTangentX;
+        const combinedNormalLength = Math.hypot(
+          previousNormalX + nextNormalX,
+          previousNormalZ + nextNormalZ
+        );
+
+        if (combinedNormalLength >= 0.001) {
+          miterX = (previousNormalX + nextNormalX) / combinedNormalLength;
+          miterZ = (previousNormalZ + nextNormalZ) / combinedNormalLength;
+          const miterDenominator = miterX * nextNormalX + miterZ * nextNormalZ;
+          if (Math.abs(miterDenominator) >= 0.2) {
+            // Clamp acute OSM bends so a narrow footway cannot create an
+            // extreme spike that reaches into an adjacent building or lane.
+            miterScale = Math.min(halfWidth * 3, halfWidth / miterDenominator);
+          } else {
+            miterX = nextNormalX;
+            miterZ = nextNormalZ;
+          }
+        }
+      }
+
+      const yValue = typeof y === 'function' ? y(feature, point) : y;
+      return {
+        left: [point[0] + miterX * miterScale, yValue, point[1] + miterZ * miterScale] as const,
+        right: [point[0] - miterX * miterScale, yValue, point[1] - miterZ * miterScale] as const
+      };
+    });
+
+    for (let index = 1; index < stripEdges.length; index += 1) {
+      const previous = stripEdges[index - 1];
+      const current = stripEdges[index];
       positions.push(
-        ax, previousY, az, cx, currentY, cz, bx, previousY, bz,
-        cx, currentY, cz, dx2, currentY, dz2, bx, previousY, bz
+        previous.left[0], previous.left[1], previous.left[2],
+        current.left[0], current.left[1], current.left[2],
+        previous.right[0], previous.right[1], previous.right[2],
+        current.left[0], current.left[1], current.left[2],
+        current.right[0], current.right[1], current.right[2],
+        previous.right[0], previous.right[1], previous.right[2]
       );
     }
   }
