@@ -12,6 +12,8 @@ interface OsmSnapshotLayerProps {
   isNight?: boolean;
   showBuildings?: boolean;
   buildingLimit?: number;
+  buildingOpacity?: number;
+  buildingOutlineOpacity?: number;
   labelDistanceFactor?: number;
 }
 
@@ -186,6 +188,8 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   isNight = false,
   showBuildings = false,
   buildingLimit = 500,
+  buildingOpacity = 0.5,
+  buildingOutlineOpacity = 0.32,
   labelDistanceFactor = 65
 }) => {
   const [snapshot, setSnapshot] = useState<MarathahalliDemoSnapshot | null>(null);
@@ -276,7 +280,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             roughness={0.92}
             metalness={0.05}
             transparent
-            opacity={0.5}
+            opacity={buildingOpacity}
           />
         </mesh>
       )}
@@ -286,7 +290,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           <lineBasicMaterial
             color={isNight ? '#64748b' : '#a8bac8'}
             transparent
-            opacity={isNight ? 0.22 : 0.32}
+            opacity={isNight ? Math.min(0.22, buildingOutlineOpacity) : buildingOutlineOpacity}
             depthWrite={false}
           />
         </lineSegments>

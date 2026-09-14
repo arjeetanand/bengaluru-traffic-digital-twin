@@ -31,6 +31,7 @@ import { RainParticles } from './Environment/RainParticles';
 import { TrafficSystem } from './traffic/TrafficSystem';
 import { SourceCorridorTraffic } from './traffic/SourceCorridorTraffic';
 import { OsmSnapshotLayer } from './Environment/OsmSnapshotLayer';
+import { CrossoverFocusOverlay } from './Environment/CrossoverFocusOverlay';
 
 interface SceneProps {
   isNight: boolean;
@@ -77,6 +78,7 @@ export const Scene: React.FC<SceneProps> = ({
   const hemiIntensity = isNight ? 0.2 : (isRaining ? 0.6 : 0.85);
 
   const isLongCorridorView = cameraPreset === 'corridor';
+  const isCrossoverFocusView = cameraPreset === 'crossover';
   const corridorVehicleCount = Math.min(vehicleCount, Math.max(32, Math.round(vehicleCount * 0.18)));
   const junctionVehicleCount = Math.max(0, vehicleCount - corridorVehicleCount);
   const fogDensity = isLongCorridorView
@@ -150,7 +152,9 @@ export const Scene: React.FC<SceneProps> = ({
           <OsmSnapshotLayer
             isNight={isNight}
             showBuildings
-            buildingLimit={1000}
+            buildingLimit={isCrossoverFocusView ? 520 : 1000}
+            buildingOpacity={isCrossoverFocusView ? 0.28 : 0.5}
+            buildingOutlineOpacity={isCrossoverFocusView ? 0.2 : 0.32}
             labelDistanceFactor={cameraPreset === 'corridor' ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65))}
           />
 
@@ -160,6 +164,10 @@ export const Scene: React.FC<SceneProps> = ({
             isNight={isNight}
             congestionRatio={congestionRatio}
           />
+
+          {isCrossoverFocusView && (
+            <CrossoverFocusOverlay isNight={isNight} />
+          )}
 
           {/* ── Realistic Pedestrian Footpaths (Paved, Missing, Encroached, Metro-Blocked) ── */}
           <Footpaths
@@ -194,14 +202,18 @@ export const Scene: React.FC<SceneProps> = ({
           />
 
           {/* ── Realistic West Corridor Landmarks (Innovative Multiplex, Krishna Summit, Krishna Grand, Novel MSR) ── */}
-          <WestCorridorBuildings
-            isNight={isNight}
-          />
+          {!isCrossoverFocusView && (
+            <WestCorridorBuildings
+              isNight={isNight}
+            />
+          )}
 
           {/* ── Realistic East Corridor Landmarks (Brand Factory, Kalamandir Palace, Factory Outlets Row, Nalli Silks) ── */}
-          <EastCorridorBuildings
-            isNight={isNight}
-          />
+          {!isCrossoverFocusView && (
+            <EastCorridorBuildings
+              isNight={isNight}
+            />
+          )}
 
           {/* ── 3D Google Maps Prominent Store Pins & Billboard Badges (Real Lat/Long) ── */}
           <GoogleMaps3DMarkers
@@ -213,9 +225,9 @@ export const Scene: React.FC<SceneProps> = ({
           {/* ── Surrounding Commercial Landmarks / Google 3D Tiles ── */}
           {buildingMode === 'google-tiles' ? (
             <Google3DTiles apiKey={googleMapsApiKey} />
-          ) : (
+          ) : !isCrossoverFocusView ? (
           <Buildings isNight={isNight} includeSurroundingBuildings={false} />
-          )}
+          ) : null}
 
           <StreetFurniture
             isNight={isNight}

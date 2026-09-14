@@ -88,11 +88,12 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     target: [860, 6, 24]
   },
   crossover: {
-    // East-side oblique angle keeps both source-aligned U-turn loops and the
-    // curved metro deck in frame without letting the foreground structures
-    // swallow the signal crossover.
-    position: [130, 108, 190],
-    target: [0, 3, 12]
+    // A tighter north-east survey angle keeps the source-aligned U-turn loops,
+    // zebra table, metro piers and both approach roads in the central frame.
+    // The extra elevation clears the authored retail roofs that previously
+    // obscured the legal turning movement.
+    position: [92, 142, 126],
+    target: [-2, 1, 8]
   },
   corridor: {
     // Full source corridor: Oracle Tech Hub → Marathahalli junction →
