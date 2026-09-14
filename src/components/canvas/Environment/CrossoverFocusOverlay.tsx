@@ -26,7 +26,7 @@ function createConnectorSurfaceGeometry(
   // drift from the shared scenario lane if the source points are revised.
   return createRoadRibbonGeometry(
     points.map(([x, _y, z]) => [x, z]),
-    5.4,
+    3.8,
     () => 0.19,
     64,
     'centripetal'
@@ -130,12 +130,11 @@ const DirectionMarkers: React.FC<{
 };
 
 /**
- * Focus aid for the crossover preset. The highlighted paths are not a second
- * traffic network: they are generated from U_TURN_CONNECTORS, the same
- * authored connector points consumed by JunctionRoads and TrafficSystem. They
- * are not OSM way geometry. The OSM snapshot also carries a no_u_turn
- * relation, so these remain scenario links until the turn restriction is
- * reconciled with the field plan.
+ * Focus aid for the crossover preset. The highlighted paths are generated
+ * from U_TURN_CONNECTORS, the same source-linked points consumed by
+ * JunctionRoads and TrafficSystem. They follow the short OSM relation trace,
+ * but remain scenario links because the snapshot records no_u_turn for that
+ * movement and does not contain a field-verified turn plan.
  */
 export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   isNight = false,
@@ -154,25 +153,25 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   const northDashGeometry = useMemo(() => createConnectorDashGeometry(northCurve), [northCurve]);
   const southDashGeometry = useMemo(() => createConnectorDashGeometry(southCurve), [southCurve]);
   const northLabelPosition = useMemo(() => {
-    const point = northCurve.getPointAt(0.62);
-    const tangent = northCurve.getTangentAt(0.62).setY(0).normalize();
+    const point = northCurve.getPointAt(0.58);
+    const tangent = northCurve.getTangentAt(0.58).setY(0).normalize();
     const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
-    return [point.x + normal.x * 12, 5.4, point.z + normal.z * 12] as [number, number, number];
+    return [point.x + normal.x * 8, 4.8, point.z + normal.z * 8] as [number, number, number];
   }, [northCurve]);
   const southLabelPosition = useMemo(() => {
-    const point = southCurve.getPointAt(0.62);
-    const tangent = southCurve.getTangentAt(0.62).setY(0).normalize();
+    const point = southCurve.getPointAt(0.58);
+    const tangent = southCurve.getTangentAt(0.58).setY(0).normalize();
     const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
-    return [point.x - normal.x * 12, 5.4, point.z - normal.z * 12] as [number, number, number];
+    return [point.x - normal.x * 8, 4.8, point.z - normal.z * 8] as [number, number, number];
   }, [southCurve]);
   const gates = useMemo(() => [
     {
-      id: 'north',
+      id: 'relation-via-entry',
       position: [U_TURN_CONNECTORS.north.points[4][0], 0.42, U_TURN_CONNECTORS.north.points[4][2]] as [number, number, number]
     },
     {
-      id: 'south',
-      position: [U_TURN_CONNECTORS.south.points[7][0], 0.42, U_TURN_CONNECTORS.south.points[7][2]] as [number, number, number]
+      id: 'relation-via-exit',
+      position: [U_TURN_CONNECTORS.north.points[6][0], 0.42, U_TURN_CONNECTORS.north.points[6][2]] as [number, number, number]
     }
   ], []);
   const accent = isNight ? '#fbbf24' : '#f59e0b';
@@ -190,10 +189,17 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
       {/* JunctionRoads keeps its authored U-turn asphalt and chevrons inside
           the non-source fallback branch. In the live source-backed scene this
           group is therefore an audit visualization, not a surveyed road. Keep
-          the filled ribbons translucent and remove them from person mode so a
-          pedestrian sees the mapped road/footway rather than a giant overlay. */}
+          the source-linked replay ribbon narrow and translucent; the mapped
+          road/footway remains the primary visual surface. */}
       {isOverview && (
-      <group name="ModelledUturnBirdAudit">
+        <group
+          name="ModelledUturnBirdAudit"
+          userData={{
+            source: 'OSM relation/18922642',
+            status: 'source-linked scenario replay',
+            legality: 'no_u_turn in snapshot; field verification required'
+          }}
+        >
         {/* A restrained center halo anchors the signal table without covering the
             source road surface. */}
         <mesh position={[0, 0.34, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={8}>
@@ -201,13 +207,14 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           <meshBasicMaterial color="#38bdf8" transparent opacity={isNight ? 0.9 : 0.72} depthWrite={false} />
         </mesh>
 
-        {/* The two modelled loop surfaces use the shared road-ribbon builder;
-            they are an audit overlay, not a claim that OSM mapped this turn. */}
+        {/* The two short source-linked surfaces use the shared road-ribbon
+            builder; they are an audit overlay, not a claim that OSM permits
+            this turn. */}
         <mesh geometry={northSurfaceGeometry} renderOrder={7}>
-          <meshStandardMaterial color="#1f2937" roughness={0.92} metalness={0.04} transparent opacity={0.42} depthWrite={false} />
+          <meshStandardMaterial color="#334155" roughness={0.92} metalness={0.04} transparent opacity={0.2} depthWrite={false} />
         </mesh>
         <mesh geometry={southSurfaceGeometry} renderOrder={7}>
-          <meshStandardMaterial color="#1f2937" roughness={0.92} metalness={0.04} transparent opacity={0.42} depthWrite={false} />
+          <meshStandardMaterial color="#334155" roughness={0.92} metalness={0.04} transparent opacity={0.2} depthWrite={false} />
         </mesh>
         <mesh geometry={northDashGeometry} renderOrder={9}>
           <meshBasicMaterial color="#f8fafc" transparent opacity={0.86} depthWrite={false} />
@@ -230,9 +237,9 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         <DirectionMarkers id="north" curve={northCurve} color={accent} />
         <DirectionMarkers id="south" curve={southCurve} color={accent} />
 
-        {/* These gates are indexed directly from U_TURN_CONNECTORS so they
-            cannot silently drift when a connector control point changes. They
-            are modelled audit markers, not legal-movement permissions. */}
+        {/* These gates are anchored to the exact via vertices of the source
+            relation trace. They are modelled audit markers, not
+            legal-movement permissions. */}
         {gates.map((gate) => (
           <group key={gate.id} position={gate.position}>
             <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={9}>
@@ -248,20 +255,20 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
 
         <FocusLabel
           position={northLabelPosition}
-          title="NORTH U-TURN"
-          detail="MODELLED ONLY · OSM NO U-TURN"
+          title="NORTH TURN REPLAY"
+          detail="SOURCE-LINKED · OSM NO U-TURN"
         />
         <FocusLabel
           position={southLabelPosition}
-          title="SOUTH U-TURN"
-          detail="MODELLED ONLY · OSM NO U-TURN"
+          title="SOUTH TURN REPLAY"
+          detail="REVERSE SCENARIO · FIELD VERIFY"
         />
         <FocusLabel
-          position={[-2, 8, 14]}
+          position={[-6, 7, 18]}
           title="MARATHAHALLI CROSSOVER"
-          detail="OSM ROAD FRAME · TURN STATUS UNRESOLVED"
+          detail="OSM ROADS + FOOTWAYS · TURN STATUS UNRESOLVED"
         />
-      </group>
+        </group>
       )}
 
       {/* At eye level, retain only a thin, low-contrast audit trace. The

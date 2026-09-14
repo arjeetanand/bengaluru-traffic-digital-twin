@@ -186,13 +186,13 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
   },
   crossover: {
     // Center on the source underpass/arterial crossover rather than the
-    // authored origin. The camera is high enough to clear the junction table
-    // and still expose the curved approaches.
-    position: [118, 128, 142],
+    // authored origin. The tighter inspection frame keeps the mapped road,
+    // source footways, signal cluster and short turn replay legible together.
+    position: [82, 86, 102],
     target: [
-      MARATHAHALLI_SOURCE_ANCHORS.underpass.center[0],
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[0],
       2,
-      MARATHAHALLI_SOURCE_ANCHORS.underpass.center[1]
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[1]
     ]
   },
   corridor: {
@@ -291,7 +291,7 @@ const WALK_STARTS: Record<CameraPreset, CameraView> = {
   },
   // The crossover walk view starts on the source frontage route and looks
   // toward the mapped crossing links.
-  crossover: { position: [-30.6, WALK_EYE_HEIGHT, -5.4], target: [-17.5, WALK_EYE_HEIGHT, -6.1] },
+  crossover: { position: [-30.6, WALK_EYE_HEIGHT, -5.4], target: [-52.2, WALK_EYE_HEIGHT, 2.5] },
   corridor: { position: [-95.8, WALK_EYE_HEIGHT, -247.4], target: [-106.7, WALK_EYE_HEIGHT, -288.8] },
   bellandur: { position: [-2965, WALK_EYE_HEIGHT, -3585], target: [-2945, WALK_EYE_HEIGHT, -3585] },
   oraclehub: {

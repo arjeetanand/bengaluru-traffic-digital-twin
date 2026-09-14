@@ -188,9 +188,9 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
           <meshStandardMaterial {...asphaltProps} />
         </mesh>
 
-        {/* Shared scenario U-turn connectors. The traffic fleet consumes the
-            same points, keeping the visible asphalt and vehicle route aligned;
-            mapped OSM restrictions are surfaced separately for review. */}
+        {/* Shared scenario turn replays. The traffic fleet consumes the same
+            source-linked points as the crossover audit; mapped OSM
+            restrictions are surfaced separately for review. */}
         <mesh geometry={northUTurnGeom} receiveShadow renderOrder={1}>
           <meshStandardMaterial color={isRaining ? '#15181d' : '#30343b'} roughness={0.78} />
         </mesh>

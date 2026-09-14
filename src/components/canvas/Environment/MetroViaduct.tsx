@@ -16,17 +16,22 @@ interface MetroViaductProps {
 
 type LocalPoint = [number, number];
 
-const METRO_DECK_CENTER_Y = 13.2;
+// The OSM extract gives the alignment and relative layer only. Keep the
+// display elevation above the mapped Varthur viaduct while using the 5.5 m
+// Phase 2A road-clearance value as a minimum structural datum; this is not a
+// surveyed rail level.
+const METRO_DECK_CENTER_Y = 10.8;
 const METRO_DECK_WIDTH = 8.5;
 const METRO_TRACK_WIDTH = 2.75;
 const METRO_RAIL_Y = METRO_DECK_CENTER_Y + 0.7;
 const METRO_TRAIN_Y = METRO_DECK_CENTER_Y + 0.68;
-const METRO_PIER_SPACING = 32;
+const METRO_PIER_SPACING = 28;
 const METRO_SAMPLE_SPACING = 8;
 const METRO_TRAIN_SPEED_FALLBACK = 22;
 const METRO_SLEEPER_SPACING = 4;
 const METRO_GAUGE_FALLBACK_METERS = 1.435;
 const METRO_THIRD_RAIL_CLEARANCE = 0.34;
+const METRO_MIN_SOFFIT_Y = 5.5;
 // The source ways carry a relative OSM layer (layer=2), not survey elevations.
 // These are display elevations for the modeled viaduct detail only.
 const METRO_JUNCTION_CLEAR_HALF_LENGTH = 42;
@@ -304,7 +309,7 @@ function sourcePierFrames(trackData: MetroTrackData, sourceSupports: LocalPoint[
   const length = trackData.centerCurve.getLength();
   const frames: MetroPierFrame[] = [];
 
-  for (let distance = 18; distance < length - 18; distance += METRO_PIER_SPACING) {
+  for (let distance = 14; distance < length - 14; distance += METRO_PIER_SPACING) {
     const progress = distance / length;
     const point = trackData.centerCurve.getPointAt(progress);
 
@@ -548,6 +553,8 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
       userData={{
         alignment: 'OSM mainline ways 1551136768 and 1551136770',
         elevation: 'modelled display elevation; OSM layer=2 is relative only',
+        structure: 'single circular RCC pier; modelled 28 m span stationing',
+        minimumSoffit: '5.5 m Phase 2A road-clearance baseline; display datum is higher to clear mapped flyover',
         supports: sourceMetroSupportFeatures.length
           ? 'OSM explicit Namma Metro pier supports'
           : 'modelled regular pier grid; extract has no explicit Namma Metro pier supports',
@@ -558,7 +565,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
       }}
     >
       {pierFrames.map(({ point, angle, sourceBacked }, index) => {
-        const columnTop = METRO_DECK_CENTER_Y - 0.75;
+        const columnTop = Math.max(METRO_MIN_SOFFIT_Y, METRO_DECK_CENTER_Y - 0.75);
         const columnBase = 0.08;
         const columnHeight = columnTop - columnBase;
         return (
@@ -573,19 +580,40 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
             }}
           >
             <mesh position={[0, columnBase + 0.08, 0]} castShadow receiveShadow>
-              <boxGeometry args={[2.9, 0.16, 2.35]} />
+              <cylinderGeometry args={[1.48, 1.62, 0.16, 16]} />
               <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
             </mesh>
+            {/* Phase 2A design references a single circular RCC pier on this
+                corridor. The low perimeter is a modelled 1.2 m crash barrier
+                so the column does not appear to sit directly in live lanes. */}
+            <group position={[0, columnBase + 0.68, 0]}>
+              <mesh position={[0, 0, -1.38]} castShadow receiveShadow>
+                <boxGeometry args={[3.2, 1.2, 0.18]} />
+                <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
+              </mesh>
+              <mesh position={[0, 0, 1.38]} castShadow receiveShadow>
+                <boxGeometry args={[3.2, 1.2, 0.18]} />
+                <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
+              </mesh>
+              <mesh position={[-1.51, 0, 0]} castShadow receiveShadow>
+                <boxGeometry args={[0.18, 1.2, 2.58]} />
+                <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
+              </mesh>
+              <mesh position={[1.51, 0, 0]} castShadow receiveShadow>
+                <boxGeometry args={[0.18, 1.2, 2.58]} />
+                <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
+              </mesh>
+            </group>
             <mesh position={[0, columnBase + columnHeight / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[1.2, columnHeight, 1.0]} />
+              <cylinderGeometry args={[0.72, 0.82, columnHeight, 16]} />
               <meshStandardMaterial color={concreteMaterial} roughness={0.86} metalness={0.04} />
             </mesh>
             <mesh position={[0, columnTop - 0.36, 0]} castShadow receiveShadow>
-              <boxGeometry args={[1.8, 0.58, 1.4]} />
+              <cylinderGeometry args={[0.98, 0.72, 0.58, 16]} />
               <meshStandardMaterial color={concreteMaterial} roughness={0.86} metalness={0.04} />
             </mesh>
             <mesh position={[0, columnBase + 0.34, 0]} castShadow receiveShadow>
-              <boxGeometry args={[2.3, 0.68, 1.9]} />
+              <cylinderGeometry args={[1.05, 0.82, 0.68, 16]} />
               <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
             </mesh>
             <mesh position={[0, columnTop - 0.22, 0]} castShadow receiveShadow>

@@ -363,18 +363,19 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       [-17.5, 0.1, -170]
     ], 'FREE');
 
-    // 19 & 20. Source-aligned surface U-turn connectors. These are shared
-    // with JunctionRoads so modelled vehicles follow a visible route.
+    // 19 & 20. Source-linked Varthur Road turn replays. These are shared
+    // with the crossover audit layer so modelled vehicles follow the same
+    // mapped vertex trace. Their OSM legality remains unresolved/negative.
     addLane(
       U_TURN_CONNECTORS.north.id,
       U_TURN_CONNECTORS.north.points,
-      'NS',
+      'EW',
       U_TURN_CONNECTORS.north.stopT
     );
     addLane(
       U_TURN_CONNECTORS.south.id,
       U_TURN_CONNECTORS.south.points,
-      'NS',
+      'EW',
       U_TURN_CONNECTORS.south.stopT
     );
 
