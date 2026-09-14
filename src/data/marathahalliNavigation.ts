@@ -399,6 +399,13 @@ const SOURCE_WALK_ROUTES: readonly SourceWalkRoute[] = [
   ...SOURCE_SKYWALK_ROUTES
 ];
 
+// Route guidance is deliberately a preference corridor, not a complete
+// pedestrian graph. The extra clearance keeps the camera near a mapped
+// footway while still allowing authored landmark aprons and source gaps to be
+// inspected when the catalog has no connected way there.
+const SOURCE_WALK_ROUTE_CLEARANCE = 2.5;
+const SOURCE_WALK_ROUTE_CONTINUITY_WEIGHT = 0.35;
+
 const distanceToSegment = (x: number, z: number, start: LocalXZ, end: LocalXZ) => {
   const dx = end[0] - start[0];
   const dz = end[1] - start[1];
@@ -550,6 +557,88 @@ const isWalkPathClear = (startX: number, startZ: number, endX: number, endZ: num
   return true;
 };
 
+const getSourceRouteCorridorRadius = (route: SourceWalkRoute) =>
+  route.width / 2 + SOURCE_WALK_ROUTE_CLEARANCE;
+
+const moveTowardWalkPoint = (
+  currentX: number,
+  currentZ: number,
+  targetX: number,
+  targetZ: number,
+  maxDistance: number
+): LocalXZ => {
+  const distance = Math.hypot(targetX - currentX, targetZ - currentZ);
+  if (distance === 0 || distance <= maxDistance) return [targetX, targetZ];
+  const progress = maxDistance / distance;
+  return [
+    currentX + (targetX - currentX) * progress,
+    currentZ + (targetZ - currentZ) * progress
+  ];
+};
+
+/**
+ * Prefer a nearby source footway for one movement candidate. The route
+ * catalog is sparse and contains no inferred crossings or ramps, so this
+ * helper only guides a move when the current or requested point is already
+ * inside a bounded route corridor. It never increases the requested travel
+ * distance and returns null for a surface/path transition the source does
+ * not establish.
+ */
+function resolveSourceGuidedWalkPosition(
+  currentX: number,
+  currentZ: number,
+  nextX: number,
+  nextZ: number
+): LocalXZ | null {
+  const requestedDistance = Math.hypot(nextX - currentX, nextZ - currentZ);
+  if (requestedDistance === 0) return null;
+
+  const routeCandidates = SOURCE_WALK_ROUTES
+    .map((route) => ({
+      route,
+      current: projectToWalkRoute(currentX, currentZ, route),
+      next: projectToWalkRoute(nextX, nextZ, route)
+    }))
+    .filter(({ route, current, next }) => (
+      (current.distance <= getSourceRouteCorridorRadius(route) ||
+        next.distance <= getSourceRouteCorridorRadius(route)) &&
+      canChangeWalkSurface(currentX, currentZ, next.point[0], next.point[1])
+    ));
+
+  if (!routeCandidates.length) return null;
+
+  const selected = routeCandidates.reduce((nearest, candidate) => {
+    const candidateScore = candidate.next.distance +
+      candidate.current.distance * SOURCE_WALK_ROUTE_CONTINUITY_WEIGHT;
+    const nearestScore = nearest.next.distance +
+      nearest.current.distance * SOURCE_WALK_ROUTE_CONTINUITY_WEIGHT;
+    return candidateScore < nearestScore ? candidate : nearest;
+  });
+
+  const routePoint = selected.next.point;
+  const corridorRadius = getSourceRouteCorridorRadius(selected.route);
+  const guidedPoint = selected.next.distance <= corridorRadius
+    ? routePoint
+    : [
+        routePoint[0] + (nextX - routePoint[0]) * corridorRadius / selected.next.distance,
+        routePoint[1] + (nextZ - routePoint[1]) * corridorRadius / selected.next.distance
+      ] as LocalXZ;
+  const boundedGuidedPoint = moveTowardWalkPoint(
+    currentX,
+    currentZ,
+    guidedPoint[0],
+    guidedPoint[1],
+    requestedDistance
+  );
+
+  if (!canChangeWalkSurface(currentX, currentZ, boundedGuidedPoint[0], boundedGuidedPoint[1]) ||
+      !isWalkPathClear(currentX, currentZ, boundedGuidedPoint[0], boundedGuidedPoint[1])) {
+    return null;
+  }
+
+  return boundedGuidedPoint;
+}
+
 export function resolveWalkPosition(
   currentX: number,
   currentZ: number,
@@ -558,16 +647,27 @@ export function resolveWalkPosition(
 ): [number, number] {
   const boundedX = Math.max(MARATHAHALLI_WALK_BOUNDS.minX, Math.min(MARATHAHALLI_WALK_BOUNDS.maxX, nextX));
   const boundedZ = Math.max(MARATHAHALLI_WALK_BOUNDS.minZ, Math.min(MARATHAHALLI_WALK_BOUNDS.maxZ, nextZ));
+  const movementCandidates: LocalXZ[] = [
+    [boundedX, boundedZ],
+    [boundedX, currentZ],
+    [currentX, boundedZ]
+  ];
 
-  if (canChangeWalkSurface(currentX, currentZ, boundedX, boundedZ) &&
-      isWalkPathClear(currentX, currentZ, boundedX, boundedZ)) {
-    return [boundedX, boundedZ];
+  for (const [candidateX, candidateZ] of movementCandidates) {
+    const sourceGuidedPosition = resolveSourceGuidedWalkPosition(
+      currentX,
+      currentZ,
+      candidateX,
+      candidateZ
+    );
+    if (sourceGuidedPosition) return sourceGuidedPosition;
+
+    if (canChangeWalkSurface(currentX, currentZ, candidateX, candidateZ) &&
+        isWalkPathClear(currentX, currentZ, candidateX, candidateZ)) {
+      return [candidateX, candidateZ];
+    }
   }
 
-  if (canChangeWalkSurface(currentX, currentZ, boundedX, currentZ) &&
-      isWalkPathClear(currentX, currentZ, boundedX, currentZ)) return [boundedX, currentZ];
-  if (canChangeWalkSurface(currentX, currentZ, currentX, boundedZ) &&
-      isWalkPathClear(currentX, currentZ, currentX, boundedZ)) return [currentX, boundedZ];
   return [currentX, currentZ];
 }
 

@@ -132,9 +132,10 @@ const DirectionMarkers: React.FC<{
 /**
  * Focus aid for the crossover preset. The highlighted paths are not a second
  * traffic network: they are generated from U_TURN_CONNECTORS, the same
- * source-aligned connector points consumed by JunctionRoads and TrafficSystem.
- * The OSM snapshot also carries a no_u_turn relation, so these remain
- * scenario links until the turn restriction is reconciled with the field plan.
+ * authored connector points consumed by JunctionRoads and TrafficSystem. They
+ * are not OSM way geometry. The OSM snapshot also carries a no_u_turn
+ * relation, so these remain scenario links until the turn restriction is
+ * reconciled with the field plan.
  */
 export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   isNight = false,
@@ -167,12 +168,10 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   const gates = useMemo(() => [
     {
       id: 'north',
-      point: U_TURN_CONNECTORS.north.points[4],
       position: [U_TURN_CONNECTORS.north.points[4][0], 0.42, U_TURN_CONNECTORS.north.points[4][2]] as [number, number, number]
     },
     {
       id: 'south',
-      point: U_TURN_CONNECTORS.south.points[7],
       position: [U_TURN_CONNECTORS.south.points[7][0], 0.42, U_TURN_CONNECTORS.south.points[7][2]] as [number, number, number]
     }
   ], []);
@@ -193,7 +192,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           group is therefore an audit visualization, not a surveyed road. Keep
           the filled ribbons translucent and remove them from person mode so a
           pedestrian sees the mapped road/footway rather than a giant overlay. */}
-      <group name="ModelledUturnBirdAudit" visible={isOverview}>
+      {isOverview && (
+      <group name="ModelledUturnBirdAudit">
         {/* A restrained center halo anchors the signal table without covering the
             source road surface. */}
         <mesh position={[0, 0.34, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={8}>
@@ -262,6 +262,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           detail="OSM ROAD FRAME · TURN STATUS UNRESOLVED"
         />
       </group>
+      )}
 
       {/* At eye level, retain only a thin, low-contrast audit trace. The
           source-backed road and footpaths remain the pedestrian experience. */}

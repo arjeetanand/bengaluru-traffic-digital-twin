@@ -28,6 +28,7 @@ interface LaneDefinition {
   controlledBy: 'NS' | 'EW' | 'FREE';
   stopT: number; // progress t at stop line
   closedLoop: boolean;
+  isScenarioRoute: boolean;
 }
 
 interface VehicleAgent {
@@ -40,6 +41,54 @@ interface VehicleAgent {
   meshIdx: number;
   lengthMeters: number;
   isIdling: boolean;
+}
+
+interface FleetCounts {
+  car: number;
+  twoWheeler: number;
+  auto: number;
+  bus: number;
+  total: number;
+}
+
+const VEHICLE_TYPE_SHARES = [
+  { type: 'car' as const, share: SIMULATION_CONFIG.vehicleDistribution.car },
+  { type: 'twoWheeler' as const, share: SIMULATION_CONFIG.vehicleDistribution.twoWheeler },
+  { type: 'auto' as const, share: SIMULATION_CONFIG.vehicleDistribution.auto },
+  { type: 'bus' as const, share: SIMULATION_CONFIG.vehicleDistribution.bus }
+];
+
+/**
+ * Allocate the requested modelled fleet without rounding one class into a
+ * negative remainder. Largest-remainder allocation keeps the configured
+ * total exact, including for the small crossover/junction detail slice.
+ */
+function allocateFleet(requestedCount: number): FleetCounts {
+  const total = Number.isFinite(requestedCount)
+    ? Math.max(0, Math.min(SIMULATION_CONFIG.maxVehicleCount, Math.floor(requestedCount)))
+    : 0;
+  const allocations = VEHICLE_TYPE_SHARES.map(({ type, share }, index) => {
+    const exact = total * share;
+    const count = Math.floor(exact);
+    return { type, count, remainder: exact - count, index };
+  });
+  const remaining = total - allocations.reduce((sum, allocation) => sum + allocation.count, 0);
+
+  allocations.sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  for (let index = 0; index < remaining; index += 1) {
+    allocations[index % allocations.length].count += 1;
+  }
+
+  const counts: Omit<FleetCounts, 'total'> = {
+    car: 0,
+    twoWheeler: 0,
+    auto: 0,
+    bus: 0
+  };
+  allocations.forEach((allocation) => {
+    counts[allocation.type] = allocation.count;
+  });
+  return { ...counts, total };
 }
 
 export const TrafficSystem: React.FC<TrafficSystemProps> = ({
@@ -133,7 +182,8 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
         length: spline.getLength(),
         controlledBy,
         stopT,
-        closedLoop
+        closedLoop,
+        isScenarioRoute: isScenarioUTurn
       });
     };
 
@@ -332,10 +382,12 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
   }, []);
 
   const spawnLaneIndices = useMemo(() => {
-    if (!scenarioOnly) return lanes.map((_, index) => index);
     return lanes
       .map((lane, index) => ({ lane, index }))
-      .filter(({ lane }) => lane.id === U_TURN_CONNECTORS.north.id || lane.id === U_TURN_CONNECTORS.south.id)
+      // The highlighted U-turns are scenario links, not ordinary junction
+      // movements. Keep them out of the normal pool so their presence never
+      // implies an observed or legally permitted turn.
+      .filter(({ lane }) => scenarioOnly ? lane.isScenarioRoute : !lane.isScenarioRoute)
       .map(({ index }) => index);
   }, [lanes, scenarioOnly]);
 
@@ -344,12 +396,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     // The scene splits the configured fleet between this detailed junction
     // network and the source-road corridor layer. Respect the exact allocation
     // here so the HUD's configured vehicle count stays a real total.
-    const total = Math.max(0, Math.min(SIMULATION_CONFIG.maxVehicleCount, vehicleTotalCount));
-
-    const carCount = Math.round(total * SIMULATION_CONFIG.vehicleDistribution.car);
-    const twoWheelerCount = Math.round(total * SIMULATION_CONFIG.vehicleDistribution.twoWheeler);
-    const autoCount = Math.round(total * SIMULATION_CONFIG.vehicleDistribution.auto);
-    const busCount = total - carCount - twoWheelerCount - autoCount;
+    const allocation = allocateFleet(vehicleTotalCount);
 
     const list: VehicleAgent[] = [];
     let idCounter = 0;
@@ -357,6 +404,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     let autoIdx = 0;
     let busIdx = 0;
     let twIdx = 0;
+    let spawnOrdinal = 0;
     let randomState = (0x4d415241 ^ (vehicleTotalCount * 2654435761)) >>> 0;
     const nextRandom = () => {
       randomState = (randomState + 0x6d2b79f5) >>> 0;
@@ -374,8 +422,12 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       lengthMeters: number,
       getIdx: () => number
     ) => {
+      if (!spawnLaneIndices.length) return;
       for (let i = 0; i < count; i++) {
-        const laneIdx = spawnLaneIndices[Math.floor(nextRandom() * spawnLaneIndices.length)];
+        const laneIdx = scenarioOnly
+          ? spawnLaneIndices[spawnOrdinal % spawnLaneIndices.length]
+          : spawnLaneIndices[Math.floor(nextRandom() * spawnLaneIndices.length)];
+        spawnOrdinal += 1;
         const t = 0.04 + nextRandom() * 0.88; // leave a small entry buffer at both ends
         list.push({
           id: idCounter++,
@@ -391,10 +443,10 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       }
     };
 
-    spawnType('twoWheeler', twoWheelerCount, SIMULATION_CONFIG.baseSpeeds.twoWheeler, 2.0, () => twIdx++);
-    spawnType('car', carCount, SIMULATION_CONFIG.baseSpeeds.car, 4.4, () => carIdx++);
-    spawnType('auto', autoCount, SIMULATION_CONFIG.baseSpeeds.auto, 2.8, () => autoIdx++);
-    spawnType('bus', busCount, SIMULATION_CONFIG.baseSpeeds.bus, 10.6, () => busIdx++);
+    spawnType('twoWheeler', allocation.twoWheeler, SIMULATION_CONFIG.baseSpeeds.twoWheeler, 2.0, () => twIdx++);
+    spawnType('car', allocation.car, SIMULATION_CONFIG.baseSpeeds.car, 4.4, () => carIdx++);
+    spawnType('auto', allocation.auto, SIMULATION_CONFIG.baseSpeeds.auto, 2.8, () => autoIdx++);
+    spawnType('bus', allocation.bus, SIMULATION_CONFIG.baseSpeeds.bus, 10.6, () => busIdx++);
 
     return {
       counts: {
@@ -406,7 +458,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       },
       agents: list
     };
-  }, [vehicleTotalCount, lanes.length, spawnLaneIndices]);
+  }, [scenarioOnly, vehicleTotalCount, spawnLaneIndices]);
 
   // ── Initialize Per-Instance Color Palette Variation ──
   useEffect(() => {
@@ -599,35 +651,51 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     if (busesMeshRef.current) busesMeshRef.current.instanceMatrix.needsUpdate = true;
   });
 
+  const trafficLayerUserData = useMemo(() => ({
+    trafficSource: 'MODELLED',
+    vehicleCountBasis: 'CONFIGURED ALLOCATION',
+    vehicleCount: counts.total,
+    scope: scenarioOnly ? 'CROSSOVER JUNCTION DETAIL' : 'JUNCTION DETAIL',
+    routePolicy: scenarioOnly
+      ? 'HIGHLIGHTED U-TURN SCENARIO ROUTES ONLY'
+      : 'U-TURN SCENARIO ROUTES EXCLUDED',
+    legalStatus: scenarioOnly ? 'MODELLED ONLY · OSM TURN STATUS UNRESOLVED' : 'MODELLED JUNCTION FLOW'
+  }), [counts.total, scenarioOnly]);
+
   return (
     <group name="TrafficSystem">
-      {/* Cars InstancedMesh */}
-      <instancedMesh
-        ref={carsMeshRef}
-        args={[carGeom, carMaterial, counts.car]}
-        frustumCulled={false}
-      />
+      <group
+        name={scenarioOnly ? 'ModelledCrossoverJunctionUTurnTraffic' : 'ModelledJunctionTraffic'}
+        userData={trafficLayerUserData}
+      >
+        {/* Cars InstancedMesh */}
+        <instancedMesh
+          ref={carsMeshRef}
+          args={[carGeom, carMaterial, counts.car]}
+          frustumCulled={false}
+        />
 
-      {/* Two-Wheelers InstancedMesh */}
-      <instancedMesh
-        ref={twoWheelersMeshRef}
-        args={[twoWheelerGeom, twoWheelerMaterial, counts.twoWheeler]}
-        frustumCulled={false}
-      />
+        {/* Two-Wheelers InstancedMesh */}
+        <instancedMesh
+          ref={twoWheelersMeshRef}
+          args={[twoWheelerGeom, twoWheelerMaterial, counts.twoWheeler]}
+          frustumCulled={false}
+        />
 
-      {/* Auto-Rickshaws InstancedMesh */}
-      <instancedMesh
-        ref={autosMeshRef}
-        args={[autoGeom, autoMaterial, counts.auto]}
-        frustumCulled={false}
-      />
+        {/* Auto-Rickshaws InstancedMesh */}
+        <instancedMesh
+          ref={autosMeshRef}
+          args={[autoGeom, autoMaterial, counts.auto]}
+          frustumCulled={false}
+        />
 
-      {/* BMTC Buses InstancedMesh */}
-      <instancedMesh
-        ref={busesMeshRef}
-        args={[busGeom, busMaterial, counts.bus]}
-        frustumCulled={false}
-      />
+        {/* BMTC Buses InstancedMesh */}
+        <instancedMesh
+          ref={busesMeshRef}
+          args={[busGeom, busMaterial, counts.bus]}
+          frustumCulled={false}
+        />
+      </group>
     </group>
   );
 };

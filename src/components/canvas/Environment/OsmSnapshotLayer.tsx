@@ -374,6 +374,20 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     const unnamed = snapshot.shops.filter((shop) => !shop.name && !shop.tags.name);
     return [...named, ...unnamed].slice(0, 420);
   }, [snapshot]);
+  const sourceTreeRowPoints = useMemo(() => {
+    if (!snapshot?.treeRows?.length) return [] as [number, number][];
+    const points: [number, number][] = [];
+    for (const row of snapshot.treeRows) {
+      for (const point of row.geometry) {
+        // A tree-row way is a source line, not an inventory of individual
+        // trees. Place deterministic display markers at separated vertices
+        // without implying a surveyed count between those vertices.
+        if (points.some(([x, z]) => Math.hypot(point[0] - x, point[1] - z) < 4)) continue;
+        points.push(point);
+      }
+    }
+    return points;
+  }, [snapshot]);
   const sourceShopLabelFeatures = useMemo(() => {
     // Keep the wide corridor survey readable: individual shop anchors remain
     // available in the store drawer and as orange POI points, while only the
@@ -382,6 +396,23 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     const landmarkShopPattern = /spice garden|pizza hut|village hypermart|holly flames|sweet chariot|kalamandir|nalli|tanishq|kalyan|brand factory/i;
     return snapshot.shops.filter((shop) => landmarkShopPattern.test(shop.name || shop.tags.name || '')).slice(0, 24);
   }, [labelDistanceFactor, snapshot]);
+  const sourceRoadLabelFeatures = useMemo(() => {
+    if (!snapshot || isLongRange) return [];
+    const priority = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'service']);
+    const seen = new Set<string>();
+    return snapshot.roads
+      .filter((road) => {
+        const name = road.name || road.tags.name;
+        const highway = road.tags.highway || '';
+        if (!name || !priority.has(highway) || seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      })
+      .sort((a, b) => (
+        (a.centroid[0] ** 2 + a.centroid[1] ** 2) - (b.centroid[0] ** 2 + b.centroid[1] ** 2)
+      ))
+      .slice(0, 12);
+  }, [isLongRange, snapshot]);
   const noUTurnSource = useMemo(
     () => (snapshot ? getRestrictionFeatures(snapshot, 'no_u_turn') : null),
     [snapshot]
@@ -622,6 +653,19 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           </group>
         ))}
 
+        {sourceTreeRowPoints.map(([x, z], index) => (
+          <group key={`tree-row-${index}`} position={[x, 0, z]} userData={{ source: 'OSM', natural: 'tree_row' }}>
+            <mesh position={[0, 1.0, 0]}>
+              <cylinderGeometry args={[0.12, 0.18, 2.0, 6]} />
+              <meshStandardMaterial color="#78350f" roughness={1} />
+            </mesh>
+            <mesh position={[0, 2.6, 0]}>
+              <coneGeometry args={[1.1, 3.2, 8]} />
+              <meshStandardMaterial color={isNight ? '#14532d' : '#166534'} roughness={0.95} />
+            </mesh>
+          </group>
+        ))}
+
         {snapshot.sourceAnchors.map((anchor) => (
           <mesh
             key={`source-anchor-${anchor.id}`}
@@ -659,6 +703,33 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
               }}
             >
               OSM · {(shop.name || shop.tags.name || 'SHOP').toUpperCase()}
+            </div>
+          </Html>
+        ))}
+
+        {sourceRoadLabelFeatures.map((road) => (
+          <Html
+            key={`source-road-label-${road.id}`}
+            position={[road.centroid[0], 1.8, road.centroid[1]]}
+            center
+            distanceFactor={Math.max(42, labelDistanceFactor * 0.78)}
+            zIndexRange={[17, 0]}
+          >
+            <div
+              style={{
+                background: 'rgba(15, 23, 42, 0.78)',
+                border: '1px solid rgba(125, 211, 252, 0.58)',
+                borderRadius: '4px',
+                color: '#bae6fd',
+                fontFamily: 'monospace',
+                fontSize: '7px',
+                letterSpacing: '0.14px',
+                padding: '2px 4px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(2, 6, 23, 0.32)'
+              }}
+            >
+              OSM ROAD · {(road.name || road.tags.name || 'UNNAMED').toUpperCase()} · {(road.tags.highway || 'ROAD').toUpperCase()}
             </div>
           </Html>
         ))}

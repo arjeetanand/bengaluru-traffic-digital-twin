@@ -1468,7 +1468,8 @@ input:focus-visible {
   }
 
   .banner-toast {
-    top: 68px;
+    /* Keep the fallback notice below the compact health card on phones. */
+    top: calc(var(--hud-mobile-header-clearance) + 86px);
     width: min( calc(100vw - 20px), 640px );
     max-width: none;
   }

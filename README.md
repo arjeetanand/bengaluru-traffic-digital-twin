@@ -30,6 +30,11 @@ The demo map is source-backed rather than an invented city block: the committed 
 - **Optional photorealistic 3D provider**:
   - The `OSM 3D TWIN` control is the no-key demo path. With a Google Maps Platform key and Map Tiles API enabled, the same scene can stream Google Photorealistic 3D Tiles through [`3d-tiles-renderer`](https://github.com/NASA-AMMOS/3DTilesRendererJS), bounded to the full local Oracle → Spice Garden corridor and rendered with the provider attribution on screen.
   - Open-source alternatives worth evaluating for a larger geospatial product are [`CesiumJS`](https://github.com/CesiumGS/cesium) and [`iTowns`](https://github.com/iTowns/itowns); they are integration choices, not additional data silently bundled into this demo.
+- **Open-source implementation references**:
+  - [`3d-tiles-renderer`](https://github.com/NASA-AMMOS/3DTilesRendererJS) is the current Three.js-compatible 3D Tiles loader used by the optional provider path.
+  - [`CesiumJS`](https://github.com/CesiumGS/cesium) and [`iTowns`](https://github.com/iTowns/itowns) are viable geospatial renderer alternatives if the project later outgrows the local React Three Fiber scene.
+  - [`Eclipse SUMO`](https://github.com/eclipse-sumo/sumo) is the recommended open-source microscopic/intermodal simulation target for a later OSM → network → TraCI adapter. Its OSM tooling can generate networks and demand, but the resulting network still needs local route, signal, U-turn, and calibration review before it can replace this offline demo engine.
+  - The [OGC 3D Tiles standard](https://www.ogc.org/standards/3dtiles/) defines a delivery format, not ground truth. Exact building, terrain, metro-pier, or sidewalk accuracy still depends on the licensed source data behind the tiles.
 - **High-Density 60 FPS Traffic (1,000–2,000 Vehicles)**:
   - 4 specialized `THREE.InstancedMesh` systems (Cars, Bengaluru yellow/green Auto-Rickshaws, BMTC Transit Buses, and Two-Wheelers with helmeted riders).
   - Smooth authored Catmull-Rom lanes for the junction, plus source-vertex-faithful polyline routes for the widened OSM corridor fleet.

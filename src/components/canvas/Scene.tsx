@@ -245,10 +245,10 @@ export const Scene: React.FC<SceneProps> = ({
           {/* Source OSM tree nodes are rendered by OsmSnapshotLayer. This
               deterministic planting buffer fills the mapped road edge and
               median in the visual demo; it is explicitly planned greenery,
-              not a surveyed inventory of every tree. */}
-          {cameraMode === 'overview' && (
-            <Greenery isRaining={isRaining} />
-          )}
+              not a surveyed inventory of every tree. Keep the instanced layer
+              in person mode too: street-level inspection should not lose the
+              roadside shade that is visible from the bird view. */}
+          <Greenery isRaining={isRaining} />
 
           {/* ── Realistic West Corridor Landmarks (Innovative Multiplex, Krishna Summit, Krishna Grand, Novel MSR) ── */}
           {!isSourceGeometryFocusView && (

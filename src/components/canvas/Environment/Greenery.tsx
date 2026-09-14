@@ -29,7 +29,7 @@ interface SkipZone {
 interface TreeCorridor {
   id: string;
   axis: 'X' | 'Z';      // axis along which the corridor runs
-  sideOffset: number;    // perpendicular position (x if axis=Z, z if axis=X)
+  sideOffset: number;    // signed road-frame offset (x/z sign at the sidewalk)
   start: number;         // corridor start along the axis
   end: number;           // corridor end along the axis
   spacing: number;       // metres between trees (8–12 m typical per BBMP/IRC)
@@ -44,9 +44,14 @@ interface TreeCorridor {
 // ── CORRIDOR DEFINITIONS ────────────────────────────────────────────────────
 //
 // Coordinate reference (from JunctionRoads / Footpaths.tsx):
-//   ORR (Outer Ring Road)  → Z-axis, carriageway edge x ±15.5, footpath x ±23.5
-//   HAL Old Airport Road   → X-axis, carriageway edge z ±14.5, footpath z ±13
-//   Varthur Road (East)    → X-axis (positive X). Footpath z ±13.5
+//   ORR (Outer Ring Road)  → Z-axis, service-road edge ≈ lateral ±20.25,
+//                            modeled footpath center x ±23.5
+//   HAL / Varthur Road     → X-axis, modeled footpath center z ±13
+//
+// Trees are placed on the outside of the modeled footpath, rather than on its
+// curb edge. The source OSM tree nodes remain rendered by OsmSnapshotLayer;
+// this layer is the deterministic MODELLED planting fill and must not clone
+// those source markers.
 //
 const TREE_CORRIDORS: TreeCorridor[] = [
 
@@ -58,7 +63,7 @@ const TREE_CORRIDORS: TreeCorridor[] = [
   {
     id: 'orr-west',
     axis: 'Z',
-    sideOffset: -21.0,
+    sideOffset: -26.2,
     start: -215,
     end: 170,
     spacing: 9,
@@ -79,7 +84,7 @@ const TREE_CORRIDORS: TreeCorridor[] = [
   {
     id: 'orr-east',
     axis: 'Z',
-    sideOffset: 21.0,
+    sideOffset: 26.2,
     start: -215,
     end: 170,
     spacing: 9,
@@ -101,7 +106,7 @@ const TREE_CORRIDORS: TreeCorridor[] = [
   {
     id: 'hal-north',
     axis: 'X',
-    sideOffset: 11.5,
+    sideOffset: 16.2,
     start: -235,
     end: -20,
     spacing: 10,
@@ -122,7 +127,7 @@ const TREE_CORRIDORS: TreeCorridor[] = [
   {
     id: 'hal-south',
     axis: 'X',
-    sideOffset: -11.5,
+    sideOffset: -16.2,
     start: -235,
     end: -20,
     spacing: 10,
@@ -143,7 +148,7 @@ const TREE_CORRIDORS: TreeCorridor[] = [
   {
     id: 'varthur-north',
     axis: 'X',
-    sideOffset: 11.5,
+    sideOffset: 16.2,
     start: 20,
     end: 265,
     spacing: 10,
@@ -165,7 +170,7 @@ const TREE_CORRIDORS: TreeCorridor[] = [
   {
     id: 'varthur-south',
     axis: 'X',
-    sideOffset: -11.5,
+    sideOffset: -16.2,
     start: 20,
     end: 265,
     spacing: 10,

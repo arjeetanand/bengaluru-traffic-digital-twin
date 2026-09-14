@@ -68,6 +68,10 @@ export const HUD: React.FC<HUDProps> = ({
       : metrics.networkHealth > 40
       ? 'health-amber'
       : 'health-red';
+  const crossoverJunctionAgents = Math.max(12, Math.round(mode.vehicleCount * 0.02));
+  const fleetSummary = mode.cameraPreset === 'crossover'
+    ? `${mode.vehicleCount} FLEET · ${crossoverJunctionAgents} JUNCTION DETAIL · ${Math.max(0, mode.vehicleCount - crossoverJunctionAgents)} CORRIDOR`
+    : `${mode.vehicleCount} MODELLED FLEET`;
 
   return (
     <div className="hud-overlay" style={{ pointerEvents: 'none' }}>
@@ -90,7 +94,7 @@ export const HUD: React.FC<HUDProps> = ({
                 {!flowData.isDemo ? 'TOMTOM LIVE FEED' : 'OSM SNAPSHOT • MODELLED TRAFFIC'}
               </span>
               <span className="meta-dot">•</span>
-              <span>{mode.vehicleCount} MODELLED VEHICLES</span>
+              <span>{fleetSummary}</span>
             </div>
           </div>
         </div>

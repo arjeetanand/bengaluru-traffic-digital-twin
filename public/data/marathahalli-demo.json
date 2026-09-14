@@ -3,7 +3,7 @@
   "source": {
     "provider": "OpenStreetMap",
     "file": "marathahalli_osm.xml",
-    "snapshotTimestamp": "2026-09-09T11:00:56Z",
+    "snapshotTimestamp": "2026-09-13T06:37:59Z",
     "attribution": "© OpenStreetMap contributors",
     "license": "ODbL-1.0",
     "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/"
@@ -65,8 +65,10 @@
     "buildings": 7533,
     "roads": 1453,
     "footways": 256,
+    "treeRows": 13,
     "shops": 363,
-    "places": 290,
+    "places": 305,
+    "namedPlaces": 16,
     "signals": 11,
     "crossings": 63,
     "busStops": 20,
@@ -593,7 +595,8 @@
       "tags": {
         "name": "Vagdevi School Canteen",
         "building": "yes",
-        "amenity": "fast_food"
+        "amenity": "fast_food",
+        "name:kn": "ವಾಗ್ದೇವಿ ಸ್ಕೂಲ್ ಕ್ಯಾಂಟೀನ್"
       },
       "geometry": [
         [
@@ -637,7 +640,8 @@
       "tags": {
         "name": "JP Morgan",
         "building": "office",
-        "addr:street": "Outer Ring Road"
+        "addr:street": "Outer Ring Road",
+        "name:kn": "ಜೆಪಿ ಮೋರ್ಗನ್"
       },
       "geometry": [
         [
@@ -2434,7 +2438,8 @@
       "id": "way/199853340",
       "tags": {
         "name": "Octave",
-        "building": "hotel"
+        "building": "hotel",
+        "tourism": "hotel"
       },
       "geometry": [
         [
@@ -2570,7 +2575,8 @@
       "tags": {
         "name": "Adishwar",
         "building": "yes",
-        "shop": "electronics"
+        "shop": "electronics",
+        "name:kn": "ಅದಿಶ್ವರ್"
       },
       "geometry": [
         [
@@ -2640,7 +2646,8 @@
       "tags": {
         "name": "Biryani Zone",
         "building": "commercial",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಬಿರಿಯಾನಿ ಜೋನ್"
       },
       "geometry": [
         [
@@ -2820,7 +2827,8 @@
         "building": "retail",
         "building:levels": "4",
         "shop": "clothes",
-        "addr:street": "Outer Ring Road"
+        "addr:street": "Outer Ring Road",
+        "name:kn": "ನಳ್ಳಿ ಸಿಲ್ಕ್ಸ್"
       },
       "geometry": [
         [
@@ -2855,7 +2863,8 @@
       "id": "way/223045585",
       "tags": {
         "name": "Nandhana Hotels",
-        "building": "commercial"
+        "building": "commercial",
+        "tourism": "hotel"
       },
       "geometry": [
         [
@@ -3059,7 +3068,8 @@
       "tags": {
         "name": "Kalamandir",
         "building": "commercial",
-        "shop": "clothes"
+        "shop": "clothes",
+        "name:kn": "ಕಲಾಮಂದಿರ"
       },
       "geometry": [
         [
@@ -4101,7 +4111,8 @@
         "building": "residential",
         "building:levels": "4",
         "addr:street": "S J R Dental College Road, Munekolala",
-        "addr:housenumber": "37"
+        "addr:housenumber": "37",
+        "name:kn": "ಗಣಪ ನಿಲಯ"
       },
       "geometry": [
         [
@@ -17290,7 +17301,8 @@
         "building": "apartments",
         "building:levels": "4",
         "addr:street": "10th Cross",
-        "addr:housenumber": "2/91"
+        "addr:housenumber": "2/91",
+        "name:kn": "ವೆಂಕಟಾದ್ರಿ ನಿಲಯ"
       },
       "geometry": [
         [
@@ -35071,7 +35083,8 @@
         "building": "apartments",
         "building:levels": "5",
         "addr:street": "3rd Main Road",
-        "addr:housenumber": "#86"
+        "addr:housenumber": "#86",
+        "name:en": "R.J Gardens"
       },
       "geometry": [
         [
@@ -35338,7 +35351,8 @@
     {
       "id": "way/346534885",
       "tags": {
-        "building": "yes"
+        "building": "yes",
+        "name:en": "State bank ATM"
       },
       "geometry": [
         [
@@ -40516,7 +40530,8 @@
       "id": "way/346535192",
       "tags": {
         "name": "Krishna Vaibhava",
-        "building": "commercial"
+        "building": "commercial",
+        "name:kn": "ಕೃಷ್ಣ ವೈಭವ"
       },
       "geometry": [
         [
@@ -80161,7 +80176,8 @@
       "id": "way/346739674",
       "tags": {
         "name": "Nithya Apartment",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "apartment"
       },
       "geometry": [
         [
@@ -129906,7 +129922,8 @@
       "id": "way/346778796",
       "tags": {
         "name": "Sai Lake View PG",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -166311,7 +166328,8 @@
       "tags": {
         "name": "Muneshwara Swami Temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಮುನೇಶ್ವರ ಸ್ವಾಮಿ ದೇವಾಲಯ"
       },
       "geometry": [
         [
@@ -171544,7 +171562,8 @@
       "tags": {
         "name": "Mariyamma Temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಮಾರಿಯಮ್ಮ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -178147,6 +178166,7 @@
       "tags": {
         "name": "Srinivasa PG",
         "building": "hostel",
+        "tourism": "hostel",
         "addr:street": "2nd Cross Road"
       },
       "geometry": [
@@ -197322,7 +197342,8 @@
       "id": "way/352222730",
       "tags": {
         "name": "Comet",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hotel"
       },
       "geometry": [
         [
@@ -212466,7 +212487,8 @@
       "tags": {
         "name": "Ganapati temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಗಣಪತಿ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -213146,7 +213168,8 @@
         "name": "Vagdevi Vilas School",
         "building": "school",
         "building:levels": "2",
-        "addr:street": "Vagdevi Layout, Munnekolala"
+        "addr:street": "Vagdevi Layout, Munnekolala",
+        "name:kn": "ವಾಗ್ದೇವಿ ವಿಲಾಸ ಶಾಲೆ"
       },
       "geometry": [
         [
@@ -213182,7 +213205,8 @@
       "tags": {
         "name": "Ayyappa Bakery",
         "building": "yes",
-        "shop": "bakery"
+        "shop": "bakery",
+        "name:kn": "ಅಯ್ಯಪ್ಪ ಬೇಕರಿ"
       },
       "geometry": [
         [
@@ -213478,7 +213502,8 @@
         "building": "office",
         "building:levels": "10",
         "addr:street": "Outer Ring Road",
-        "addr:housenumber": "176"
+        "addr:housenumber": "176",
+        "name:kn": "ಸಲಾರಪುರಿಯ ಸತ್ವ"
       },
       "geometry": [
         [
@@ -213842,7 +213867,8 @@
       "tags": {
         "name": "Ganesha Temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಗಣೇಶ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -215883,7 +215909,8 @@
       "id": "way/757666949",
       "tags": {
         "name": "Salarpuria Block B",
-        "building": "office"
+        "building": "office",
+        "name:kn": "ಸಲಾರಪುರಿಯ"
       },
       "geometry": [
         [
@@ -216716,7 +216743,8 @@
         "building": "apartments",
         "building:levels": "4",
         "addr:street": "Vaikuntam Layout",
-        "addr:housenumber": "5th Cross Road"
+        "addr:housenumber": "5th Cross Road",
+        "name:kn": "ನಕ್ಷತ್ರ"
       },
       "geometry": [
         [
@@ -219762,7 +219790,8 @@
       "id": "way/1066506649",
       "tags": {
         "name": "Orchid Sports Academy",
-        "building": "yes"
+        "building": "yes",
+        "leisure": "sports_centre"
       },
       "geometry": [
         [
@@ -219796,7 +219825,8 @@
     {
       "id": "way/1066506650",
       "tags": {
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -219866,7 +219896,8 @@
         "building": "church",
         "amenity": "place_of_worship",
         "addr:street": "Munekolala Main Road",
-        "addr:housenumber": "6"
+        "addr:housenumber": "6",
+        "name:kn": "ಸೇಂಟ್ ಆಂಟೊನಿ ಚರ್ಚ್"
       },
       "geometry": [
         [
@@ -220000,7 +220031,8 @@
       "id": "way/1066506657",
       "tags": {
         "name": "Icon Suites by Bhagini",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hotel"
       },
       "geometry": [
         [
@@ -221316,6 +221348,7 @@
       "tags": {
         "name": "Bloom Hub",
         "building": "hotel",
+        "tourism": "hotel",
         "addr:street": "Outer Ring Road"
       },
       "geometry": [
@@ -225840,7 +225873,8 @@
       "id": "way/1075549051",
       "tags": {
         "name": "Laavish Pro-4 Living",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -227883,7 +227917,8 @@
     {
       "id": "way/1086017969",
       "tags": {
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -227916,7 +227951,8 @@
     {
       "id": "way/1086017970",
       "tags": {
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -232223,7 +232259,9 @@
       "tags": {
         "name": "Nandini",
         "building": "retail",
-        "shop": "dairy"
+        "shop": "dairy",
+        "name:en": "Nandini",
+        "name:kn": "ನಂದಿನಿ"
       },
       "geometry": [
         [
@@ -233451,7 +233489,8 @@
       "tags": {
         "name": "Marathahalli Police Station",
         "building": "yes",
-        "amenity": "police"
+        "amenity": "police",
+        "name:kn": "ಆರಕ್ಷಕ ಠಾಣೆ"
       },
       "geometry": [
         [
@@ -233714,6 +233753,7 @@
       "tags": {
         "name": "Vista Pro4",
         "building": "yes",
+        "tourism": "hostel",
         "operator": "Pro4 Living",
         "addr:street": "Spice Garden Road"
       },
@@ -235182,6 +235222,7 @@
       "tags": {
         "name": "Meridian Pro4",
         "building": "yes",
+        "tourism": "hostel",
         "operator": "Pro4 Living",
         "addr:street": "Spice Garden Road"
       },
@@ -236165,7 +236206,8 @@
       "id": "way/1194928869",
       "tags": {
         "name": "Ashirwad",
-        "building": "apartments"
+        "building": "apartments",
+        "name:kn": "ಆಶೀರ್ವಾದ"
       },
       "geometry": [
         [
@@ -244408,7 +244450,8 @@
       "tags": {
         "name": "Tower 3",
         "building": "apartments",
-        "building:levels": "13"
+        "building:levels": "13",
+        "name:kn": "ಕಟ್ಟಡ ೩"
       },
       "geometry": [
         [
@@ -244740,7 +244783,8 @@
       "tags": {
         "name": "Tower 2",
         "building": "apartments",
-        "building:levels": "13"
+        "building:levels": "13",
+        "name:kn": "ಕಟ್ಟಪ 2"
       },
       "geometry": [
         [
@@ -245180,7 +245224,8 @@
       "tags": {
         "name": "Tower 4",
         "building": "apartments",
-        "building:levels": "13"
+        "building:levels": "13",
+        "name:kn": "ಕಟ್ಟಡ ೪"
       },
       "geometry": [
         [
@@ -245528,7 +245573,8 @@
       "tags": {
         "name": "Tower 1",
         "building": "apartments",
-        "building:levels": "13"
+        "building:levels": "13",
+        "name:kn": "ಕಟ್ಟಡ ೧"
       },
       "geometry": [
         [
@@ -246717,7 +246763,8 @@
       "id": "way/1260649106",
       "tags": {
         "name": "JRS",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -249671,7 +249718,8 @@
       "id": "way/1338993115",
       "tags": {
         "name": "Rams Sports Arena",
-        "building": "sports_hall"
+        "building": "sports_hall",
+        "leisure": "sports_centre"
       },
       "geometry": [
         [
@@ -253066,7 +253114,8 @@
       "tags": {
         "name": "Shri Prasanna Anjaneya Temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಪ್ರಸನ್ನ ಆಂಜನೇಯ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -253135,7 +253184,8 @@
       "tags": {
         "name": "Sri Sai Sannidhi",
         "building": "apartments",
-        "building:levels": "5"
+        "building:levels": "5",
+        "name:kn": "ಶ್ರೀ ಸಾಯಿ ಸನ್ನಿದಿ"
       },
       "geometry": [
         [
@@ -263690,6 +263740,7 @@
       "tags": {
         "name": "Legacy Pro4",
         "building": "yes",
+        "tourism": "hostel",
         "operator": "Pro4 Living",
         "addr:street": "Spice Garden Road"
       },
@@ -263727,6 +263778,7 @@
       "tags": {
         "name": "Pavilion Pro4",
         "building": "yes",
+        "tourism": "hostel",
         "operator": "Pro4 Living",
         "addr:street": "Spice Garden Road"
       },
@@ -264355,7 +264407,8 @@
         "lanes": "3",
         "oneway": "yes",
         "sidewalk": "separate",
-        "embankment": "yes"
+        "embankment": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264389,7 +264442,8 @@
         "lanes": "3",
         "oneway": "yes",
         "sidewalk": "separate",
-        "embankment": "yes"
+        "embankment": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264427,7 +264481,8 @@
         "lanes": "2",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ದೊಡ್ದನೆಕ್ಕುಂದಿ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264550,7 +264605,8 @@
         "highway": "residential",
         "name": "6th Main Road",
         "surface": "asphalt",
-        "lanes": "2"
+        "lanes": "2",
+        "name:kn": "೬ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264603,7 +264659,8 @@
       "id": "way/29456155",
       "tags": {
         "highway": "residential",
-        "name": "3rd Main Road"
+        "name": "3rd Main Road",
+        "name:kn": "೩ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264644,7 +264701,8 @@
       "id": "way/29456247",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264665,7 +264723,8 @@
       "id": "way/29456298",
       "tags": {
         "highway": "residential",
-        "name": "6th Cross Road"
+        "name": "6th Cross Road",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264691,7 +264750,8 @@
       "tags": {
         "highway": "residential",
         "name": "3rd Main Road",
-        "surface": "asphalt"
+        "surface": "asphalt",
+        "name:kn": "೩ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264728,7 +264788,9 @@
       "id": "way/29456511",
       "tags": {
         "highway": "residential",
-        "name": "5th Cross Road"
+        "name": "5th Cross Road",
+        "name:kn": "೫ನೇ ಅಡ್ಡ ರಸ್ತೆ",
+        "name:ur": "5 ویں کراس روڈ"
       },
       "geometry": [
         [
@@ -264750,7 +264812,8 @@
       "tags": {
         "highway": "residential",
         "name": "4th Cross Road",
-        "surface": "asphalt"
+        "surface": "asphalt",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264787,7 +264850,8 @@
       "id": "way/29456866",
       "tags": {
         "highway": "residential",
-        "name": "6th Main Road"
+        "name": "6th Main Road",
+        "name:kn": "೬ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264812,7 +264876,8 @@
       "id": "way/29456897",
       "tags": {
         "highway": "residential",
-        "name": "5th Main Road"
+        "name": "5th Main Road",
+        "name:kn": "೫ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264837,7 +264902,8 @@
       "id": "way/29457001",
       "tags": {
         "highway": "residential",
-        "name": "4th Main Road"
+        "name": "4th Main Road",
+        "name:kn": "೪ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264859,7 +264925,8 @@
       "tags": {
         "highway": "residential",
         "name": "2nd Cross Road",
-        "surface": "asphalt"
+        "surface": "asphalt",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264908,7 +264975,8 @@
       "id": "way/29457216",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264956,7 +265024,8 @@
       "tags": {
         "highway": "residential",
         "name": "1st Cross Road",
-        "surface": "asphalt"
+        "surface": "asphalt",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -264985,7 +265054,8 @@
       "id": "way/29457640",
       "tags": {
         "highway": "residential",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265022,7 +265092,8 @@
       "id": "way/29458452",
       "tags": {
         "highway": "residential",
-        "name": "Vaikuntam Layout"
+        "name": "Vaikuntam Layout",
+        "name:kn": "ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265098,7 +265169,8 @@
         "highway": "residential",
         "name": "8th Cross Road",
         "surface": "asphalt",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೮ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265123,7 +265195,8 @@
       "id": "way/37699839",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265158,7 +265231,8 @@
         "highway": "residential",
         "name": "6th Cross Road",
         "surface": "asphalt",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265185,7 +265259,9 @@
         "highway": "residential",
         "name": "5th Cross Road",
         "surface": "asphalt",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೫ನೇ ಅಡ್ಡ ರಸ್ತೆ",
+        "name:ur": "5 ویں کراس روڈ"
       },
       "geometry": [
         [
@@ -265212,7 +265288,8 @@
         "highway": "residential",
         "name": "4th Cross",
         "surface": "asphalt",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265239,7 +265316,8 @@
         "highway": "residential",
         "name": "3rd Cross Road",
         "surface": "asphalt",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265281,7 +265359,8 @@
       "id": "way/37699845",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265326,7 +265405,8 @@
       "id": "way/37699847",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265349,7 +265429,8 @@
         "highway": "residential",
         "name": "1st Cross Road",
         "surface": "asphalt",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -265686,7 +265767,8 @@
       "id": "way/37700526",
       "tags": {
         "highway": "tertiary",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -266017,7 +266099,8 @@
       "id": "way/37723489",
       "tags": {
         "highway": "residential",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -266639,7 +266722,8 @@
         "name": "Gandhi Nagar Main Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -266788,7 +266872,8 @@
       "id": "way/83803475",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -266813,7 +266898,8 @@
       "id": "way/83803499",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267015,7 +267101,8 @@
       "id": "way/88635042",
       "tags": {
         "highway": "residential",
-        "name": "3rd Main Road"
+        "name": "3rd Main Road",
+        "name:kn": "೩ನೇ ಮಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267105,7 +267192,8 @@
       "id": "way/89532447",
       "tags": {
         "highway": "residential",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267156,7 +267244,8 @@
         "highway": "residential",
         "name": "14th Cross Road",
         "surface": "ground",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "೧೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267213,7 +267302,8 @@
       "id": "way/89533026",
       "tags": {
         "highway": "residential",
-        "name": "12th Cross Road"
+        "name": "12th Cross Road",
+        "name:kn": "೧೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267242,7 +267332,8 @@
       "id": "way/89533333",
       "tags": {
         "highway": "residential",
-        "name": "5th Main Road"
+        "name": "5th Main Road",
+        "name:kn": "೫ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267271,7 +267362,8 @@
       "id": "way/92641597",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267293,7 +267385,8 @@
       "tags": {
         "highway": "residential",
         "name": "4th Main Road",
-        "surface": "concrete"
+        "surface": "concrete",
+        "name:kn": "೪ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267371,7 +267464,8 @@
       "tags": {
         "highway": "residential",
         "name": "2nd Cross Road",
-        "width": "5"
+        "width": "5",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267481,7 +267575,8 @@
       "id": "way/98314686",
       "tags": {
         "highway": "residential",
-        "name": "6th Cross Road"
+        "name": "6th Cross Road",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267520,7 +267615,8 @@
         "highway": "residential",
         "name": "9th Cross Road",
         "surface": "asphalt",
-        "maxspeed": "30"
+        "maxspeed": "30",
+        "name:kn": "೯ನೇ ಅಡ್ಡರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267577,7 +267673,8 @@
       "id": "way/100107968",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267610,7 +267707,8 @@
       "id": "way/100107969",
       "tags": {
         "highway": "residential",
-        "name": "7th A Cross Road"
+        "name": "7th A Cross Road",
+        "name:kn": "೭ ಏ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267635,7 +267733,8 @@
       "id": "way/100107970",
       "tags": {
         "highway": "residential",
-        "name": "4th A Cross Road"
+        "name": "4th A Cross Road",
+        "name:kn": "೪ ಎ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267660,7 +267759,8 @@
       "id": "way/100107971",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267683,7 +267783,8 @@
         "highway": "residential",
         "name": "1st Main Road",
         "surface": "asphalt",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267760,7 +267861,8 @@
       "id": "way/100107973",
       "tags": {
         "highway": "residential",
-        "name": "9th Main Road"
+        "name": "9th Main Road",
+        "name:kn": "೯ನೇ ಮುಖ್ಯರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267793,7 +267895,8 @@
       "id": "way/100107974",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267814,7 +267917,8 @@
       "id": "way/100107975",
       "tags": {
         "highway": "residential",
-        "name": "6th A Cross"
+        "name": "6th A Cross",
+        "name:kn": "೬ ಏ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267835,7 +267939,8 @@
       "id": "way/100107976",
       "tags": {
         "highway": "residential",
-        "name": "5th A Cross Road"
+        "name": "5th A Cross Road",
+        "name:kn": "೫ ಏ ಅಡ್ಡರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -267864,7 +267969,8 @@
       "id": "way/100107978",
       "tags": {
         "highway": "residential",
-        "name": "6th Cross Road"
+        "name": "6th Cross Road",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -268462,7 +268568,8 @@
       "id": "way/122151903",
       "tags": {
         "highway": "residential",
-        "name": "10th Cross Road"
+        "name": "10th Cross Road",
+        "name:kn": "೧೦ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -268599,7 +268706,8 @@
       "id": "way/122151908",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -268632,7 +268740,8 @@
       "id": "way/122151909",
       "tags": {
         "highway": "residential",
-        "name": "12th Cross Road"
+        "name": "12th Cross Road",
+        "name:kn": "೧೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -268713,7 +268822,8 @@
       "id": "way/122151915",
       "tags": {
         "highway": "residential",
-        "name": "8th Cross Road"
+        "name": "8th Cross Road",
+        "name:kn": "೮ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -268742,7 +268852,8 @@
       "id": "way/122151916",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -268775,7 +268886,8 @@
       "id": "way/122151917",
       "tags": {
         "highway": "residential",
-        "name": "9th Cross Road"
+        "name": "9th Cross Road",
+        "name:kn": "೯ನೇ ಅಡ್ಡರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -268864,7 +268976,8 @@
       "id": "way/122151920",
       "tags": {
         "highway": "residential",
-        "name": "11th Cross Road"
+        "name": "11th Cross Road",
+        "name:kn": "೧೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -268910,7 +269023,8 @@
       "tags": {
         "highway": "residential",
         "name": "3rd Main Road",
-        "surface": "ground"
+        "surface": "ground",
+        "name:kn": "೩ನೇ ಮಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269003,7 +269117,8 @@
       "id": "way/122151926",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269098,7 +269213,8 @@
         "lanes": "2",
         "oneway": "yes",
         "sidewalk": "separate",
-        "smoothness": "good"
+        "smoothness": "good",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269341,7 +269457,8 @@
         "highway": "residential",
         "name": "2nd Main Road",
         "surface": "asphalt",
-        "lanes": "2"
+        "lanes": "2",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269427,7 +269544,8 @@
       "tags": {
         "highway": "residential",
         "name": "Sai Baba Temple Road",
-        "surface": "asphalt"
+        "surface": "asphalt",
+        "name:kn": "ಸಾಯಿಬಾಬಾ ದೇವಸ್ಥಾನ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269564,7 +269682,9 @@
       "id": "way/130999835",
       "tags": {
         "highway": "residential",
-        "name": "5th Cross Road"
+        "name": "5th Cross Road",
+        "name:kn": "೫ನೇ ಅಡ್ಡ ರಸ್ತೆ",
+        "name:ur": "5 ویں کراس روڈ"
       },
       "geometry": [
         [
@@ -269677,7 +269797,8 @@
       "id": "way/130999842",
       "tags": {
         "highway": "residential",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269734,7 +269855,8 @@
       "id": "way/130999846",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269764,7 +269886,9 @@
       "tags": {
         "highway": "residential",
         "name": "5th Cross Road",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "೫ನೇ ಅಡ್ಡ ರಸ್ತೆ",
+        "name:ur": "5 ویں کراس روڈ"
       },
       "geometry": [
         [
@@ -269789,7 +269913,8 @@
       "id": "way/130999849",
       "tags": {
         "highway": "residential",
-        "name": "4th Cross Road"
+        "name": "4th Cross Road",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269846,7 +269971,8 @@
       "id": "way/130999850",
       "tags": {
         "highway": "residential",
-        "name": "8th Main Road"
+        "name": "8th Main Road",
+        "name:kn": "೮ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269893,7 +270019,8 @@
         "highway": "residential",
         "name": "3rd Main Road",
         "surface": "concrete",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೩ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -269954,7 +270081,8 @@
       "id": "way/130999853",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270113,7 +270241,8 @@
         "highway": "residential",
         "name": "6th Cross Road",
         "oneway": "no",
-        "foot": "yes"
+        "foot": "yes",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270134,7 +270263,8 @@
       "id": "way/130999858",
       "tags": {
         "highway": "residential",
-        "name": "10th Cross Road"
+        "name": "10th Cross Road",
+        "name:kn": "೧೦ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270171,7 +270301,8 @@
       "id": "way/130999860",
       "tags": {
         "highway": "residential",
-        "name": "6th Main Road"
+        "name": "6th Main Road",
+        "name:kn": "೬ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270530,7 +270661,8 @@
       "id": "way/130999870",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270559,7 +270691,8 @@
       "id": "way/130999872",
       "tags": {
         "highway": "residential",
-        "name": "9th Main Road"
+        "name": "9th Main Road",
+        "name:kn": "೯ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270645,7 +270778,8 @@
       "tags": {
         "highway": "residential",
         "name": "1st Cross Road",
-        "surface": "unpaved"
+        "surface": "unpaved",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270874,7 +271008,8 @@
       "id": "way/131037297",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270895,7 +271030,8 @@
       "id": "way/131037298",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270916,7 +271052,8 @@
       "id": "way/131037302",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Rd"
+        "name": "2nd Cross Rd",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270937,7 +271074,8 @@
       "id": "way/131037309",
       "tags": {
         "highway": "residential",
-        "name": "4th Cross Road"
+        "name": "4th Cross Road",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270962,7 +271100,8 @@
       "id": "way/131037319",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -270983,7 +271122,8 @@
       "id": "way/131037320",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -271004,7 +271144,8 @@
       "id": "way/131037325",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -271053,7 +271194,8 @@
       "id": "way/131037329",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -271082,7 +271224,8 @@
       "id": "way/131037333",
       "tags": {
         "highway": "residential",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -271251,7 +271394,8 @@
       "id": "way/133126062",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -271389,7 +271533,8 @@
       "id": "way/148481374",
       "tags": {
         "highway": "tertiary",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -271598,7 +271743,8 @@
       "id": "way/148481412",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -271763,7 +271909,8 @@
         "name": "Chinnappanahalli Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "ಚಿನ್ನಪ್ಪನಹಳ್ಳಿ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -272027,7 +272174,8 @@
       "id": "way/151492275",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -272573,7 +272721,8 @@
       "tags": {
         "highway": "residential",
         "name": "1st Main Road",
-        "service": "alley"
+        "service": "alley",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -272684,7 +272833,8 @@
       "id": "way/158623051",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -272750,7 +272900,8 @@
         "lanes": "2",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -272819,7 +272970,8 @@
       "id": "way/158623057",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -272848,7 +273000,8 @@
       "id": "way/158623060",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -272885,7 +273038,8 @@
       "id": "way/158623063",
       "tags": {
         "highway": "residential",
-        "name": "4th Cross Road"
+        "name": "4th Cross Road",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -272970,7 +273124,8 @@
         "name": "2nd Cross Road",
         "surface": "asphalt",
         "oneway": "yes",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -273033,7 +273188,8 @@
         "highway": "residential",
         "name": "Munireddy Layout",
         "oneway": "no",
-        "foot": "yes"
+        "foot": "yes",
+        "name:kn": "ಮುನಿರೆಡ್ಡಿ ಬಡಾವಣೆ"
       },
       "geometry": [
         [
@@ -273352,7 +273508,8 @@
       "tags": {
         "highway": "residential",
         "name": "Railway Station Road",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "ರೈಲು ನಿಲ್ದಾಣ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -273377,7 +273534,8 @@
       "id": "way/223045624",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -273400,7 +273558,8 @@
         "highway": "residential",
         "name": "2nd Cross Road",
         "surface": "asphalt",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -273421,7 +273580,8 @@
       "id": "way/223045626",
       "tags": {
         "highway": "residential",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -273443,7 +273603,8 @@
       "tags": {
         "highway": "residential",
         "name": "3rd Main Road",
-        "surface": "asphalt"
+        "surface": "asphalt",
+        "name:kn": "೩ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -273935,7 +274096,8 @@
       "id": "way/232866079",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -274893,7 +275055,8 @@
       "tags": {
         "highway": "residential",
         "name": "2nd Cross Road",
-        "surface": "paved"
+        "surface": "paved",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -274941,7 +275104,8 @@
         "highway": "residential",
         "name": "1st Main Road",
         "surface": "asphalt",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275083,7 +275247,8 @@
       "tags": {
         "highway": "residential",
         "name": "1st A Main Road",
-        "surface": "paved"
+        "surface": "paved",
+        "name:kn": "೧ ಏ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275108,7 +275273,8 @@
       "id": "way/260359252",
       "tags": {
         "highway": "residential",
-        "name": "2nd A Cross"
+        "name": "2nd A Cross",
+        "name:kn": "೨ ಎ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275137,7 +275303,8 @@
       "id": "way/260359253",
       "tags": {
         "highway": "residential",
-        "name": "3rd A Cross Road"
+        "name": "3rd A Cross Road",
+        "name:kn": "೩ ಏ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275158,7 +275325,8 @@
       "id": "way/260359254",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275179,7 +275347,8 @@
       "id": "way/260359255",
       "tags": {
         "highway": "residential",
-        "name": "4th Cross Road"
+        "name": "4th Cross Road",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275200,7 +275369,9 @@
       "id": "way/260359256",
       "tags": {
         "highway": "residential",
-        "name": "5th Cross Road"
+        "name": "5th Cross Road",
+        "name:kn": "೫ನೇ ಅಡ್ಡ ರಸ್ತೆ",
+        "name:ur": "5 ویں کراس روڈ"
       },
       "geometry": [
         [
@@ -275221,7 +275392,8 @@
       "id": "way/260359257",
       "tags": {
         "highway": "residential",
-        "name": "8th Cross Road"
+        "name": "8th Cross Road",
+        "name:kn": "೮ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275246,7 +275418,8 @@
         "surface": "asphalt",
         "lanes": "4",
         "sidewalk": "separate",
-        "alt_name": "Kadubeesanahalli Road"
+        "alt_name": "Kadubeesanahalli Road",
+        "name:kn": "ಪಣತೂರು ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275375,7 +275548,8 @@
       "id": "way/290187540",
       "tags": {
         "highway": "residential",
-        "name": "7th Main Road"
+        "name": "7th Main Road",
+        "name:kn": "೭ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275478,7 +275652,8 @@
         "highway": "tertiary",
         "name": "Munekolala Main Road",
         "surface": "asphalt",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275679,7 +275854,8 @@
       "id": "way/309508252",
       "tags": {
         "highway": "tertiary",
-        "name": "Kariyamma Agrahara Road"
+        "name": "Kariyamma Agrahara Road",
+        "name:kn": "ಕರಿಯಮ್ಮನ ಅಗ್ರಹಾರ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275791,7 +275967,8 @@
       "id": "way/309621320",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275860,7 +276037,8 @@
       "id": "way/309670148",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275909,7 +276087,8 @@
       "id": "way/309670149",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -275934,7 +276113,8 @@
       "id": "way/309670150",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -276307,7 +276487,8 @@
       "id": "way/309670441",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -276408,7 +276589,8 @@
       "id": "way/313707504",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -276435,7 +276617,8 @@
         "highway": "residential",
         "name": "3rd A Cross Road",
         "maxspeed": "20",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "೩ನೇ ಏ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -276589,7 +276772,8 @@
       "id": "way/332244566",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -276642,7 +276826,8 @@
       "id": "way/332244567",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -277005,7 +277190,8 @@
       "id": "way/343746538",
       "tags": {
         "highway": "residential",
-        "name": "5th Main Road"
+        "name": "5th Main Road",
+        "name:kn": "೫ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -277750,7 +277936,8 @@
       "id": "way/375215721",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -277853,7 +278040,8 @@
         "lit": "yes",
         "alt_name": "Srinagar - Kanyakumari Highway",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -277928,7 +278116,8 @@
         "foot": "no",
         "layer": "-1",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -277963,7 +278152,8 @@
         "lit": "yes",
         "alt_name": "Srinagar - Kanyakumari Highway",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278051,7 +278241,8 @@
         "layer": "-1",
         "covered": "yes",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278145,7 +278336,8 @@
         "sidewalk": "no",
         "layer": "-1",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278422,7 +278614,8 @@
         "foot": "no",
         "layer": "-1",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278473,7 +278666,8 @@
         "foot": "no",
         "layer": "-1",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278513,7 +278707,8 @@
         "layer": "-1",
         "covered": "yes",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278718,7 +278913,8 @@
       "id": "way/390148400",
       "tags": {
         "highway": "residential",
-        "name": "10th Cross Road"
+        "name": "10th Cross Road",
+        "name:kn": "೧೦ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278743,7 +278939,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278837,7 +279034,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -278898,7 +279096,8 @@
         "lanes": "3",
         "oneway": "yes",
         "sidewalk": "left",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -279017,7 +279216,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -279061,7 +279261,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280092,7 +280293,8 @@
       "id": "way/546003178",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280446,7 +280648,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280494,7 +280697,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280527,7 +280731,8 @@
       "id": "way/546799005",
       "tags": {
         "highway": "residential",
-        "name": "6th Cross Road"
+        "name": "6th Cross Road",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280628,7 +280833,8 @@
       "id": "way/546799010",
       "tags": {
         "highway": "residential",
-        "name": "9th Cross Road"
+        "name": "9th Cross Road",
+        "name:kn": "೯ನೇ ಅಡ್ಡರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280649,7 +280855,8 @@
       "id": "way/546799012",
       "tags": {
         "highway": "residential",
-        "name": "10th Cross Road"
+        "name": "10th Cross Road",
+        "name:kn": "೧೦ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280682,7 +280889,8 @@
       "id": "way/546799014",
       "tags": {
         "highway": "residential",
-        "name": "11th Cross Road"
+        "name": "11th Cross Road",
+        "name:kn": "೧೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280711,7 +280919,8 @@
       "id": "way/546799033",
       "tags": {
         "highway": "residential",
-        "name": "12th Cross Road"
+        "name": "12th Cross Road",
+        "name:kn": "೧೨ನೇ ಅಡ್ಡರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280752,7 +280961,8 @@
       "id": "way/546799035",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -280773,7 +280983,8 @@
       "id": "way/546799036",
       "tags": {
         "highway": "residential",
-        "name": "6th Cross Road"
+        "name": "6th Cross Road",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281174,7 +281385,8 @@
       "id": "way/546799049",
       "tags": {
         "highway": "residential",
-        "name": "4th Main Road"
+        "name": "4th Main Road",
+        "name:kn": "೪ನೇ ಮಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281227,7 +281439,8 @@
       "id": "way/546799050",
       "tags": {
         "highway": "residential",
-        "name": "5th A Main Road"
+        "name": "5th A Main Road",
+        "name:kn": "೫ನೇ ಏ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281256,7 +281469,8 @@
       "id": "way/546799051",
       "tags": {
         "highway": "residential",
-        "name": "6th Main Road"
+        "name": "6th Main Road",
+        "name:kn": "೬ನೇ ಮುಖ್ಯರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281301,7 +281515,8 @@
       "id": "way/546799054",
       "tags": {
         "highway": "residential",
-        "name": "9th Main Road"
+        "name": "9th Main Road",
+        "name:kn": "೯ನೇ ಮುಖ್ಯರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281326,7 +281541,8 @@
       "id": "way/546799055",
       "tags": {
         "highway": "residential",
-        "name": "8th Cross Road"
+        "name": "8th Cross Road",
+        "name:kn": "೮ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281347,7 +281563,8 @@
       "id": "way/546799056",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281368,7 +281585,8 @@
       "id": "way/546799057",
       "tags": {
         "highway": "residential",
-        "name": "6th Cross Road"
+        "name": "6th Cross Road",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281389,7 +281607,9 @@
       "id": "way/546799058",
       "tags": {
         "highway": "residential",
-        "name": "5th Cross Road"
+        "name": "5th Cross Road",
+        "name:kn": "೫ನೇ ಅಡ್ಡ ರಸ್ತೆ",
+        "name:ur": "5 ویں کراس روڈ"
       },
       "geometry": [
         [
@@ -281514,7 +281734,8 @@
       "id": "way/546799064",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281597,7 +281818,8 @@
       "id": "way/546799067",
       "tags": {
         "highway": "residential",
-        "name": "10th Cross Road"
+        "name": "10th Cross Road",
+        "name:kn": "೧೦ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281623,7 +281845,8 @@
       "tags": {
         "highway": "tertiary",
         "name": "Lakshmi Narayana Temple Road",
-        "maxspeed": "40"
+        "maxspeed": "40",
+        "name:kn": "ಲಕ್ಷ್ಮೀನಾರಾಯಣ ದೇವಸ್ಥಾನ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281655,7 +281878,8 @@
         "name": "Manjunadha Layout Main Road",
         "surface": "asphalt",
         "lanes": "2",
-        "maxspeed": "40"
+        "maxspeed": "40",
+        "name:kn": "ಮಂಜುನಾಥ ಬಡಾವಣೆ ಮಖ್ಯರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281784,7 +282008,8 @@
       "id": "way/546799087",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281809,7 +282034,8 @@
       "id": "way/546799088",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281834,7 +282060,8 @@
       "id": "way/546799089",
       "tags": {
         "highway": "residential",
-        "name": "6th Cross Road"
+        "name": "6th Cross Road",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281859,7 +282086,8 @@
       "id": "way/546799090",
       "tags": {
         "highway": "residential",
-        "name": "7th Cross Road"
+        "name": "7th Cross Road",
+        "name:kn": "೭ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281884,7 +282112,8 @@
       "id": "way/546799091",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281905,7 +282134,8 @@
       "id": "way/546799092",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281926,7 +282156,8 @@
       "id": "way/546799093",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -281971,7 +282202,8 @@
       "id": "way/546799095",
       "tags": {
         "highway": "living_street",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -282020,7 +282252,8 @@
       "id": "way/546799097",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -282041,7 +282274,8 @@
       "id": "way/546799098",
       "tags": {
         "highway": "residential",
-        "name": "2nd Cross Road"
+        "name": "2nd Cross Road",
+        "name:kn": "೨ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -282062,7 +282296,8 @@
       "id": "way/546799099",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -282111,7 +282346,8 @@
       "id": "way/546799101",
       "tags": {
         "highway": "residential",
-        "name": "9th Cross Road"
+        "name": "9th Cross Road",
+        "name:kn": "೯ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -282184,7 +282420,8 @@
       "id": "way/546799105",
       "tags": {
         "highway": "service",
-        "name": "Annaiah Reddy Street"
+        "name": "Annaiah Reddy Street",
+        "name:kn": "ಅಣ್ಣಯ್ಯ ರೆಡ್ಡಿ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -282413,7 +282650,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -283102,7 +283340,8 @@
       "id": "way/655505030",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -283167,7 +283406,8 @@
       "id": "way/655510954",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -283857,7 +284097,8 @@
       "id": "way/660103848",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -285106,7 +285347,8 @@
         "highway": "tertiary",
         "name": "Panathur Main Road",
         "surface": "asphalt",
-        "lanes": "1"
+        "lanes": "1",
+        "name:kn": "ಪಣತೂರು ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -285350,7 +285592,8 @@
       "id": "way/694986172",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -285736,7 +285979,8 @@
       "id": "way/695612558",
       "tags": {
         "highway": "residential",
-        "name": "4th Cross Road"
+        "name": "4th Cross Road",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -287592,7 +287836,8 @@
         "lanes": "2",
         "oneway": "no",
         "foot": "yes",
-        "bicycle": "yes"
+        "bicycle": "yes",
+        "name:kn": "ರೈಲ್ವೆ ನಿಲ್ದಾಣ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -288371,7 +288616,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -288789,7 +289035,8 @@
         "highway": "tertiary",
         "name": "Panathur Main Road",
         "surface": "concrete",
-        "smoothness": "excellent"
+        "smoothness": "excellent",
+        "name:kn": "ಪಣತೂರು ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -288952,7 +289199,8 @@
         "highway": "residential",
         "name": "1st Main Road",
         "surface": "asphalt",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -289218,7 +289466,8 @@
       "tags": {
         "highway": "tertiary",
         "name": "Lakshmi Narayana Temple Road",
-        "maxspeed": "40"
+        "maxspeed": "40",
+        "name:kn": "ಲಕ್ಷ್ಮೀನಾರಾಯಣ ದೇವಸ್ಥಾನ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -289240,7 +289489,8 @@
       "tags": {
         "highway": "tertiary",
         "name": "Lakshmi Narayana Temple Road",
-        "maxspeed": "40"
+        "maxspeed": "40",
+        "name:kn": "ಲಕ್ಷ್ಮೀನಾರಾಯಣ ದೇವಸ್ಥಾನ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -289318,7 +289568,8 @@
       "id": "way/762162708",
       "tags": {
         "highway": "residential",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -289627,7 +289878,8 @@
       "id": "way/762162718",
       "tags": {
         "highway": "residential",
-        "name": "5th Main Road"
+        "name": "5th Main Road",
+        "name:kn": "೫ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -289672,7 +289924,8 @@
       "id": "way/762162720",
       "tags": {
         "highway": "residential",
-        "name": "4th Main Road"
+        "name": "4th Main Road",
+        "name:kn": "೪ನೇ ಮಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -289757,7 +290010,8 @@
       "id": "way/762162722",
       "tags": {
         "highway": "residential",
-        "name": "4th Main Road"
+        "name": "4th Main Road",
+        "name:kn": "೪ನೇ ಮಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -290194,7 +290448,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -290846,7 +291101,8 @@
       "id": "way/784196585",
       "tags": {
         "highway": "residential",
-        "name": "8th Cross Road"
+        "name": "8th Cross Road",
+        "name:kn": "೮ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -292097,7 +292353,8 @@
       "id": "way/796561971",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -292396,7 +292653,8 @@
       "id": "way/796863789",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -292722,7 +292980,8 @@
       "id": "way/799547980",
       "tags": {
         "highway": "residential",
-        "name": "5th Cross Road"
+        "name": "5th Cross Road",
+        "name:kn": "೫ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -292827,7 +293086,8 @@
       "id": "way/799776587",
       "tags": {
         "highway": "residential",
-        "name": "4th Cross Road"
+        "name": "4th Cross Road",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -294194,7 +294454,8 @@
         "lanes": "2",
         "oneway": "no",
         "foot": "yes",
-        "bicycle": "yes"
+        "bicycle": "yes",
+        "name:kn": "ಬೆಳ್ಳಂದೂರು ರೈಲ್ವೆ ನಿಲ್ದಾಣ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -294640,7 +294901,8 @@
       "id": "way/1066506702",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -294667,7 +294929,8 @@
         "highway": "residential",
         "name": "Munireddy Layout",
         "oneway": "no",
-        "foot": "yes"
+        "foot": "yes",
+        "name:kn": "ಮುನಿರೆಡ್ಡಿ ಬಡಾವಣೆ"
       },
       "geometry": [
         [
@@ -294811,7 +295074,8 @@
         "oneway": "yes",
         "sidewalk": "separate",
         "lit": "yes",
-        "smoothness": "excellent"
+        "smoothness": "excellent",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -294839,7 +295103,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -294988,7 +295253,8 @@
       "id": "way/1073336190",
       "tags": {
         "highway": "unclassified",
-        "name": "2nd Main Road"
+        "name": "2nd Main Road",
+        "name:kn": "೨ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295066,7 +295332,8 @@
         "surface": "asphalt",
         "lanes": "4",
         "sidewalk": "separate",
-        "alt_name": "Kadubeesanahalli Road"
+        "alt_name": "Kadubeesanahalli Road",
+        "name:kn": "ಪಣತೂರು ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295166,7 +295433,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "alt_name": "Kadubeesanahalli Road"
+        "alt_name": "Kadubeesanahalli Road",
+        "name:kn": "ಪಣತೂರು ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295465,7 +295733,8 @@
         "lit": "yes",
         "alt_name": "Srinagar - Kanyakumari Highway",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295530,7 +295799,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295604,7 +295874,8 @@
         "lit": "yes",
         "alt_name": "Srinagar - Kanyakumari Highway",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295690,7 +295961,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295739,7 +296011,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "name:kn": "ದೊಡ್ಡನೆಕುಂದಿ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295848,7 +296121,8 @@
       "id": "way/1098843682",
       "tags": {
         "highway": "tertiary",
-        "name": "Kariyamma Agrahara Road"
+        "name": "Kariyamma Agrahara Road",
+        "name:kn": "ಕರಿಯಮ್ಮನ ಅಗ್ರಹಾರ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -295935,7 +296209,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -296205,7 +296480,8 @@
       "id": "way/1102544432",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -296226,7 +296502,8 @@
       "id": "way/1102544433",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -297027,7 +297304,8 @@
         "lit": "yes",
         "alt_name": "Srinagar - Kanyakumari Highway",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -298264,7 +298542,8 @@
       "id": "way/1111939013",
       "tags": {
         "highway": "residential",
-        "name": "1st C Main Road"
+        "name": "1st C Main Road",
+        "name:kn": "೧ನೇ ಸೀ ಮುಖ್ನ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -299322,7 +299601,8 @@
       "tags": {
         "highway": "residential",
         "name": "3rd Main Road",
-        "surface": "asphalt"
+        "surface": "asphalt",
+        "name:kn": "೩ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -299493,7 +299773,8 @@
         "surface": "asphalt",
         "lanes": "3",
         "oneway": "yes",
-        "embankment": "yes"
+        "embankment": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -299520,7 +299801,8 @@
         "oneway": "yes",
         "sidewalk": "separate",
         "bridge": "viaduct",
-        "layer": "1"
+        "layer": "1",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -299550,7 +299832,8 @@
         "lanes": "3",
         "oneway": "yes",
         "sidewalk": "separate",
-        "embankment": "yes"
+        "embankment": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -299581,7 +299864,8 @@
         "oneway": "yes",
         "sidewalk": "separate",
         "bridge": "viaduct",
-        "layer": "1"
+        "layer": "1",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -299609,7 +299893,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -299639,7 +299924,8 @@
         "lanes": "2",
         "oneway": "yes",
         "sidewalk": "separate",
-        "smoothness": "bad"
+        "smoothness": "bad",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -299813,7 +300099,8 @@
         "name": "Panathur Main Road",
         "surface": "asphalt",
         "oneway": "yes",
-        "alt_name": "Kadubeesanahalli Road"
+        "alt_name": "Kadubeesanahalli Road",
+        "name:kn": "ಪಣತೂರು ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -300473,7 +300760,8 @@
       "id": "way/1186144948",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -300578,7 +300866,8 @@
         "highway": "residential",
         "name": "Munireddy Layout",
         "oneway": "no",
-        "foot": "yes"
+        "foot": "yes",
+        "name:kn": "ಮುನಿರೆಡ್ಡಿ ಬಡಾವಣೆ"
       },
       "geometry": [
         [
@@ -301102,7 +301391,8 @@
       "id": "way/1201233659",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -301172,7 +301462,8 @@
         "sidewalk": "separate",
         "lit": "yes",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -301230,7 +301521,8 @@
         "sidewalk": "separate",
         "lit": "yes",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -301303,7 +301595,8 @@
         "layer": "1",
         "alt_name": "Srinagar - Kanyakumari Highway",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -301338,7 +301631,8 @@
         "lit": "yes",
         "alt_name": "Srinagar - Kanyakumari Highway",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -301383,7 +301677,8 @@
         "layer": "1",
         "alt_name": "Srinagar - Kanyakumari Highway",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -301615,7 +301910,8 @@
       "tags": {
         "highway": "residential",
         "name": "1st Cross Road",
-        "surface": "ground"
+        "surface": "ground",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -302062,7 +302358,8 @@
         "name": "Munekolala Main Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -302213,7 +302510,8 @@
         "highway": "service",
         "name": "6th Cross Road",
         "oneway": "no",
-        "foot": "yes"
+        "foot": "yes",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -302238,7 +302536,8 @@
       "id": "way/1221939065",
       "tags": {
         "highway": "residential",
-        "name": "6th Main Road"
+        "name": "6th Main Road",
+        "name:kn": "೬ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -303135,7 +303434,8 @@
       "id": "way/1229018165",
       "tags": {
         "highway": "residential",
-        "name": "1st Main Road"
+        "name": "1st Main Road",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -303156,7 +303456,8 @@
       "id": "way/1229018166",
       "tags": {
         "highway": "residential",
-        "name": "4th Cross Road"
+        "name": "4th Cross Road",
+        "name:kn": "೪ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -303450,7 +303751,8 @@
       "id": "way/1229590373",
       "tags": {
         "highway": "service",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -303475,7 +303777,8 @@
       "id": "way/1229590374",
       "tags": {
         "highway": "residential",
-        "name": "1st Cross Road"
+        "name": "1st Cross Road",
+        "name:kn": "೧ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -306136,7 +306439,8 @@
         "lanes": "2",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -306209,7 +306513,8 @@
         "surface": "asphalt",
         "oneway": "yes",
         "sidewalk": "left",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -306430,7 +306735,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "name:kn": "೧ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -307066,7 +307372,8 @@
         "oneway": "yes",
         "sidewalk": "no",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -307259,7 +307566,8 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -307283,7 +307591,8 @@
         "name": "Varthur Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -307467,7 +307776,8 @@
         "surface": "asphalt",
         "oneway": "yes",
         "sidewalk": "left",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -307492,7 +307802,8 @@
         "surface": "asphalt",
         "oneway": "yes",
         "sidewalk": "left",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -307538,7 +307849,8 @@
         "lanes": "2",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -308533,7 +308845,8 @@
         "lanes": "3",
         "oneway": "yes",
         "sidewalk": "left",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -308563,7 +308876,8 @@
         "lanes": "3",
         "oneway": "yes",
         "sidewalk": "left",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -308632,7 +308946,8 @@
         "surface": "asphalt",
         "oneway": "yes",
         "sidewalk": "left",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -308681,7 +308996,8 @@
         "surface": "asphalt",
         "oneway": "yes",
         "sidewalk": "left",
-        "lit": "yes"
+        "lit": "yes",
+        "name:kn": "ವರ್ತೂರು ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -309292,7 +309608,8 @@
         "sidewalk": "separate",
         "lit": "yes",
         "official_name": "KC Reddy Ring Road",
-        "short_name": "ORR"
+        "short_name": "ORR",
+        "name:kn": "ಹೊರ ವರ್ತುಲ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -310628,7 +310945,8 @@
       "id": "way/1427889895",
       "tags": {
         "highway": "residential",
-        "name": "3rd Cross Road"
+        "name": "3rd Cross Road",
+        "name:kn": "೩ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -310800,7 +311118,8 @@
       "id": "way/1427953814",
       "tags": {
         "highway": "residential",
-        "name": "Sai Baba Temple Road"
+        "name": "Sai Baba Temple Road",
+        "name:kn": "ಸಾಯಿಬಾಬಾ ದೇವಸ್ಥಾನ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -310829,7 +311148,8 @@
       "id": "way/1427954982",
       "tags": {
         "highway": "residential",
-        "name": "6th Cross Road"
+        "name": "6th Cross Road",
+        "name:kn": "೬ನೇ ಅಡ್ಡ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -311394,7 +311714,8 @@
         "name": "Chinnappanahalli Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "ಚಿನ್ನಪ್ಪನಹಳ್ಳಿ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -311460,7 +311781,8 @@
       "tags": {
         "highway": "residential",
         "name": "4th Main Road",
-        "surface": "concrete"
+        "surface": "concrete",
+        "name:kn": "೪ನೇ ಮುಖ್ಯ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -311504,7 +311826,8 @@
         "name": "Chinnappanahalli Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "ಚಿನ್ನಪ್ಪನಹಳ್ಳಿ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -317719,7 +318042,8 @@
       "id": "way/1248868623",
       "tags": {
         "highway": "pedestrian",
-        "surface": "paving_stones"
+        "surface": "paving_stones",
+        "area": "yes"
       },
       "geometry": [
         [
@@ -320477,7 +320801,8 @@
         "highway": "path",
         "name": "Chinnappanahalli Road",
         "surface": "gravel",
-        "oneway": "no"
+        "oneway": "no",
+        "name:kn": "ಚಿನ್ನಪ್ಪನಹಳ್ಳಿ ರಸ್ತೆ"
       },
       "geometry": [
         [
@@ -322057,6 +322382,312 @@
       ]
     }
   ],
+  "treeRows": [
+    {
+      "id": "way/1343417363",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          1046.2,
+          -1271.1
+        ],
+        [
+          1022.8,
+          -1347.3
+        ]
+      ],
+      "centroid": [
+        1034.5,
+        -1309.2
+      ]
+    },
+    {
+      "id": "way/1343417364",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          971.2,
+          -1333.7
+        ],
+        [
+          982.5,
+          -1288.2
+        ],
+        [
+          986.1,
+          -1273.7
+        ],
+        [
+          1027.9,
+          -1284.5
+        ]
+      ],
+      "centroid": [
+        991.9,
+        -1295
+      ]
+    },
+    {
+      "id": "way/1343417365",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          1027.9,
+          -1284.5
+        ],
+        [
+          995.8,
+          -1392.2
+        ]
+      ],
+      "centroid": [
+        1011.9,
+        -1338.4
+      ]
+    },
+    {
+      "id": "way/1343417366",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          990.2,
+          -1401.1
+        ],
+        [
+          982.8,
+          -1426.8
+        ]
+      ],
+      "centroid": [
+        986.5,
+        -1413.9
+      ]
+    },
+    {
+      "id": "way/1343417367",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          961.1,
+          -1508.8
+        ],
+        [
+          980.9,
+          -1443.9
+        ],
+        [
+          993.1,
+          -1443
+        ],
+        [
+          998.7,
+          -1424.8
+        ]
+      ],
+      "centroid": [
+        983.5,
+        -1455.1
+      ]
+    },
+    {
+      "id": "way/1343417368",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          889.6,
+          -1486.7
+        ],
+        [
+          919.9,
+          -1380.1
+        ]
+      ],
+      "centroid": [
+        904.7,
+        -1433.4
+      ]
+    },
+    {
+      "id": "way/1343417369",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          970.9,
+          -1509.4
+        ],
+        [
+          987.9,
+          -1451.3
+        ],
+        [
+          1000.8,
+          -1449.4
+        ],
+        [
+          1007.3,
+          -1428.4
+        ]
+      ],
+      "centroid": [
+        991.7,
+        -1459.6
+      ]
+    },
+    {
+      "id": "way/1343417370",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          958.9,
+          -1433.4
+        ],
+        [
+          964.5,
+          -1413.3
+        ]
+      ],
+      "centroid": [
+        961.7,
+        -1423.4
+      ]
+    },
+    {
+      "id": "way/1343417371",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          946.2,
+          -1429.6
+        ],
+        [
+          950.3,
+          -1417.2
+        ]
+      ],
+      "centroid": [
+        948.3,
+        -1423.4
+      ]
+    },
+    {
+      "id": "way/1343417375",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          986.1,
+          -1273.7
+        ],
+        [
+          969.9,
+          -1269.4
+        ],
+        [
+          954.3,
+          -1326.2
+        ],
+        [
+          932.6,
+          -1320.8
+        ],
+        [
+          920.9,
+          -1360
+        ]
+      ],
+      "centroid": [
+        952.8,
+        -1310
+      ]
+    },
+    {
+      "id": "way/1343417376",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          961.2,
+          -1282.5
+        ],
+        [
+          982.5,
+          -1288.2
+        ]
+      ],
+      "centroid": [
+        971.8,
+        -1285.4
+      ]
+    },
+    {
+      "id": "way/1343417378",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          967.4,
+          -1260
+        ],
+        [
+          986.4,
+          -1264.5
+        ],
+        [
+          995.7,
+          -1260.8
+        ],
+        [
+          1027.7,
+          -1267.4
+        ]
+      ],
+      "centroid": [
+        994.3,
+        -1263.2
+      ]
+    },
+    {
+      "id": "way/1343417379",
+      "tags": {
+        "natural": "tree_row"
+      },
+      "geometry": [
+        [
+          984,
+          -1238
+        ],
+        [
+          1033.8,
+          -1247
+        ]
+      ],
+      "centroid": [
+        1008.9,
+        -1242.5
+      ]
+    }
+  ],
   "shops": [
     {
       "id": "node/413368456",
@@ -322079,7 +322710,8 @@
         "name": "Yo China",
         "amenity": "restaurant",
         "addr:street": "Outer Ring Road (Opp. Innovative Multiplex)",
-        "addr:housenumber": "90/3"
+        "addr:housenumber": "90/3",
+        "name:kn": "ಯೊ ಚೈನ"
       },
       "position": [
         -135.8,
@@ -322093,7 +322725,8 @@
       "name": "Golconda Chimney",
       "tags": {
         "name": "Golconda Chimney",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಗೊಲ್ಕೊಂಡ ಚಿಮಿನಿ"
       },
       "position": [
         1258.9,
@@ -322122,7 +322755,8 @@
       "tags": {
         "name": "Spice Garden",
         "amenity": "restaurant",
-        "addr:street": "HAL Airport Road (near Marathahalli Bridge)"
+        "addr:street": "HAL Airport Road (near Marathahalli Bridge)",
+        "name:kn": "ಸ್ಪೈಸ್ ಗಾರ್ಡನ್"
       },
       "position": [
         860.1,
@@ -322137,7 +322771,8 @@
       "tags": {
         "name": "Puma",
         "shop": "clothes",
-        "addr:street": "Varthur Road"
+        "addr:street": "Varthur Road",
+        "name:kn": "ಪೂಮ"
       },
       "position": [
         -210.3,
@@ -322196,7 +322831,8 @@
       "name": "Pizza Hut",
       "tags": {
         "name": "Pizza Hut",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಪಿಟ್ಸ ಹಟ್"
       },
       "position": [
         824.6,
@@ -322268,7 +322904,8 @@
       "name": "Megha Restaurant",
       "tags": {
         "name": "Megha Restaurant",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಮೇಘ ರೆಸ್ಟೋರೆಂಟ್"
       },
       "position": [
         -359.1,
@@ -322311,7 +322948,8 @@
       "name": "Holly Flames",
       "tags": {
         "name": "Holly Flames",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಹಾಲಿ ಫ್ಲೇಮ್ಸ್"
       },
       "position": [
         862.7,
@@ -322326,7 +322964,8 @@
       "tags": {
         "name": "Odia Mess",
         "amenity": "restaurant",
-        "alt_name": "Tulashi Restaurant"
+        "alt_name": "Tulashi Restaurant",
+        "name:kn": "ಒಡಿಯ ಮೆಸ್"
       },
       "position": [
         -341.9,
@@ -322503,7 +323142,8 @@
       "name": "Bhagini",
       "tags": {
         "name": "Bhagini",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಭಗಿನಿ"
       },
       "position": [
         -568.9,
@@ -322517,7 +323157,8 @@
       "name": "Pizza Hut",
       "tags": {
         "name": "Pizza Hut",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಪಿಟ್ಸ ಹಟ್"
       },
       "position": [
         -636,
@@ -322615,7 +323256,8 @@
       "name": "Reliance Digital",
       "tags": {
         "name": "Reliance Digital",
-        "shop": "electronics"
+        "shop": "electronics",
+        "name:kn": "ರಿಲಾಯನ್ಸ್ ಡಿಜಿಟಲ್"
       },
       "position": [
         -218,
@@ -322671,7 +323313,8 @@
       "name": "Bata",
       "tags": {
         "name": "Bata",
-        "shop": "shoes"
+        "shop": "shoes",
+        "name:kn": "ಬಾಟಾ"
       },
       "position": [
         -194.1,
@@ -323231,7 +323874,8 @@
       "name": "Sangeetha Mobiles",
       "tags": {
         "name": "Sangeetha Mobiles",
-        "shop": "mobile_phone"
+        "shop": "mobile_phone",
+        "name:kn": "ಸಂಗೀತ"
       },
       "position": [
         -49,
@@ -323301,7 +323945,8 @@
       "name": "Vaikuntam",
       "tags": {
         "name": "Vaikuntam",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ವೈಕುಂಟಂ"
       },
       "position": [
         77.3,
@@ -323343,7 +323988,8 @@
       "name": "Udupi Vaibhava",
       "tags": {
         "name": "Udupi Vaibhava",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಕೃಷ್ಣ ವೈಭವ"
       },
       "position": [
         -28.1,
@@ -323441,7 +324087,8 @@
       "name": "Puma",
       "tags": {
         "name": "Puma",
-        "shop": "clothes"
+        "shop": "clothes",
+        "name:kn": "ಪೂಮ"
       },
       "position": [
         -321.1,
@@ -323497,7 +324144,8 @@
       "name": "Adidas",
       "tags": {
         "name": "Adidas",
-        "shop": "sports"
+        "shop": "sports",
+        "name:kn": "ಅಡಿಡಾಸ್"
       },
       "position": [
         -309.2,
@@ -323539,7 +324187,8 @@
       "name": "Manyavar",
       "tags": {
         "name": "Manyavar",
-        "shop": "clothes"
+        "shop": "clothes",
+        "name:kn": "ಮಾನ್ಯವಾರ"
       },
       "position": [
         -284.8,
@@ -323553,7 +324202,8 @@
       "name": "Peter England",
       "tags": {
         "name": "Peter England",
-        "shop": "clothes"
+        "shop": "clothes",
+        "name:kn": "ಪೀಟರ್ ಇಂಗ್ಲೆಂಡ್"
       },
       "position": [
         -282.2,
@@ -323936,7 +324586,8 @@
       "name": "Just Bake",
       "tags": {
         "name": "Just Bake",
-        "shop": "bakery"
+        "shop": "bakery",
+        "name:kn": "ಜಸ್ಟ್ ಬೇಕ್"
       },
       "position": [
         -476.8,
@@ -324324,7 +324975,8 @@
         "name": "Nike",
         "shop": "clothes",
         "addr:street": "Sigma Arcade, Old Airport Road, Marathahalli village, Marathahalli, Marathahalli Village, Marathahalli,",
-        "addr:housenumber": "G-2"
+        "addr:housenumber": "G-2",
+        "name:kn": "ನೈಕ್"
       },
       "position": [
         -305.1,
@@ -324340,7 +324992,8 @@
         "name": "Reebok",
         "shop": "clothes",
         "addr:street": "Sigma Arcade, No. 227/70, Next To Tulsi Theater,, Marathahalli Main Rd, Marathahalli Village, Marathahalli",
-        "addr:housenumber": "G5-G9"
+        "addr:housenumber": "G5-G9",
+        "name:kn": "ರೀಬಾಕ್"
       },
       "position": [
         -302.9,
@@ -324355,7 +325008,8 @@
       "tags": {
         "name": "Puma",
         "shop": "clothes",
-        "addr:street": "HAL Old Airport Rd, Marathahalli Village, Marathahalli,"
+        "addr:street": "HAL Old Airport Rd, Marathahalli Village, Marathahalli,",
+        "name:kn": "ಪೂಮ"
       },
       "position": [
         -627.1,
@@ -324431,7 +325085,8 @@
       "name": "California Burrito",
       "tags": {
         "name": "California Burrito",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:en": "California Burrito"
       },
       "position": [
         -1136.1,
@@ -324530,7 +325185,8 @@
       "tags": {
         "name": "Sri Vishnu Grand",
         "amenity": "restaurant",
-        "addr:street": "Panathur Main Road"
+        "addr:street": "Panathur Main Road",
+        "name:kn": "ಶ್ರೀ ವಿಷ್ಣು"
       },
       "position": [
         -219.2,
@@ -324558,7 +325214,8 @@
         "name": "Nagarjuna",
         "amenity": "restaurant",
         "addr:street": "Outer Ring Road",
-        "addr:housenumber": "88"
+        "addr:housenumber": "88",
+        "name:kn": "ನಾಗಾರ್ಜುನ"
       },
       "position": [
         -254.8,
@@ -325079,7 +325736,8 @@
       "tags": {
         "name": "Mahindra",
         "shop": "car",
-        "alt_name": "Mahindra"
+        "alt_name": "Mahindra",
+        "name:kn": "ಮಹಿಂದ್ರ"
       },
       "position": [
         28.8,
@@ -325191,7 +325849,8 @@
       "name": "Ambur Biryani",
       "tags": {
         "name": "Ambur Biryani",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಅಂಬುರ್ ಬಿರಿಯಾನಿ"
       },
       "position": [
         -393.2,
@@ -325569,7 +326228,8 @@
       "name": "Tanishq",
       "tags": {
         "name": "Tanishq",
-        "shop": "jewelry"
+        "shop": "jewelry",
+        "name:en": "Tanishq"
       },
       "position": [
         -195.7,
@@ -326047,7 +326707,8 @@
       "name": "Jockey",
       "tags": {
         "name": "Jockey",
-        "shop": "clothes"
+        "shop": "clothes",
+        "name:kn": "ಜಾಕೀ"
       },
       "position": [
         -563.8,
@@ -326231,7 +326892,8 @@
       "name": "Tanishq",
       "tags": {
         "name": "Tanishq",
-        "shop": "jewelry"
+        "shop": "jewelry",
+        "name:en": "Tanishq"
       },
       "position": [
         -70.2,
@@ -326863,7 +327525,8 @@
       "tags": {
         "name": "Adishwar",
         "building": "yes",
-        "shop": "electronics"
+        "shop": "electronics",
+        "name:kn": "ಅದಿಶ್ವರ್"
       },
       "position": [
         -137,
@@ -326905,7 +327568,8 @@
         "building": "retail",
         "building:levels": "4",
         "shop": "clothes",
-        "addr:street": "Outer Ring Road"
+        "addr:street": "Outer Ring Road",
+        "name:kn": "ನಳ್ಳಿ ಸಿಲ್ಕ್ಸ್"
       },
       "position": [
         48.9,
@@ -326918,7 +327582,8 @@
       "tags": {
         "name": "Panache Enterprises",
         "shop": "motorcycle",
-        "service": "dealer"
+        "service": "dealer",
+        "name:kn": "ಯಮಹಾ"
       },
       "position": [
         86.1,
@@ -326944,7 +327609,8 @@
       "tags": {
         "name": "Kalamandir",
         "building": "commercial",
-        "shop": "clothes"
+        "shop": "clothes",
+        "name:kn": "ಕಲಾಮಂದಿರ"
       },
       "position": [
         46,
@@ -327092,7 +327758,8 @@
       "tags": {
         "name": "Ayyappa Bakery",
         "building": "yes",
-        "shop": "bakery"
+        "shop": "bakery",
+        "name:kn": "ಅಯ್ಯಪ್ಪ ಬೇಕರಿ"
       },
       "position": [
         1060.1,
@@ -327129,7 +327796,9 @@
       "tags": {
         "name": "Nandini",
         "building": "retail",
-        "shop": "dairy"
+        "shop": "dairy",
+        "name:en": "Nandini",
+        "name:kn": "ನಂದಿನಿ"
       },
       "position": [
         202.7,
@@ -327182,7 +327851,8 @@
       "id": "way/37699896",
       "tags": {
         "name": "Akash Vihar Air Force Camp",
-        "landuse": "military"
+        "landuse": "military",
+        "name:kn": "ಆಕಾಶ ವಿಹಾರ ವಾಯುಪೆಡ"
       },
       "geometry": [
         [
@@ -327281,7 +327951,8 @@
       "id": "way/37700530",
       "tags": {
         "name": "Indian Space Research Organisation",
-        "landuse": "industrial"
+        "landuse": "industrial",
+        "name:kn": "ಭಾರತೀಯ ಬಾಹ್ಯಾಕಾಶ ಸಂಶೋಧನೆ ಸಂಸ್ಥೆ"
       },
       "geometry": [
         [
@@ -327334,7 +328005,8 @@
         "name": "Vagdevi Vilas School",
         "amenity": "school",
         "barrier": "wall",
-        "addr:housenumber": "77/2"
+        "addr:housenumber": "77/2",
+        "name:kn": "ವಾಗ್ದೇವಿ ವಿಲಾಸ ಶಾಲೆ"
       },
       "geometry": [
         [
@@ -327819,7 +328491,8 @@
       "id": "way/122157597",
       "tags": {
         "name": "Karunashraya",
-        "amenity": "hospital"
+        "amenity": "hospital",
+        "name:kn": "ಕರುಣಾಶ್ರಯ"
       },
       "geometry": [
         [
@@ -327863,7 +328536,8 @@
       "tags": {
         "name": "Sankara Eye Hospital",
         "amenity": "hospital",
-        "addr:street": "Varthur Road"
+        "addr:street": "Varthur Road",
+        "name:kn": "ಶಂಕರ ನೇತ್ರಾಲಯ"
       },
       "geometry": [
         [
@@ -327924,6 +328598,62 @@
         26.6
       ],
       "name": "Sankara Eye Hospital",
+      "height": 3.2
+    },
+    {
+      "id": "way/124373428",
+      "tags": {
+        "name": "Ezone sporting",
+        "leisure": "sports_centre",
+        "alt_name": "Torq03"
+      },
+      "geometry": [
+        [
+          161.9,
+          772.9
+        ],
+        [
+          264.9,
+          768.1
+        ],
+        [
+          274.5,
+          657.1
+        ],
+        [
+          272.2,
+          657.2
+        ],
+        [
+          166.9,
+          659
+        ],
+        [
+          165,
+          671.2
+        ],
+        [
+          98.5,
+          681.6
+        ],
+        [
+          99.5,
+          689.3
+        ],
+        [
+          164.3,
+          678.4
+        ],
+        [
+          161.9,
+          772.9
+        ]
+      ],
+      "centroid": [
+        183,
+        700.8
+      ],
+      "name": "Ezone sporting",
       "height": 3.2
     },
     {
@@ -328188,7 +328918,8 @@
       "tags": {
         "name": "Vagdevi School Canteen",
         "building": "yes",
-        "amenity": "fast_food"
+        "amenity": "fast_food",
+        "name:kn": "ವಾಗ್ದೇವಿ ಸ್ಕೂಲ್ ಕ್ಯಾಂಟೀನ್"
       },
       "geometry": [
         [
@@ -328232,7 +328963,8 @@
       "tags": {
         "name": "JP Morgan",
         "building": "office",
-        "addr:street": "Outer Ring Road"
+        "addr:street": "Outer Ring Road",
+        "name:kn": "ಜೆಪಿ ಮೋರ್ಗನ್"
       },
       "geometry": [
         [
@@ -328301,6 +329033,42 @@
         -1537.2
       ],
       "name": "JP Morgan",
+      "height": 3.2
+    },
+    {
+      "id": "way/152938974",
+      "tags": {
+        "name": "Treebo Cartier Hotel",
+        "tourism": "hotel",
+        "addr:street": "Silver Springs Layout"
+      },
+      "geometry": [
+        [
+          834.6,
+          96.5
+        ],
+        [
+          857.2,
+          103.7
+        ],
+        [
+          878.3,
+          59.8
+        ],
+        [
+          844.8,
+          46.5
+        ],
+        [
+          834.6,
+          96.5
+        ]
+      ],
+      "centroid": [
+        849.9,
+        80.6
+      ],
+      "name": "Treebo Cartier Hotel",
       "height": 3.2
     },
     {
@@ -328428,6 +329196,101 @@
         222.9
       ],
       "name": "Visitors'Car Park",
+      "height": 3.2
+    },
+    {
+      "id": "way/152941116",
+      "tags": {
+        "name": "Children's Play Area",
+        "leisure": "playground"
+      },
+      "geometry": [
+        [
+          644.1,
+          258.3
+        ],
+        [
+          665.9,
+          261.2
+        ],
+        [
+          669.1,
+          258
+        ],
+        [
+          669.1,
+          253.4
+        ],
+        [
+          665.3,
+          249
+        ],
+        [
+          663.3,
+          247.9
+        ],
+        [
+          664.8,
+          242.1
+        ],
+        [
+          666.2,
+          238.9
+        ],
+        [
+          668.8,
+          230
+        ],
+        [
+          669.4,
+          223.3
+        ],
+        [
+          667.7,
+          209.4
+        ],
+        [
+          664.8,
+          204
+        ],
+        [
+          668,
+          190.1
+        ],
+        [
+          670,
+          179.4
+        ],
+        [
+          673.2,
+          170.1
+        ],
+        [
+          672.3,
+          167.2
+        ],
+        [
+          666.5,
+          164.9
+        ],
+        [
+          661.8,
+          165.2
+        ],
+        [
+          659.5,
+          171.9
+        ],
+        [
+          644.1,
+          258.3
+        ]
+      ],
+      "centroid": [
+        664.7,
+        217.1
+      ],
+      "name": "Children's Play Area",
       "height": 3.2
     },
     {
@@ -328701,7 +329564,8 @@
       "id": "way/163244601",
       "tags": {
         "name": "Vinayaka Theatre",
-        "landuse": "cinema"
+        "landuse": "cinema",
+        "name:kn": "ವಿನಾಯಕ"
       },
       "geometry": [
         [
@@ -328833,7 +329697,8 @@
       "id": "way/199853340",
       "tags": {
         "name": "Octave",
-        "building": "hotel"
+        "building": "hotel",
+        "tourism": "hotel"
       },
       "geometry": [
         [
@@ -328969,7 +329834,8 @@
       "tags": {
         "name": "Adishwar",
         "building": "yes",
-        "shop": "electronics"
+        "shop": "electronics",
+        "name:kn": "ಅದಿಶ್ವರ್"
       },
       "geometry": [
         [
@@ -329005,7 +329871,8 @@
       "tags": {
         "name": "Biryani Zone",
         "building": "commercial",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "name:kn": "ಬಿರಿಯಾನಿ ಜೋನ್"
       },
       "geometry": [
         [
@@ -329151,7 +330018,8 @@
         "building": "retail",
         "building:levels": "4",
         "shop": "clothes",
-        "addr:street": "Outer Ring Road"
+        "addr:street": "Outer Ring Road",
+        "name:kn": "ನಳ್ಳಿ ಸಿಲ್ಕ್ಸ್"
       },
       "geometry": [
         [
@@ -329186,7 +330054,8 @@
       "id": "way/223045585",
       "tags": {
         "name": "Nandhana Hotels",
-        "building": "commercial"
+        "building": "commercial",
+        "tourism": "hotel"
       },
       "geometry": [
         [
@@ -329222,7 +330091,8 @@
       "tags": {
         "name": "Panache Enterprises",
         "shop": "motorcycle",
-        "service": "dealer"
+        "service": "dealer",
+        "name:kn": "ಯಮಹಾ"
       },
       "geometry": [
         [
@@ -329294,7 +330164,8 @@
       "tags": {
         "name": "Kalamandir",
         "building": "commercial",
-        "shop": "clothes"
+        "shop": "clothes",
+        "name:kn": "ಕಲಾಮಂದಿರ"
       },
       "geometry": [
         [
@@ -329645,7 +330516,8 @@
       "id": "way/223045623",
       "tags": {
         "name": "Sanjay Nagar",
-        "landuse": "residential"
+        "landuse": "residential",
+        "name:kn": "ಸಂಜಯ ನಗರ"
       },
       "geometry": [
         [
@@ -330252,10 +331124,47 @@
       "height": 3.2
     },
     {
+      "id": "way/259894675",
+      "tags": {
+        "name": "Munekolala Bus Stand",
+        "area": "yes",
+        "name:kn": "ಮುನ್ನೆಕೊಳಾಲ ಬಸ್ ನಿಲ್ದಾಣ"
+      },
+      "geometry": [
+        [
+          782.1,
+          -887.2
+        ],
+        [
+          780.3,
+          -952.9
+        ],
+        [
+          746.4,
+          -950.8
+        ],
+        [
+          744.7,
+          -885.5
+        ],
+        [
+          782.1,
+          -887.2
+        ]
+      ],
+      "centroid": [
+        767.1,
+        -912.7
+      ],
+      "name": "Munekolala Bus Stand",
+      "height": 3.2
+    },
+    {
       "id": "way/260359250",
       "tags": {
         "name": "Rajashree Layout",
-        "landuse": "residential"
+        "landuse": "residential",
+        "name:kn": "ರಾಜಶ್ರೀ ಬಡಾವಣೆ"
       },
       "geometry": [
         [
@@ -330429,7 +331338,8 @@
         "building": "residential",
         "building:levels": "4",
         "addr:street": "S J R Dental College Road, Munekolala",
-        "addr:housenumber": "37"
+        "addr:housenumber": "37",
+        "name:kn": "ಗಣಪ ನಿಲಯ"
       },
       "geometry": [
         [
@@ -330775,7 +331685,8 @@
         "name": "Kadabeesanahalli Sewage Treatment Plant",
         "operator": "Bangalore Water Supply and Sewerage Board",
         "landuse": "industrial",
-        "man_made": "wastewater_plant"
+        "man_made": "wastewater_plant",
+        "name:kn": "ಕೊಳಚೆ ನೀರು ಸಂಸ್ಕರಣ ಘಟಕ"
       },
       "geometry": [
         [
@@ -330951,7 +331862,8 @@
         "building": "apartments",
         "building:levels": "4",
         "addr:street": "10th Cross",
-        "addr:housenumber": "2/91"
+        "addr:housenumber": "2/91",
+        "name:kn": "ವೆಂಕಟಾದ್ರಿ ನಿಲಯ"
       },
       "geometry": [
         [
@@ -331521,7 +332433,8 @@
         "building": "apartments",
         "building:levels": "5",
         "addr:street": "3rd Main Road",
-        "addr:housenumber": "#86"
+        "addr:housenumber": "#86",
+        "name:en": "R.J Gardens"
       },
       "geometry": [
         [
@@ -331661,7 +332574,8 @@
       "id": "way/346535192",
       "tags": {
         "name": "Krishna Vaibhava",
-        "building": "commercial"
+        "building": "commercial",
+        "name:kn": "ಕೃಷ್ಣ ವೈಭವ"
       },
       "geometry": [
         [
@@ -331929,7 +332843,8 @@
       "id": "way/346739674",
       "tags": {
         "name": "Nithya Apartment",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "apartment"
       },
       "geometry": [
         [
@@ -332390,7 +333305,8 @@
       "id": "way/346777554",
       "tags": {
         "name": "Lakshmi Narayana Temple",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಲಕ್ಷ್ಮೀನಾರಾಯಣ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -332425,7 +333341,8 @@
       "id": "way/346778796",
       "tags": {
         "name": "Sai Lake View PG",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -332531,7 +333448,8 @@
       "tags": {
         "name": "Muneshwara Swami Temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಮುನೇಶ್ವರ ಸ್ವಾಮಿ ದೇವಾಲಯ"
       },
       "geometry": [
         [
@@ -332567,7 +333485,8 @@
       "tags": {
         "name": "Mariyamma Temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಮಾರಿಯಮ್ಮ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -332603,6 +333522,7 @@
       "tags": {
         "name": "Srinivasa PG",
         "building": "hostel",
+        "tourism": "hostel",
         "addr:street": "2nd Cross Road"
       },
       "geometry": [
@@ -332707,6 +333627,42 @@
       "height": 9.600000000000001
     },
     {
+      "id": "way/351630706",
+      "tags": {
+        "name": "Sathyabushana Complex",
+        "area": "yes",
+        "addr:street": "Panathur Main Road"
+      },
+      "geometry": [
+        [
+          -292.4,
+          -2071.8
+        ],
+        [
+          -294.5,
+          -2122.8
+        ],
+        [
+          -358.9,
+          -2117.4
+        ],
+        [
+          -353.9,
+          -2063.5
+        ],
+        [
+          -292.4,
+          -2071.8
+        ]
+      ],
+      "centroid": [
+        -318.4,
+        -2089.5
+      ],
+      "name": "Sathyabushana Complex",
+      "height": 3.2
+    },
+    {
       "id": "way/351630726",
       "tags": {
         "name": "Sri Balaji Nilaya",
@@ -332781,7 +333737,8 @@
       "id": "way/352222730",
       "tags": {
         "name": "Comet",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hotel"
       },
       "geometry": [
         [
@@ -332851,7 +333808,8 @@
       "id": "way/363099987",
       "tags": {
         "name": "Sri Chaitanya School",
-        "amenity": "school"
+        "amenity": "school",
+        "name:kn": "ಶ್ರೀ ಚೈತನ್ಯ ಶಾಲೆ"
       },
       "geometry": [
         [
@@ -333006,7 +333964,8 @@
       "tags": {
         "name": "Ganapati temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಗಣಪತಿ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -333120,7 +334079,8 @@
       "id": "way/378409368",
       "tags": {
         "name": "Auto Stand",
-        "amenity": "taxi"
+        "amenity": "taxi",
+        "name:kn": "ಆಟೋ ನಿಲ್ದಾಣ"
       },
       "geometry": [
         [
@@ -333267,7 +334227,8 @@
         "name": "Vagdevi Vilas School",
         "building": "school",
         "building:levels": "2",
-        "addr:street": "Vagdevi Layout, Munnekolala"
+        "addr:street": "Vagdevi Layout, Munnekolala",
+        "name:kn": "ವಾಗ್ದೇವಿ ವಿಲಾಸ ಶಾಲೆ"
       },
       "geometry": [
         [
@@ -333303,7 +334264,8 @@
       "tags": {
         "name": "Ayyappa Bakery",
         "building": "yes",
-        "shop": "bakery"
+        "shop": "bakery",
+        "name:kn": "ಅಯ್ಯಪ್ಪ ಬೇಕರಿ"
       },
       "geometry": [
         [
@@ -333371,13 +334333,77 @@
       "height": 3.2
     },
     {
+      "id": "way/405432275",
+      "tags": {
+        "name": "Active Arena",
+        "leisure": "sports_centre"
+      },
+      "geometry": [
+        [
+          -175.9,
+          -1517.5
+        ],
+        [
+          -101.6,
+          -1402
+        ],
+        [
+          -39.2,
+          -1440.2
+        ],
+        [
+          -53.6,
+          -1475
+        ],
+        [
+          -69.2,
+          -1467.9
+        ],
+        [
+          -91.6,
+          -1509.3
+        ],
+        [
+          -94.4,
+          -1514.3
+        ],
+        [
+          -102.5,
+          -1511.4
+        ],
+        [
+          -117.9,
+          -1570.1
+        ],
+        [
+          -148.1,
+          -1564.8
+        ],
+        [
+          -135.2,
+          -1532
+        ],
+        [
+          -175.9,
+          -1517.5
+        ]
+      ],
+      "centroid": [
+        -108.8,
+        -1501.8
+      ],
+      "name": "Active Arena",
+      "height": 3.2
+    },
+    {
       "id": "way/431536369",
       "tags": {
         "name": "Salarpuria Sattva Eminence",
         "building": "office",
         "building:levels": "10",
         "addr:street": "Outer Ring Road",
-        "addr:housenumber": "176"
+        "addr:housenumber": "176",
+        "name:kn": "ಸಲಾರಪುರಿಯ ಸತ್ವ"
       },
       "geometry": [
         [
@@ -333697,7 +334723,8 @@
       "tags": {
         "name": "Ganesha Temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಗಣೇಶ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -333821,7 +334848,8 @@
       "id": "way/476030209",
       "tags": {
         "name": "Chaintanya School",
-        "amenity": "school"
+        "amenity": "school",
+        "name:kn": "ಚೈತನ್ಯ ಶಾಲೆ"
       },
       "geometry": [
         [
@@ -334269,6 +335297,53 @@
       "height": 51.2
     },
     {
+      "id": "way/636489351",
+      "tags": {
+        "name": "77 Place common park",
+        "leisure": "park"
+      },
+      "geometry": [
+        [
+          -848.6,
+          -868.2
+        ],
+        [
+          -849,
+          -880.6
+        ],
+        [
+          -841.7,
+          -881.4
+        ],
+        [
+          -843.8,
+          -928.7
+        ],
+        [
+          -844.2,
+          -939.3
+        ],
+        [
+          -802.2,
+          -936.3
+        ],
+        [
+          -800.3,
+          -865.5
+        ],
+        [
+          -848.6,
+          -868.2
+        ]
+      ],
+      "centroid": [
+        -834.8,
+        -896
+      ],
+      "name": "77 Place common park",
+      "height": 3.2
+    },
+    {
       "id": "way/636489353",
       "tags": {
         "name": "Tower C",
@@ -334693,6 +335768,45 @@
       "height": 3.2
     },
     {
+      "id": "way/688590270",
+      "tags": {
+        "name": "Park#2",
+        "leisure": "park"
+      },
+      "geometry": [
+        [
+          -519.4,
+          -1637.7
+        ],
+        [
+          -526,
+          -1648
+        ],
+        [
+          -529.8,
+          -1654
+        ],
+        [
+          -517.6,
+          -1660.8
+        ],
+        [
+          -507.4,
+          -1644.6
+        ],
+        [
+          -519.4,
+          -1637.7
+        ]
+      ],
+      "centroid": [
+        -519.9,
+        -1647.1
+      ],
+      "name": "Park#2",
+      "height": 3.2
+    },
+    {
       "id": "way/688600223",
       "tags": {
         "name": "Oracle Tech Hub",
@@ -334992,7 +336106,8 @@
       "id": "way/757666949",
       "tags": {
         "name": "Salarpuria Block B",
-        "building": "office"
+        "building": "office",
+        "name:kn": "ಸಲಾರಪುರಿಯ"
       },
       "geometry": [
         [
@@ -336008,7 +337123,8 @@
         "building": "apartments",
         "building:levels": "4",
         "addr:street": "Vaikuntam Layout",
-        "addr:housenumber": "5th Cross Road"
+        "addr:housenumber": "5th Cross Road",
+        "name:kn": "ನಕ್ಷತ್ರ"
       },
       "geometry": [
         [
@@ -336259,7 +337375,8 @@
       "tags": {
         "name": "Indian Oil",
         "amenity": "fuel",
-        "operator": "Indian Oil"
+        "operator": "Indian Oil",
+        "name:kn": "ಇಂಡಿಯನ್ ಆಯಿಲ್"
       },
       "geometry": [
         [
@@ -336672,7 +337789,8 @@
       "tags": {
         "name": "Shell",
         "amenity": "fuel",
-        "landuse": "commercial"
+        "landuse": "commercial",
+        "name:kn": "ಶೆಲ್"
       },
       "geometry": [
         [
@@ -336751,7 +337869,8 @@
       "id": "way/1066506649",
       "tags": {
         "name": "Orchid Sports Academy",
-        "building": "yes"
+        "building": "yes",
+        "leisure": "sports_centre"
       },
       "geometry": [
         [
@@ -336789,7 +337908,8 @@
         "building": "church",
         "amenity": "place_of_worship",
         "addr:street": "Munekolala Main Road",
-        "addr:housenumber": "6"
+        "addr:housenumber": "6",
+        "name:kn": "ಸೇಂಟ್ ಆಂಟೊನಿ ಚರ್ಚ್"
       },
       "geometry": [
         [
@@ -336824,7 +337944,8 @@
       "id": "way/1066506657",
       "tags": {
         "name": "Icon Suites by Bhagini",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hotel"
       },
       "geometry": [
         [
@@ -337024,6 +338145,45 @@
       "height": 28.8
     },
     {
+      "id": "way/1066721255",
+      "tags": {
+        "name": "Nagarjuna Suites",
+        "tourism": "apartment"
+      },
+      "geometry": [
+        [
+          -562.2,
+          -1968.3
+        ],
+        [
+          -537,
+          -1980
+        ],
+        [
+          -574.2,
+          -2054.3
+        ],
+        [
+          -589.5,
+          -2104.5
+        ],
+        [
+          -610,
+          -2098.9
+        ],
+        [
+          -562.2,
+          -1968.3
+        ]
+      ],
+      "centroid": [
+        -572.5,
+        -2029.1
+      ],
+      "name": "Nagarjuna Suites",
+      "height": 3.2
+    },
+    {
       "id": "way/1066915239",
       "tags": {
         "name": "Annaiahappa",
@@ -337134,6 +338294,7 @@
       "tags": {
         "name": "Bloom Hub",
         "building": "hotel",
+        "tourism": "hotel",
         "addr:street": "Outer Ring Road"
       },
       "geometry": [
@@ -337543,7 +338704,8 @@
         "name": "HP",
         "amenity": "fuel",
         "official_name": "Hindustan Petroleum",
-        "short_name": "HP"
+        "short_name": "HP",
+        "name:kn": "ಹಿಂದುಸ್ತಾನ್ ಪೆಟ್ರೋಲಿಯಂ"
       },
       "geometry": [
         [
@@ -337759,7 +338921,8 @@
         "name": "HP",
         "amenity": "fuel",
         "official_name": "Hindustan Petroleum",
-        "short_name": "HP"
+        "short_name": "HP",
+        "name:kn": "ಹಿಂದುಸ್ತಾನ್ ಪೆಟ್ರೋಲಿಯಂ"
       },
       "geometry": [
         [
@@ -337864,7 +339027,8 @@
       "id": "way/1075549051",
       "tags": {
         "name": "Laavish Pro-4 Living",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -338159,7 +339323,8 @@
       "id": "way/1092683241",
       "tags": {
         "name": "Salarpuria Sattva Eminence",
-        "landuse": "commercial"
+        "landuse": "commercial",
+        "name:kn": "ಸಲಾರಪುರಿಯ ಸತ್ವ"
       },
       "geometry": [
         [
@@ -338637,7 +339802,9 @@
       "tags": {
         "name": "Nandini",
         "building": "retail",
-        "shop": "dairy"
+        "shop": "dairy",
+        "name:en": "Nandini",
+        "name:kn": "ನಂದಿನಿ"
       },
       "geometry": [
         [
@@ -339087,7 +340254,8 @@
       "tags": {
         "name": "Marathahalli Police Station",
         "building": "yes",
-        "amenity": "police"
+        "amenity": "police",
+        "name:kn": "ಆರಕ್ಷಕ ಠಾಣೆ"
       },
       "geometry": [
         [
@@ -339245,6 +340413,7 @@
       "tags": {
         "name": "Vista Pro4",
         "building": "yes",
+        "tourism": "hostel",
         "operator": "Pro4 Living",
         "addr:street": "Spice Garden Road"
       },
@@ -339282,6 +340451,7 @@
       "tags": {
         "name": "Meridian Pro4",
         "building": "yes",
+        "tourism": "hostel",
         "operator": "Pro4 Living",
         "addr:street": "Spice Garden Road"
       },
@@ -339378,7 +340548,8 @@
       "id": "way/1194928869",
       "tags": {
         "name": "Ashirwad",
-        "building": "apartments"
+        "building": "apartments",
+        "name:kn": "ಆಶೀರ್ವಾದ"
       },
       "geometry": [
         [
@@ -339492,9 +340663,11 @@
       "id": "way/1211318977",
       "tags": {
         "name": "Radisson Blu Bengaluru Outer Ring Road",
+        "tourism": "hotel",
         "addr:street": "Outer Ring Road",
         "addr:housenumber": "Sy. #90/4",
-        "landuse": "commercial"
+        "landuse": "commercial",
+        "name:kn": "ರಾಡಿಸನ್ ಬ್ಲೂ"
       },
       "geometry": [
         [
@@ -340023,7 +341196,8 @@
       "tags": {
         "name": "Tower 3",
         "building": "apartments",
-        "building:levels": "13"
+        "building:levels": "13",
+        "name:kn": "ಕಟ್ಟಡ ೩"
       },
       "geometry": [
         [
@@ -340355,7 +341529,8 @@
       "tags": {
         "name": "Tower 2",
         "building": "apartments",
-        "building:levels": "13"
+        "building:levels": "13",
+        "name:kn": "ಕಟ್ಟಪ 2"
       },
       "geometry": [
         [
@@ -340795,7 +341970,8 @@
       "tags": {
         "name": "Tower 4",
         "building": "apartments",
-        "building:levels": "13"
+        "building:levels": "13",
+        "name:kn": "ಕಟ್ಟಡ ೪"
       },
       "geometry": [
         [
@@ -341143,7 +342319,8 @@
       "tags": {
         "name": "Tower 1",
         "building": "apartments",
-        "building:levels": "13"
+        "building:levels": "13",
+        "name:kn": "ಕಟ್ಟಡ ೧"
       },
       "geometry": [
         [
@@ -341630,6 +342807,119 @@
       "height": 16
     },
     {
+      "id": "way/1248868635",
+      "tags": {
+        "name": "Twenty Fourt Hotel",
+        "tourism": "hotel"
+      },
+      "geometry": [
+        [
+          -746.1,
+          -1539.1
+        ],
+        [
+          -679.9,
+          -1544.8
+        ],
+        [
+          -681.5,
+          -1571.2
+        ],
+        [
+          -705.5,
+          -1584.3
+        ],
+        [
+          -720.6,
+          -1590.4
+        ],
+        [
+          -750.3,
+          -1592.8
+        ],
+        [
+          -746.1,
+          -1539.1
+        ]
+      ],
+      "centroid": [
+        -718.6,
+        -1565.9
+      ],
+      "name": "Twenty Fourt Hotel",
+      "height": 3.2
+    },
+    {
+      "id": "way/1253169439",
+      "tags": {
+        "name": "Childrens Playground",
+        "leisure": "playground"
+      },
+      "geometry": [
+        [
+          548.1,
+          327.2
+        ],
+        [
+          554.8,
+          309.5
+        ],
+        [
+          573.4,
+          323.9
+        ],
+        [
+          571.4,
+          334.9
+        ],
+        [
+          548.1,
+          327.2
+        ]
+      ],
+      "centroid": [
+        559.1,
+        324.6
+      ],
+      "name": "Childrens Playground",
+      "height": 3.2
+    },
+    {
+      "id": "way/1253169440",
+      "tags": {
+        "name": "Childrens Playground",
+        "leisure": "playground"
+      },
+      "geometry": [
+        [
+          624.9,
+          161.7
+        ],
+        [
+          627.9,
+          165.4
+        ],
+        [
+          620.1,
+          171.4
+        ],
+        [
+          616.9,
+          167.1
+        ],
+        [
+          624.9,
+          161.7
+        ]
+      ],
+      "centroid": [
+        622.9,
+        165.4
+      ],
+      "name": "Childrens Playground",
+      "height": 3.2
+    },
+    {
       "id": "way/1253839863",
       "tags": {
         "name": "Sattva Aura",
@@ -341656,7 +342946,8 @@
       "id": "way/1260649106",
       "tags": {
         "name": "JRS",
-        "building": "yes"
+        "building": "yes",
+        "tourism": "hostel"
       },
       "geometry": [
         [
@@ -341709,6 +343000,87 @@
         -68.7
       ],
       "name": "JRS",
+      "height": 3.2
+    },
+    {
+      "id": "way/1283097571",
+      "tags": {
+        "name": "Marathahalli Underpass",
+        "junction": "yes",
+        "area": "yes",
+        "name:kn": "ಮಾರತಹಳ್ಳಿ ಸೇತುವೆ"
+      },
+      "geometry": [
+        [
+          -23.1,
+          39.1
+        ],
+        [
+          -11.4,
+          38.6
+        ],
+        [
+          -11.8,
+          30.8
+        ],
+        [
+          17.5,
+          26.7
+        ],
+        [
+          29.5,
+          31.3
+        ],
+        [
+          37.7,
+          32.7
+        ],
+        [
+          44,
+          33
+        ],
+        [
+          49.3,
+          -2.7
+        ],
+        [
+          30.1,
+          -2.9
+        ],
+        [
+          20.3,
+          -12.2
+        ],
+        [
+          -27.9,
+          -11.3
+        ],
+        [
+          -30.9,
+          0.6
+        ],
+        [
+          -35.2,
+          3.1
+        ],
+        [
+          -33.5,
+          19.6
+        ],
+        [
+          -25.1,
+          26
+        ],
+        [
+          -23.1,
+          39.1
+        ]
+      ],
+      "centroid": [
+        0.4,
+        18.2
+      ],
+      "name": "Marathahalli Underpass",
       "height": 3.2
     },
     {
@@ -341864,7 +343236,8 @@
       "id": "way/1338993115",
       "tags": {
         "name": "Rams Sports Arena",
-        "building": "sports_hall"
+        "building": "sports_hall",
+        "leisure": "sports_centre"
       },
       "geometry": [
         [
@@ -342238,6 +343611,46 @@
       "height": 3.2
     },
     {
+      "id": "way/1417004742",
+      "tags": {
+        "name": "Platform 2",
+        "ref": "2",
+        "public_transport": "platform",
+        "railway": "platform",
+        "area": "yes",
+        "operator": "South Western Railways",
+        "name:kn": "ವೇದಿಕೆ ೨"
+      },
+      "geometry": [
+        [
+          619.5,
+          -1661.5
+        ],
+        [
+          626.9,
+          -1660.1
+        ],
+        [
+          630.3,
+          -1689.5
+        ],
+        [
+          640.5,
+          -1768.5
+        ],
+        [
+          651.2,
+          -1872.3
+        ]
+      ],
+      "centroid": [
+        633.7,
+        -1730.4
+      ],
+      "name": "Platform 2",
+      "height": 3.2
+    },
+    {
       "id": "way/1426810495",
       "tags": {
         "name": "Terminal 2",
@@ -342309,6 +343722,58 @@
       "height": 3.2
     },
     {
+      "id": "way/1454919874",
+      "tags": {
+        "name": "Platform 1",
+        "ref": "1",
+        "public_transport": "platform",
+        "railway": "platform",
+        "area": "yes",
+        "operator": "South Western Railways",
+        "name:kn": "ವೇದಿಕೆ ೧"
+      },
+      "geometry": [
+        [
+          648.3,
+          -2188.7
+        ],
+        [
+          634.9,
+          -2113.7
+        ],
+        [
+          624.1,
+          -2031.2
+        ],
+        [
+          631.1,
+          -2030.4
+        ],
+        [
+          607.3,
+          -1851.1
+        ],
+        [
+          586.6,
+          -1741.9
+        ],
+        [
+          572.3,
+          -1656.1
+        ],
+        [
+          582.2,
+          -1654.8
+        ]
+      ],
+      "centroid": [
+        610.8,
+        -1908.5
+      ],
+      "name": "Platform 1",
+      "height": 3.2
+    },
+    {
       "id": "way/1454919878",
       "tags": {
         "name": "Bellandur Road KRIDE Station (u/c)",
@@ -342341,7 +343806,8 @@
       "tags": {
         "name": "Shri Prasanna Anjaneya Temple",
         "building": "yes",
-        "amenity": "place_of_worship"
+        "amenity": "place_of_worship",
+        "name:kn": "ಪ್ರಸನ್ನ ಆಂಜನೇಯ ದೇವಸ್ಥಾನ"
       },
       "geometry": [
         [
@@ -342479,7 +343945,8 @@
       "tags": {
         "name": "Sri Sai Sannidhi",
         "building": "apartments",
-        "building:levels": "5"
+        "building:levels": "5",
+        "name:kn": "ಶ್ರೀ ಸಾಯಿ ಸನ್ನಿದಿ"
       },
       "geometry": [
         [
@@ -343540,6 +345007,7 @@
       "tags": {
         "name": "Legacy Pro4",
         "building": "yes",
+        "tourism": "hostel",
         "operator": "Pro4 Living",
         "addr:street": "Spice Garden Road"
       },
@@ -343577,6 +345045,7 @@
       "tags": {
         "name": "Pavilion Pro4",
         "building": "yes",
+        "tourism": "hostel",
         "operator": "Pro4 Living",
         "addr:street": "Spice Garden Road"
       },
@@ -343736,6 +345205,221 @@
       ],
       "name": "Featherlite (u/c)",
       "height": 3.2
+    }
+  ],
+  "namedPlaces": [
+    {
+      "id": "node/442068273",
+      "name": "Marathahalli",
+      "tags": {
+        "name": "Marathahalli",
+        "place": "suburb",
+        "name:kn": "ಮಾರತಹಳ್ಳಿ",
+        "name:or": "ମାରତହଳ୍ଳି",
+        "name:ta": "மாரத்தஹல்லி"
+      },
+      "position": [
+        -299.4,
+        -175
+      ]
+    },
+    {
+      "id": "node/442068820",
+      "name": "Ashwath Nagar",
+      "tags": {
+        "name": "Ashwath Nagar",
+        "place": "neighbourhood",
+        "name:kn": "ಅಶ್ವಥ ನಗರ",
+        "name:ta": "அஷ்வத் நகர்"
+      },
+      "position": [
+        211.4,
+        156.5
+      ]
+    },
+    {
+      "id": "node/442068822",
+      "name": "Hemanth Nagar",
+      "tags": {
+        "name": "Hemanth Nagar",
+        "place": "locality",
+        "name:kn": "ಹೇಮಂತನಗರ"
+      },
+      "position": [
+        114,
+        446.5
+      ]
+    },
+    {
+      "id": "node/442068826",
+      "name": "Ananda Nagara",
+      "tags": {
+        "name": "Ananda Nagara",
+        "place": "neighbourhood",
+        "name:kn": "ಆನಂದ ನಗರ",
+        "name:ta": "அனந்த நகரா"
+      },
+      "position": [
+        -70,
+        464.2
+      ]
+    },
+    {
+      "id": "node/1615766957",
+      "name": "Kaadubeesanahalli",
+      "tags": {
+        "name": "Kaadubeesanahalli",
+        "place": "quarter",
+        "name:kn": "ಕಾಡುಬಿಸನಹಳ್ಳಿ",
+        "name:ml": "കാടുബിസനഹള്ളി",
+        "name:ta": "காடுபீசனஹல்லி"
+      },
+      "position": [
+        -475.4,
+        -1914
+      ]
+    },
+    {
+      "id": "node/2319910870",
+      "name": "Vivekananda Layout",
+      "tags": {
+        "name": "Vivekananda Layout",
+        "place": "locality",
+        "name:kn": "ವಿವೇಕಾನಂದ ಬಡಾವಣೆ",
+        "name:ta": "விவேகானந்தா லேஅவுட்"
+      },
+      "position": [
+        81.8,
+        -484.1
+      ]
+    },
+    {
+      "id": "node/2937449067",
+      "name": "Chinnappanahalli",
+      "tags": {
+        "name": "Chinnappanahalli",
+        "place": "neighbourhood",
+        "name:kn": "ಚಿನ್ನಪ್ಪನಹಳ್ಳಿ"
+      },
+      "position": [
+        350.9,
+        490.8
+      ]
+    },
+    {
+      "id": "node/2937449074",
+      "name": "AECS Layout D Block",
+      "tags": {
+        "name": "AECS Layout D Block",
+        "place": "neighbourhood",
+        "name:kn": "ಎಇಸಿಎಸ್ ಲೇಔಟ್ ಡಿ ಬ್ಲಾಕ್"
+      },
+      "position": [
+        1000.3,
+        660.6
+      ]
+    },
+    {
+      "id": "node/3197268233",
+      "name": "Ayappa Layout",
+      "tags": {
+        "name": "Ayappa Layout",
+        "place": "locality",
+        "name:kn": "ಅಯ್ಯಪ್ಪ ಲೇಔಟ್"
+      },
+      "position": [
+        180.7,
+        -310
+      ]
+    },
+    {
+      "id": "node/3220081437",
+      "name": "Sanjay Nagar",
+      "tags": {
+        "name": "Sanjay Nagar",
+        "place": "neighbourhood",
+        "name:kn": "ಸಂಜಯ ನಗರ"
+      },
+      "position": [
+        -575.1,
+        113.4
+      ]
+    },
+    {
+      "id": "node/3222889690",
+      "name": "P R Layout",
+      "tags": {
+        "name": "P R Layout",
+        "place": "neighbourhood",
+        "name:kn": "ಪಿ ಆರ್ ಲೇಔಟ್"
+      },
+      "position": [
+        230.5,
+        -419
+      ]
+    },
+    {
+      "id": "node/4118295030",
+      "name": "Gandhi Nagar",
+      "tags": {
+        "name": "Gandhi Nagar",
+        "place": "neighbourhood",
+        "name:kn": "ಗಾಂಧಿನಗರ"
+      },
+      "position": [
+        626.2,
+        -296.9
+      ]
+    },
+    {
+      "id": "node/4674414991",
+      "name": "Munekolala",
+      "tags": {
+        "name": "Munekolala",
+        "place": "quarter",
+        "alt_name": "Munnekolala",
+        "name:kn": "ಮುನೆಕೊಲ"
+      },
+      "position": [
+        850.7,
+        -968.3
+      ]
+    },
+    {
+      "id": "node/10111827014",
+      "name": "Ramanjaneya Layout",
+      "tags": {
+        "name": "Ramanjaneya Layout",
+        "place": "locality"
+      },
+      "position": [
+        -120.4,
+        232.1
+      ]
+    },
+    {
+      "id": "node/11051170145",
+      "name": "Silver Springs Layout",
+      "tags": {
+        "name": "Silver Springs Layout",
+        "place": "neighbourhood"
+      },
+      "position": [
+        944,
+        154
+      ]
+    },
+    {
+      "id": "node/12343238242",
+      "name": "MSR Layout",
+      "tags": {
+        "name": "MSR Layout",
+        "place": "neighbourhood"
+      },
+      "position": [
+        6.5,
+        -546.3
+      ]
     }
   ],
   "signals": [
@@ -344750,7 +346434,8 @@
         "name": "Marathahalli Bridge",
         "public_transport": "platform",
         "operator": "BMTC",
-        "network": "BMTC"
+        "network": "BMTC",
+        "name:en": "Marathahalli Bridge"
       },
       "position": [
         131.3,
@@ -344784,7 +346469,8 @@
         "name": "Marathahalli",
         "public_transport": "platform",
         "operator": "BMTC",
-        "network": "BMTC"
+        "network": "BMTC",
+        "name:kn": "ಮಾರತಹಳ್ಳಿ"
       },
       "position": [
         -115.2,
@@ -344801,7 +346487,8 @@
         "name": "Marathahalli Market",
         "public_transport": "platform",
         "operator": "BMTC",
-        "network": "BMTC"
+        "network": "BMTC",
+        "name:kn": "ಮಾರತಹಳ್ಳಿ"
       },
       "position": [
         -810.2,
@@ -344818,7 +346505,8 @@
         "name": "Marathahalli Market",
         "public_transport": "platform",
         "operator": "BMTC",
-        "network": "BMTC"
+        "network": "BMTC",
+        "name:kn": "ಮಾರತಹಳ್ಳಿ"
       },
       "position": [
         -681.7,
@@ -344836,7 +346524,8 @@
         "public_transport": "platform",
         "operator": "BMTC",
         "network": "BMTC",
-        "alt_name": "JP Morgan"
+        "alt_name": "JP Morgan",
+        "name:kn": "ಕಾಡುಬೀಸನಹಳ್ಳಿ"
       },
       "position": [
         -467.5,
@@ -344853,7 +346542,8 @@
         "name": "Kaadubeesanahalli",
         "public_transport": "platform",
         "operator": "BMTC",
-        "network": "BMTC"
+        "network": "BMTC",
+        "name:kn": "ಕಾಡುಬೀಸನಹಳ್ಳಿ"
       },
       "position": [
         -447.1,
@@ -344903,7 +346593,8 @@
         "public_transport": "platform",
         "lit": "no",
         "operator": "BMTC",
-        "network": "BMTC"
+        "network": "BMTC",
+        "name:kn": "ಮಾರತಹಳ್ಳಿ"
       },
       "position": [
         -134,
@@ -345003,7 +346694,8 @@
         "name": "Marathahalli Bridge",
         "public_transport": "platform",
         "operator": "BMTC",
-        "network": "BMTC"
+        "network": "BMTC",
+        "name:kn": "ಮಾರತಹಳ್ಳಿ ಸೇತುವೆ"
       },
       "position": [
         17.5,
@@ -345560,7 +347252,8 @@
       "name": "Kadubeesanahalli Underpass",
       "tags": {
         "name": "Kadubeesanahalli Underpass",
-        "junction": "yes"
+        "junction": "yes",
+        "name:kn": "ಕಡುಬೀಸನಹಳ್ಳಿ ಕೆಳಸೇತುವೆ"
       },
       "position": [
         -649.4,
@@ -345572,7 +347265,10 @@
       "name": "Kaadubeesanahalli",
       "tags": {
         "name": "Kaadubeesanahalli",
-        "place": "quarter"
+        "place": "quarter",
+        "name:kn": "ಕಾಡುಬಿಸನಹಳ್ಳಿ",
+        "name:ml": "കാടുബിസനഹള്ളി",
+        "name:ta": "காடுபீசனஹல்லி"
       },
       "position": [
         -475.4,
@@ -347319,7 +349015,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347355,7 +349052,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347405,7 +349103,8 @@
         "layer": "1",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347483,7 +349182,9 @@
         "ref": "2",
         "public_transport": "platform",
         "railway": "platform",
-        "operator": "South Western Railways"
+        "area": "yes",
+        "operator": "South Western Railways",
+        "name:kn": "ವೇದಿಕೆ ೨"
       },
       "geometry": [
         [
@@ -347519,7 +349220,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347547,7 +349249,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347599,7 +349302,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347643,7 +349347,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347687,7 +349392,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347711,7 +349417,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347747,7 +349454,9 @@
         "ref": "1",
         "public_transport": "platform",
         "railway": "platform",
-        "operator": "South Western Railways"
+        "area": "yes",
+        "operator": "South Western Railways",
+        "name:kn": "ವೇದಿಕೆ ೧"
       },
       "geometry": [
         [
@@ -347797,7 +349506,8 @@
         "layer": "1",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347821,7 +349531,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347845,7 +349556,8 @@
         "railway": "rail",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347879,7 +349591,8 @@
         "layer": "1",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347905,7 +349618,8 @@
         "layer": "1",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347931,7 +349645,8 @@
         "layer": "1",
         "gauge": "1676",
         "voltage": "25000",
-        "frequency": "50"
+        "frequency": "50",
+        "name:kn": "ಬೆಂಗಳೂರು - ಸಲೇಂ ರೈಲು"
       },
       "geometry": [
         [
@@ -347960,7 +349675,8 @@
         "colour": "blue",
         "gauge": "1435",
         "voltage": "750",
-        "frequency": "0"
+        "frequency": "0",
+        "name:kn": "ನಮ್ಮ ಮೆಟ್ರೋ - ಹಂತ 2A"
       },
       "geometry": [
         [
@@ -348130,7 +349846,8 @@
         "colour": "blue",
         "gauge": "1435",
         "voltage": "750",
-        "frequency": "0"
+        "frequency": "0",
+        "name:kn": "ನಮ್ಮ ಮೆಟ್ರೋ - ಹಂತ 2A"
       },
       "geometry": [
         [
@@ -348167,7 +349884,8 @@
         "colour": "blue",
         "gauge": "1435",
         "voltage": "750",
-        "frequency": "0"
+        "frequency": "0",
+        "name:kn": "ನಮ್ಮ ಮೆಟ್ರೋ - ಹಂತ 2A"
       },
       "geometry": [
         [
@@ -348338,7 +350056,8 @@
         "layer": "1",
         "bridge:structure": "beam",
         "man_made": "bridge",
-        "full_name": "Marathahalli Rail Over Bridge"
+        "full_name": "Marathahalli Rail Over Bridge",
+        "name:kn": "ಮಾರತಹಳ್ಳಿ ಸೇತುವೆ"
       },
       "geometry": [
         [
@@ -348420,7 +350139,8 @@
       "tags": {
         "name": "Kadubeesanahalli Underpass",
         "layer": "-1",
-        "man_made": "tunnel"
+        "man_made": "tunnel",
+        "name:kn": "ಕಡುಬೀಸನಹಳ್ಳಿ ಕೆಳಸೇತುವೆ"
       },
       "geometry": [
         [
@@ -348462,7 +350182,8 @@
       "tags": {
         "name": "Kadubeesanahalli Underpass",
         "layer": "-1",
-        "man_made": "tunnel"
+        "man_made": "tunnel",
+        "name:kn": "ಕಡುಬೀಸನಹಳ್ಳಿ ಕೆಳಸೇತುವೆ"
       },
       "geometry": [
         [

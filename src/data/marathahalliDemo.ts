@@ -191,8 +191,10 @@ export interface MarathahalliDemoSnapshot {
   buildings: OSMPolylineFeature[];
   roads: OSMPolylineFeature[];
   footways: OSMPolylineFeature[];
+  treeRows?: OSMPolylineFeature[];
   shops: OSMPointFeature[];
   places: OSMPolylineFeature[];
+  namedPlaces?: OSMPointFeature[];
   signals: OSMPointFeature[];
   crossings: OSMPointFeature[];
   busStops: OSMPointFeature[];

@@ -223,13 +223,16 @@ function buildMetroTrackData(snapshot: MarathahalliDemoSnapshot): MetroTrackData
   const trackSeparation = median(firstTrack.map((point, index) => (
     distanceBetween(point, secondTrack[index])
   )));
-  const sourceGaugeMillimeters = Number.parseFloat(sourceCurves.length
-    ? (ways[0].tags.gauge || '')
-    : '');
-  const gaugeSourceBacked = Number.isFinite(sourceGaugeMillimeters) && sourceGaugeMillimeters > 0;
+  const sourceGaugeMillimeters = Number.parseFloat(ways[0].tags.gauge || '');
+  const gaugeSourceBacked = Number.isFinite(sourceGaugeMillimeters)
+    && sourceGaugeMillimeters > 0
+    && ways.every((way) => way.tags.gauge === ways[0].tags.gauge);
   const gaugeMeters = gaugeSourceBacked
     ? sourceGaugeMillimeters / 1000
     : METRO_GAUGE_FALLBACK_METERS;
+  // These tags are source metadata. The animated train speed remains a
+  // presentation value; this uses the mapped maxspeed only as its bounded
+  // motion input, never as live timetable or telemetry evidence.
   const sourceMaxspeedKph = Number.parseFloat(ways[0].tags.maxspeed || '');
   const trainSpeed = Number.isFinite(sourceMaxspeedKph) && sourceMaxspeedKph > 0
     ? sourceMaxspeedKph / 3.6
@@ -476,7 +479,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     [parapetPaths]
   );
   const blueStripeGeometry = useMemo(
-    () => (parapetPaths.length ? createBeamGeometry(parapetPaths, 0.1, 0.28, METRO_DECK_CENTER_Y + 0.54) : null),
+    () => (parapetPaths.length ? createBeamGeometry(parapetPaths, 0.1, 0.22, METRO_DECK_CENTER_Y + 0.86) : null),
     [parapetPaths]
   );
   const railGeometry = useMemo(
@@ -625,7 +628,13 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
       )}
       {deckGeometry && (
         <mesh geometry={deckGeometry} castShadow receiveShadow>
-          <meshStandardMaterial color={concreteMaterial} roughness={0.82} metalness={0.04} />
+          <meshStandardMaterial
+            color={concreteMaterial}
+            emissive={soffitEmissive}
+            emissiveIntensity={isNight ? 0.18 : 0.12}
+            roughness={0.82}
+            metalness={0.04}
+          />
         </mesh>
       )}
       {parapetGeometry && (

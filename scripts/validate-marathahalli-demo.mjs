@@ -20,6 +20,16 @@ const uTurnValidation = {
 const requiredCollections = [
   'buildings', 'roads', 'footways', 'shops', 'places', 'signals', 'crossings', 'busStops', 'trees', 'sourceAnchors', 'bridgeSupports', 'railways', 'infrastructure'
 ];
+// These collections are additive schema extensions. Older snapshots remain
+// valid without them; refreshed compiler output validates them when present.
+const additiveCollections = ['namedPlaces', 'treeRows'];
+const collectionsToValidate = [
+  ...requiredCollections,
+  ...additiveCollections.filter((collection) => dataset[collection] !== undefined)
+];
+const pointCollections = new Set([
+  'shops', 'signals', 'crossings', 'busStops', 'trees', 'sourceAnchors', 'bridgeSupports', 'namedPlaces'
+]);
 
 function finite(value, label) {
   if (!Number.isFinite(value)) errors.push(`${label} must be finite`);
@@ -60,7 +70,7 @@ for (const key of ['minLat', 'minLon', 'maxLat', 'maxLon']) finite(dataset.bound
 if (dataset.bounds?.minLat >= dataset.bounds?.maxLat) errors.push('latitude bounds are inverted');
 if (dataset.bounds?.minLon >= dataset.bounds?.maxLon) errors.push('longitude bounds are inverted');
 
-for (const collection of requiredCollections) {
+for (const collection of collectionsToValidate) {
   if (!Array.isArray(dataset[collection])) {
     errors.push(`${collection} collection is missing`);
     continue;
@@ -70,10 +80,27 @@ for (const collection of requiredCollections) {
     if (!feature.id) errors.push(`${collection} feature is missing id`);
     if (ids.has(feature.id)) errors.push(`${collection} contains duplicate id ${feature.id}`);
     ids.add(feature.id);
-    if (collection === 'shops' || collection === 'signals' || collection === 'crossings' || collection === 'busStops' || collection === 'trees' || collection === 'sourceAnchors' || collection === 'bridgeSupports') {
+    if (pointCollections.has(collection)) {
       checkPosition(feature.position, `${collection}.${feature.id}.position`);
     } else {
       checkGeometry(feature.geometry, `${collection}.${feature.id}.geometry`);
+    }
+  }
+}
+
+if (Array.isArray(dataset.namedPlaces)) {
+  for (const feature of dataset.namedPlaces) {
+    if (!feature.name || feature.tags?.name !== feature.name) {
+      errors.push(`namedPlaces.${feature.id} must preserve its source name`);
+    }
+    if (!feature.tags?.place) errors.push(`namedPlaces.${feature.id} must preserve place=*`);
+  }
+}
+
+if (Array.isArray(dataset.treeRows)) {
+  for (const feature of dataset.treeRows) {
+    if (feature.tags?.natural !== 'tree_row') {
+      errors.push(`treeRows.${feature.id} must preserve natural=tree_row`);
     }
   }
 }
@@ -281,6 +308,15 @@ if (dataset.schemaVersion >= 2) {
 const snapshotStats = dataset.stats || {};
 for (const collection of requiredCollections) {
   if (snapshotStats[collection] !== dataset[collection]?.length) {
+    errors.push(`stats.${collection} does not match the serialized collection`);
+  }
+}
+for (const collection of additiveCollections) {
+  const hasCollection = dataset[collection] !== undefined;
+  const hasStat = snapshotStats[collection] !== undefined;
+  if (hasCollection !== hasStat) {
+    errors.push(`${collection} and stats.${collection} must be added together`);
+  } else if (hasCollection && snapshotStats[collection] !== dataset[collection].length) {
     errors.push(`stats.${collection} does not match the serialized collection`);
   }
 }

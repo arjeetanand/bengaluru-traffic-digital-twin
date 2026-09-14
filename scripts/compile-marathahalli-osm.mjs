@@ -65,11 +65,11 @@ function compactTags(tags) {
     'highway', 'name', 'ref', 'surface', 'lanes', 'maxspeed', 'oneway', 'sidewalk', 'junction', 'place',
     'foot', 'bicycle', 'building', 'building:levels', 'height', 'shop', 'amenity',
     'public_transport', 'railway', 'bridge', 'tunnel', 'crossing', 'crossing:markings',
-    'natural', 'barrier', 'lit', 'operator', 'addr:street', 'addr:housenumber', 'landuse',
+    'natural', 'leisure', 'tourism', 'area', 'barrier', 'lit', 'operator', 'addr:street', 'addr:housenumber', 'landuse',
     'traffic_signals', 'layer', 'step_count', 'width', 'incline', 'ramp', 'covered',
     'handrail', 'smoothness', 'footway', 'embankment', 'service', 'network', 'colour',
     'gauge', 'voltage', 'frequency', 'bridge:support', 'material', 'bridge:structure', 'man_made', 'full_name',
-    'alt_name', 'official_name', 'short_name'
+    'alt_name', 'official_name', 'short_name', 'name:en', 'name:hi', 'name:kn', 'name:ml', 'name:or', 'name:ta', 'name:ur'
   ];
   return Object.fromEntries(allowed.filter((key) => tags[key] !== undefined).map((key) => [key, tags[key]]));
 }
@@ -77,13 +77,19 @@ function compactTags(tags) {
 const nodes = new Map();
 let latestTimestamp = '';
 
+// The extract contains independently versioned nodes, ways and relations.
+// Track all primitive timestamps so a newer relation cannot leave the
+// published snapshot looking older than its source data.
+for (const match of xml.matchAll(/<(?:node|way|relation)\b([^>]*)/g)) {
+  const timestamp = attr(match[1], 'timestamp') || '';
+  if (timestamp > latestTimestamp) latestTimestamp = timestamp;
+}
+
 for (const match of xml.matchAll(/<node\b([^>]*?)(?:\/>|>([\s\S]*?)<\/node>)/g)) {
   const attrs = match[1];
   const lat = Number(attr(attrs, 'lat'));
   const lon = Number(attr(attrs, 'lon'));
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-  const timestamp = attr(attrs, 'timestamp') || '';
-  if (timestamp > latestTimestamp) latestTimestamp = timestamp;
   nodes.set(attr(attrs, 'id'), {
     lat,
     lon,
@@ -194,6 +200,7 @@ const roads = ways.filter((way) => roadValues.has(way.tags.highway));
 const pedestrianHighwayValues = new Set(['footway', 'path', 'pedestrian', 'cycleway', 'steps', 'bridleway']);
 const footways = ways.filter((way) => pedestrianHighwayValues.has(way.tags.highway));
 const railways = ways.filter((way) => way.tags.railway);
+const treeRows = ways.filter((way) => way.tags.natural === 'tree_row');
 // Keep named transport structures separate from roads and railways. Their
 // plan geometry is source-backed, while the renderer supplies only a clearly
 // modelled display elevation because OSM layer values are relative, not a
@@ -215,7 +222,7 @@ const shops = [
 const places = ways
   .filter((way) => way.tags.name)
   .filter((way) => !way.tags.highway)
-  .filter((way) => way.tags.landuse || way.tags.amenity || way.tags.building || way.tags.leisure || way.tags.natural || way.tags.shop)
+  .filter((way) => way.tags.landuse || way.tags.amenity || way.tags.building || way.tags.leisure || way.tags.natural || way.tags.shop || way.tags.tourism || way.tags.area || way.tags.place)
   .map((way) => ({
     ...way,
     name: way.tags.name,
@@ -227,6 +234,9 @@ const signals = pointFeatures.filter((feature) =>
 const crossings = pointFeatures.filter((feature) =>
   feature.tags.highway === 'crossing' || feature.tags.crossing || feature.tags.railway === 'level_crossing'
 );
+const namedPlaces = pointFeatures
+  .filter((feature) => feature.tags.place && feature.tags.name)
+  .map(({ id, name, tags, position }) => ({ id, name, tags, position }));
 const busStops = pointFeatures.filter((feature) =>
   feature.tags.highway === 'bus_stop' || feature.tags.public_transport === 'platform'
 );
@@ -299,8 +309,10 @@ const dataset = {
     buildings: buildings.length,
     roads: roads.length,
     footways: footways.length,
+    treeRows: treeRows.length,
     shops: shops.length,
     places: places.length,
+    namedPlaces: namedPlaces.length,
     signals: signals.length,
     crossings: crossings.length,
     busStops: busStops.length,
@@ -314,8 +326,10 @@ const dataset = {
   buildings,
   roads,
   footways,
+  treeRows,
   shops,
   places,
+  namedPlaces,
   signals,
   crossings,
   busStops,
