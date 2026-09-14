@@ -12,7 +12,8 @@ import {
   Sliders,
   Footprints,
   Building2,
-  MapPin
+  MapPin,
+  Layers3
 } from 'lucide-react';
 import { SimulationMode } from '../../types';
 
@@ -24,6 +25,8 @@ interface ControlsBarProps {
   onOpenJunctionDetail: () => void;
   isStoreDrawerOpen?: boolean;
   onToggleStoreDrawer?: () => void;
+  isScenarioRoomOpen: boolean;
+  onOpenScenarioRoom: () => void;
 }
 
 export const ControlsBar: React.FC<ControlsBarProps> = ({
@@ -33,7 +36,9 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
   onToggleDemo,
   onOpenJunctionDetail,
   isStoreDrawerOpen,
-  onToggleStoreDrawer
+  onToggleStoreDrawer,
+  isScenarioRoomOpen,
+  onOpenScenarioRoom
 }) => {
   const [showMoreControls, setShowMoreControls] = useState(false);
 
@@ -52,6 +57,17 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       >
         <MapPin size={15} color={isStoreDrawerOpen ? '#38bdf8' : '#ea4335'} />
         <span>MAP STORES</span>
+      </button>
+
+      <button
+        type="button"
+        className={`control-btn scenario-room-toggle ${isScenarioRoomOpen ? 'active' : ''}`}
+        onClick={onOpenScenarioRoom}
+        aria-pressed={isScenarioRoomOpen}
+        title="Open the reproducible what-if scenario control room"
+      >
+        <Layers3 size={15} />
+        <span>SCENARIOS</span>
       </button>
 
       {/* ── Person / Bird's-eye inspection mode ── */}
@@ -209,7 +225,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
 
       {/* ── Camera View Angle Presets (Corridors & Landmarks) ── */}
       <div className="btn-group" role="group" aria-label="Camera preset">
-        {(['overview', 'corridor', 'oraclehub', 'crossover', 'flyover', 'brandfactory', 'skywalk', 'kalamandir', 'multiplex', 'spicegarden', 'underpass'] as const).map((preset) => (
+        {(['overview', 'corridor', 'bellandur', 'oraclehub', 'kadubeesanahalli', 'crossover', 'flyover', 'brandfactory', 'skywalk', 'kalamandir', 'multiplex', 'spicegarden', 'underpass'] as const).map((preset) => (
           <button
             key={preset}
             className={`group-item ${mode.cameraPreset === preset ? 'active' : ''}`}
@@ -221,8 +237,12 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
               ? 'SPICE GARDEN'
               : preset === 'brandfactory'
                 ? 'BRAND FACTORY'
-                : preset === 'oraclehub'
+              : preset === 'oraclehub'
                   ? 'ORACLE HUB'
+                  : preset === 'bellandur'
+                    ? 'BELLANDUR SLICE'
+                  : preset === 'kadubeesanahalli'
+                    ? 'KADUBEESANAHALLI'
                   : preset === 'flyover'
                     ? 'VARTHUR FLYOVER'
                     : preset === 'skywalk'

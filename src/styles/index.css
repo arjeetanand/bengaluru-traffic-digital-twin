@@ -233,9 +233,14 @@ canvas:active {
 
 /* ── Fallback / Safety Toast Banner ── */
 .banner-toast {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  z-index: 30;
   pointer-events: auto;
-  margin: 10px auto;
+  margin: 0;
   max-width: 640px;
+  transform: translateX(-50%);
   background: rgba(15, 23, 42, 0.92);
   border: 1px solid rgba(56, 189, 248, 0.35);
   border-radius: 8px;
@@ -1304,7 +1309,7 @@ input:focus-visible {
 @media (max-width: 900px) {
   .hud-overlay {
     --hud-mobile-header-clearance: 64px;
-    --hud-mobile-footer-height: min(38vh, 320px);
+    --hud-mobile-footer-height: min(46vh, 380px);
   }
 
   .hud-top-bar {
@@ -1426,6 +1431,9 @@ input:focus-visible {
 
   .controls-secondary.is-open {
     display: grid;
+    max-height: 120px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .mobile-more-controls {
@@ -1456,7 +1464,13 @@ input:focus-visible {
 @media (max-width: 640px) {
   .hud-overlay {
     --hud-mobile-header-clearance: 68px;
-    --hud-mobile-footer-height: min(38vh, 320px);
+    --hud-mobile-footer-height: min(46vh, 380px);
+  }
+
+  .banner-toast {
+    top: 68px;
+    width: min( calc(100vw - 20px), 640px );
+    max-width: none;
   }
 
   .hud-header-right {
@@ -1503,6 +1517,10 @@ input:focus-visible {
   .hud-overlay {
     --hud-mobile-header-clearance: 46px;
     --hud-mobile-footer-height: min(40vh, 156px);
+  }
+
+  .banner-toast {
+    top: 50px;
   }
 
   .hud-top-bar {
@@ -1556,5 +1574,272 @@ input:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ── Scenario control room integration layer ── */
+.scenario-room-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 58px 22px 96px;
+  pointer-events: auto;
+  background: rgb(2, 6, 23);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.scenario-room-shell {
+  display: flex;
+  flex-direction: column;
+  width: min(1440px, calc(100vw - 44px));
+  max-height: calc(100vh - 154px);
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(3, 7, 18, 0.96);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.64), 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.scenario-room-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  min-height: 50px;
+  padding: 7px 14px 7px 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(6, 15, 28, 0.92);
+}
+
+.scenario-view-mode-tabs {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.scenario-view-mode-tabs button,
+.scenario-room-close {
+  min-height: 36px;
+  cursor: pointer;
+  color: #94a3b8;
+  border: 1px solid transparent;
+  background: transparent;
+  font: 700 10px/1 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  letter-spacing: 0.1em;
+  transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease, opacity 180ms ease;
+}
+
+.scenario-view-mode-tabs button {
+  min-width: 82px;
+  padding: 8px 10px;
+}
+
+.scenario-view-mode-tabs button:hover:not(:disabled),
+.scenario-view-mode-tabs button:focus-visible,
+.scenario-room-close:hover,
+.scenario-room-close:focus-visible {
+  color: #f1f5f9;
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.scenario-view-mode-tabs button.is-active {
+  color: #03111b;
+  border-color: #38bdf8;
+  background: #38bdf8;
+}
+
+.scenario-view-mode-tabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.34;
+}
+
+.scenario-room-close {
+  display: inline-grid;
+  width: 36px;
+  place-items: center;
+  padding: 0;
+}
+
+.scenario-view-mode-tabs button:focus-visible,
+.scenario-room-close:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+}
+
+.scenario-world-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: max-content;
+  padding: 5px 8px;
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: rgba(3, 7, 18, 0.86);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.34);
+  font: 700 9px/1.2 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.scenario-world-label-closed {
+  color: #ffd166;
+  border-color: rgba(255, 118, 94, 0.72);
+}
+
+.scenario-world-label-spillover {
+  color: #f8d28f;
+  border-color: rgba(246, 180, 79, 0.52);
+}
+
+.scenario-world-label strong {
+  color: #fb7185;
+}
+
+.scenario-world-label-dot,
+.scenario-world-label-pulse {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.scenario-world-label-dot {
+  background: #ff765e;
+  box-shadow: 0 0 8px rgba(255, 118, 94, 0.9);
+}
+
+.scenario-world-label-pulse {
+  background: #f6b44f;
+  box-shadow: 0 0 8px rgba(246, 180, 79, 0.9);
+  animation: scenarioPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes scenarioPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.scenario-room-backdrop button {
+  touch-action: manipulation;
+}
+
+.corridor-attractor-label,
+.corridor-stop-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: max-content;
+  padding: 5px 8px;
+  color: #e2e8f0;
+  border: 1px solid rgba(79, 209, 197, 0.48);
+  background: rgba(3, 7, 18, 0.88);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+  font: 700 9px/1.2 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.corridor-attractor-label.is-context {
+  color: #ddd6fe;
+  border-color: rgba(167, 139, 250, 0.54);
+}
+
+.corridor-attractor-label strong,
+.corridor-attractor-label small {
+  display: block;
+}
+
+.corridor-attractor-label strong {
+  color: #f8fafc;
+}
+
+.corridor-attractor-label small {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+}
+
+.corridor-attractor-icon {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid currentColor;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.corridor-stop-label {
+  padding: 4px 7px;
+  color: #bae6fd;
+  border-color: rgba(56, 189, 248, 0.46);
+}
+
+.corridor-stop-label svg {
+  color: #38bdf8;
+}
+
+@media (max-width: 900px) {
+  .scenario-room-backdrop {
+    place-items: start center;
+    padding: 52px 10px 78px;
+  }
+
+  .scenario-room-shell {
+    width: min(100%, 720px);
+    max-height: calc(100vh - 130px);
+  }
+
+  .scenario-room-toolbar {
+    justify-content: space-between;
+  }
+
+  .scenario-view-mode-tabs {
+    width: 100%;
+  }
+
+  .scenario-view-mode-tabs button {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-inline: 5px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 520px) {
+  .scenario-room-backdrop {
+    padding: 44px 0 70px;
+  }
+
+  .scenario-room-shell {
+    width: 100%;
+    max-height: calc(100vh - 114px);
+    border-right: 0;
+    border-left: 0;
+  }
+
+  .scenario-room-toolbar {
+    gap: 7px;
+    padding-inline: 8px;
+  }
+
+  .scenario-view-mode-tabs button {
+    letter-spacing: 0.05em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scenario-world-label-pulse {
+    animation: none;
   }
 }

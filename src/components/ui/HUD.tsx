@@ -38,6 +38,8 @@ interface HUDProps {
   onResetUsage: () => void;
   onOpenJunctionDetail: () => void;
   onDismissNotice: () => void;
+  isScenarioRoomOpen: boolean;
+  onOpenScenarioRoom: () => void;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -55,7 +57,9 @@ export const HUD: React.FC<HUDProps> = ({
   onToggleDemo,
   onResetUsage,
   onOpenJunctionDetail,
-  onDismissNotice
+  onDismissNotice,
+  isScenarioRoomOpen,
+  onOpenScenarioRoom
 }) => {
   // Determine health color
   const healthColor =
@@ -264,6 +268,8 @@ export const HUD: React.FC<HUDProps> = ({
           onOpenJunctionDetail={onOpenJunctionDetail}
           isStoreDrawerOpen={isStoreDrawerOpen}
           onToggleStoreDrawer={onToggleStoreDrawer}
+          isScenarioRoomOpen={isScenarioRoomOpen}
+          onOpenScenarioRoom={onOpenScenarioRoom}
         />
       </footer>
 

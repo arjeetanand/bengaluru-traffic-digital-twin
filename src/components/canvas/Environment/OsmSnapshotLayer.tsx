@@ -103,6 +103,17 @@ function isSourceUnderpass(feature: OSMPolylineFeature) {
   return /underpass/i.test(name) || feature.tags.tunnel === 'yes';
 }
 
+function isSourceTunnel(feature: OSMPolylineFeature) {
+  return feature.tags.man_made === 'tunnel' || isSourceUnderpass(feature);
+}
+
+function getInfrastructureDisplayY(feature: OSMPolylineFeature) {
+  // OSM layer=-1/1 describes relative ordering only. These display datums
+  // align named structures with the authored scene without claiming a
+  // survey-grade elevation from the source extract.
+  return isSourceTunnel(feature) ? -6.2 : 5.2;
+}
+
 function getRoadSurfaceY(feature: OSMPolylineFeature, point: [number, number]) {
   if (isSourceUnderpass(feature)) return getOrrUnderpassElevation(point[1]) + 0.075;
   return 0.075;
@@ -237,6 +248,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   labelDistanceFactor = 65
 }) => {
   const [snapshot, setSnapshot] = useState<MarathahalliDemoSnapshot | null>(null);
+  const isLongRange = labelDistanceFactor > 1000;
 
   useEffect(() => {
     let active = true;
@@ -328,6 +340,12 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     () => (snapshot ? createPolylineGeometry(snapshot.railways.filter((feature) => !isNammaMetroSourceWay(feature))) : null),
     [snapshot]
   );
+  const sourceInfrastructureGeometry = useMemo(
+    () => (snapshot
+      ? createPolylineGeometry(snapshot.infrastructure || [], (feature) => getInfrastructureDisplayY(feature) + 0.18)
+      : null),
+    [snapshot]
+  );
   const buildingGeometry = useMemo(
     () => (snapshot && showBuildings ? createBuildingGeometry(snapshot.buildings, buildingLimit) : null),
     [buildingLimit, showBuildings, snapshot]
@@ -357,10 +375,13 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     return [...named, ...unnamed].slice(0, 420);
   }, [snapshot]);
   const sourceShopLabelFeatures = useMemo(() => {
-    if (!snapshot) return [];
+    // Keep the wide corridor survey readable: individual shop anchors remain
+    // available in the store drawer and as orange POI points, while only the
+    // four fixed source landmarks are labelled at long-range scale.
+    if (!snapshot || labelDistanceFactor > 1000) return [];
     const landmarkShopPattern = /spice garden|pizza hut|village hypermart|holly flames|sweet chariot|kalamandir|nalli|tanishq|kalyan|brand factory/i;
     return snapshot.shops.filter((shop) => landmarkShopPattern.test(shop.name || shop.tags.name || '')).slice(0, 24);
-  }, [snapshot]);
+  }, [labelDistanceFactor, snapshot]);
   const noUTurnSource = useMemo(
     () => (snapshot ? getRestrictionFeatures(snapshot, 'no_u_turn') : null),
     [snapshot]
@@ -388,11 +409,12 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     footwayGeometry?.dispose();
     footwaySurfaceGeometry?.dispose();
     railwayGeometry?.dispose();
+    sourceInfrastructureGeometry?.dispose();
     buildingGeometry?.dispose();
     buildingOutlineGeometry?.dispose();
     namedAreaGeometry?.dispose();
     noUTurnGeometry?.dispose();
-  }, [buildingGeometry, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, noUTurnGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry]);
+  }, [buildingGeometry, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, noUTurnGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry, sourceInfrastructureGeometry]);
 
   if (!snapshot) return null;
 
@@ -401,7 +423,9 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       {buildingGeometry && (
         <mesh geometry={buildingGeometry} position={[0, 0, 0]}>
           <meshStandardMaterial
-            color={isNight ? '#243b53' : '#71879a'}
+            color={isNight ? '#243b53' : (isLongRange ? '#9ab0be' : '#71879a')}
+            emissive={isNight ? '#08111c' : (isLongRange ? '#294454' : '#000000')}
+            emissiveIntensity={isNight ? 0.16 : (isLongRange ? 0.22 : 0)}
             roughness={0.92}
             metalness={0.05}
             transparent
@@ -528,6 +552,15 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
         </lineSegments>
       )}
 
+      {/* Named tunnel/bridge footprints preserve source structures that are
+          not drawable road or railway ways. Their plan position is source
+          geometry; their vertical display datum is explicitly modelled. */}
+      {sourceInfrastructureGeometry && (
+        <lineSegments geometry={sourceInfrastructureGeometry} renderOrder={5}>
+          <lineBasicMaterial color={isNight ? '#67e8f9' : '#0e7490'} transparent opacity={0.9} depthWrite={false} />
+        </lineSegments>
+      )}
+
       <group name="OSMSnapshotPointFeatures">
         {sourceShopFeatures.map((shop) => (
           <mesh key={`shop-${shop.id}`} position={[shop.position[0], 0.55, shop.position[1]]}>
@@ -588,6 +621,18 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             </mesh>
           </group>
         ))}
+
+        {snapshot.sourceAnchors.map((anchor) => (
+          <mesh
+            key={`source-anchor-${anchor.id}`}
+            position={[anchor.position[0], 0.26, anchor.position[1]]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            renderOrder={5}
+          >
+            <ringGeometry args={[1.15, 1.45, 20]} />
+            <meshBasicMaterial color="#38bdf8" transparent opacity={0.78} depthWrite={false} />
+          </mesh>
+        ))}
       </group>
 
       <group name="OSMSourceLandmarkLabels">
@@ -618,19 +663,20 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           </Html>
         ))}
 
-        {['Oracle Tech Hub', 'Innovative Multiplex', 'Kalamandir', 'Spice Garden'].map((label) => {
+        {['Oracle Tech Hub', 'Innovative Multiplex', 'Kalamandir', 'Spice Garden', 'Kadubeesanahalli Underpass', 'Kaadubeesanahalli'].map((label) => {
           const place = snapshot.places.find((feature) => feature.name?.toLowerCase() === label.toLowerCase())
             || snapshot.places.find((feature) => feature.name?.toLowerCase().includes(label.toLowerCase()));
-          const point = [...snapshot.shops, ...snapshot.busStops].find((feature) =>
+          const point = [...snapshot.sourceAnchors, ...snapshot.shops, ...snapshot.busStops].find((feature) =>
             feature.name?.toLowerCase() === label.toLowerCase()
           );
           if (!place && !point) return null;
           const position = place?.centroid || point?.position;
           if (!position) return null;
+          const labelLift = isLongRange ? 36 : 4;
           return (
             <Html
               key={label}
-              position={[position[0], Math.max(4, place?.height || 4) + 4, position[1]]}
+              position={[position[0], Math.max(4, place?.height || 4) + labelLift, position[1]]}
               center
               distanceFactor={labelDistanceFactor}
               zIndexRange={[20, 0]}
@@ -642,7 +688,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
                   borderRadius: '5px',
                   color: '#e0f2fe',
                   fontFamily: 'monospace',
-                  fontSize: '9px',
+                fontSize: isLongRange ? '10px' : '9px',
                   letterSpacing: '0.35px',
                   padding: '4px 7px',
                   whiteSpace: 'nowrap',
@@ -650,6 +696,38 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
                 }}
               >
                 SOURCE · {label.toUpperCase()}
+              </div>
+            </Html>
+          );
+        })}
+
+        {(snapshot.infrastructure || []).map((feature) => {
+          const displayName = feature.tags.full_name || feature.name || feature.tags.name;
+          if (!displayName) return null;
+          const isTunnel = isSourceTunnel(feature);
+          return (
+            <Html
+              key={`source-infrastructure-label-${feature.id}`}
+              position={[feature.centroid[0], isTunnel ? 6.0 : (isLongRange ? 30.0 : 8.0), feature.centroid[1]]}
+              center
+              distanceFactor={Math.max(55, labelDistanceFactor * 0.9)}
+              zIndexRange={[22, 0]}
+            >
+              <div
+                style={{
+                  background: 'rgba(8, 47, 73, 0.9)',
+                  border: '1px solid rgba(103, 232, 249, 0.72)',
+                  borderRadius: '4px',
+                  color: '#cffafe',
+                  fontFamily: 'monospace',
+                  fontSize: isLongRange ? '9px' : '8px',
+                  letterSpacing: '0.16px',
+                  padding: '3px 5px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 10px rgba(2, 6, 23, 0.45)'
+                }}
+              >
+                OSM INFRA · {displayName.toUpperCase()} · LAYER {feature.tags.layer || '—'}
               </div>
             </Html>
           );

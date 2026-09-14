@@ -18,7 +18,7 @@ const uTurnValidation = {
 };
 
 const requiredCollections = [
-  'buildings', 'roads', 'footways', 'shops', 'places', 'signals', 'crossings', 'busStops', 'trees', 'bridgeSupports', 'railways'
+  'buildings', 'roads', 'footways', 'shops', 'places', 'signals', 'crossings', 'busStops', 'trees', 'sourceAnchors', 'bridgeSupports', 'railways', 'infrastructure'
 ];
 
 function finite(value, label) {
@@ -50,7 +50,7 @@ function distanceBetween(left, right) {
   return Math.hypot(left[0] - right[0], left[1] - right[1]);
 }
 
-if (![1, 2].includes(dataset.schemaVersion)) errors.push('unsupported schemaVersion');
+if (![1, 2, 3].includes(dataset.schemaVersion)) errors.push('unsupported schemaVersion');
 if (dataset.source?.provider !== 'OpenStreetMap') errors.push('source.provider must be OpenStreetMap');
 if (!dataset.source?.attribution?.includes('OpenStreetMap contributors')) errors.push('OSM attribution is missing');
 if (dataset.source?.license !== 'ODbL-1.0') errors.push('OSM license must be ODbL-1.0');
@@ -70,11 +70,38 @@ for (const collection of requiredCollections) {
     if (!feature.id) errors.push(`${collection} feature is missing id`);
     if (ids.has(feature.id)) errors.push(`${collection} contains duplicate id ${feature.id}`);
     ids.add(feature.id);
-    if (collection === 'shops' || collection === 'signals' || collection === 'crossings' || collection === 'busStops' || collection === 'trees' || collection === 'bridgeSupports') {
+    if (collection === 'shops' || collection === 'signals' || collection === 'crossings' || collection === 'busStops' || collection === 'trees' || collection === 'sourceAnchors' || collection === 'bridgeSupports') {
       checkPosition(feature.position, `${collection}.${feature.id}.position`);
     } else {
       checkGeometry(feature.geometry, `${collection}.${feature.id}.geometry`);
     }
+  }
+}
+
+const kadubeesanahalliAnchor = dataset.sourceAnchors.find((feature) =>
+  /kadubeesanahalli underpass/i.test(feature.name || feature.tags?.name || '')
+);
+if (!kadubeesanahalliAnchor) {
+  errors.push('sourceAnchors must preserve the Kadubeesanahalli Underpass junction node');
+} else if (kadubeesanahalliAnchor.tags?.junction !== 'yes') {
+  errors.push('Kadubeesanahalli Underpass source anchor must preserve junction=yes');
+}
+
+const kaadubeesanahalliAnchor = dataset.sourceAnchors.find((feature) =>
+  /kaadubeesanahalli/i.test(feature.name || feature.tags?.name || '')
+);
+if (!kaadubeesanahalliAnchor) {
+  errors.push('sourceAnchors must preserve the Kaadubeesanahalli locality node');
+} else if (kaadubeesanahalliAnchor.tags?.place !== 'quarter') {
+  errors.push('Kaadubeesanahalli source anchor must preserve place=quarter');
+}
+
+for (const infrastructureId of ['way/1302220812', 'way/1302220813', 'way/1225572735']) {
+  const feature = dataset.infrastructure.find((candidate) => candidate.id === infrastructureId);
+  if (!feature) {
+    errors.push(`named source infrastructure ${infrastructureId} is missing`);
+  } else if (feature.geometry.length < 3) {
+    errors.push(`${infrastructureId} must preserve its source footprint geometry`);
   }
 }
 

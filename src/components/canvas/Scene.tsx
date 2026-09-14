@@ -9,7 +9,7 @@ import {
   FOG_DENSITY_NIGHT,
   CAMERA_DEFAULT_POSITION
 } from '../../config/location';
-import { SignalStatus, CameraPreset } from '../../types';
+import { SignalStatus, CameraPreset, ScenarioVisualState } from '../../types';
 import { CameraController } from './CameraController';
 import { PostProcessingPipeline } from './PostProcessing';
 import { JunctionRoads } from './Environment/JunctionRoads';
@@ -28,6 +28,8 @@ import { TrafficSystem } from './traffic/TrafficSystem';
 import { SourceCorridorTraffic } from './traffic/SourceCorridorTraffic';
 import { OsmSnapshotLayer } from './Environment/OsmSnapshotLayer';
 import { CrossoverFocusOverlay } from './Environment/CrossoverFocusOverlay';
+import { ScenarioImpactOverlay } from './Environment/ScenarioImpactOverlay';
+import { CorridorAttractorLayer } from './Environment/CorridorAttractorLayer';
 import { MARATHAHALLI_SOURCE_ANCHORS } from '../../data/marathahalliNavigation';
 
 interface SceneProps {
@@ -43,6 +45,7 @@ interface SceneProps {
   signalStatus: SignalStatus;
   congestionRatio: number;
   vehicleCount: number;
+  scenarioVisualState: ScenarioVisualState;
   onInspectJunction: () => void;
 }
 
@@ -59,6 +62,7 @@ export const Scene: React.FC<SceneProps> = ({
   signalStatus,
   congestionRatio,
   vehicleCount,
+  scenarioVisualState,
   onInspectJunction
 }) => {
   const [googleTilesFailed, setGoogleTilesFailed] = React.useState(false);
@@ -72,15 +76,15 @@ export const Scene: React.FC<SceneProps> = ({
   }, []);
 
   // Lighting & Atmospheric parameters
+  const isLongCorridorView = cameraPreset === 'corridor' || cameraPreset === 'bellandur';
   const sunPosition: [number, number, number] = isRaining ? SUN_POSITION_OVERCAST : SUN_POSITION_DAY;
-  const sunIntensity = isNight ? 0.05 : (isRaining ? 1.2 : 3.2);
+  const sunIntensity = isNight ? 0.05 : (isRaining ? 1.2 : (isLongCorridorView ? 4.1 : 3.2));
   const sunColor = isNight ? '#1e293b' : (isRaining ? '#cbd5e1' : '#fff1d6');
 
   const hemiSkyColor = isNight ? '#0b1329' : (isRaining ? '#475569' : '#e0f2fe');
   const hemiGroundColor = isNight ? '#020617' : (isRaining ? '#1e293b' : '#334155');
-  const hemiIntensity = isNight ? 0.2 : (isRaining ? 0.6 : 0.85);
+  const hemiIntensity = isNight ? 0.2 : (isRaining ? 0.6 : (isLongCorridorView ? 1.1 : 0.85));
 
-  const isLongCorridorView = cameraPreset === 'corridor';
   const isCrossoverFocusView = cameraPreset === 'crossover';
   const isSourceGeometryFocusView = [
     'corridor',
@@ -92,7 +96,9 @@ export const Scene: React.FC<SceneProps> = ({
     'oraclehub',
     'brandfactory',
     'kalamandir',
-    'multiplex'
+    'multiplex',
+    'kadubeesanahalli',
+    'bellandur'
   ].includes(cameraPreset);
   const sourceBuildingLimit = cameraPreset === 'corridor'
     ? 3000
@@ -111,7 +117,7 @@ export const Scene: React.FC<SceneProps> = ({
     : (isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY));
   const fogColor = isNight ? '#030712' : (isRaining ? '#334155' : '#a9b8c8');
   const sourceLabelDistanceFactor = cameraMode === 'overview'
-    ? (cameraPreset === 'corridor' ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65)))
+    ? ((cameraPreset === 'corridor' || cameraPreset === 'bellandur') ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65)))
     : 65;
 
   return (
@@ -181,9 +187,16 @@ export const Scene: React.FC<SceneProps> = ({
             isNight={isNight}
             showBuildings={buildingMode !== 'google-tiles' || googleTilesFailed}
             buildingLimit={sourceBuildingLimit}
-            buildingOpacity={isCrossoverFocusView ? 0.28 : 0.5}
-            buildingOutlineOpacity={isCrossoverFocusView ? 0.2 : 0.32}
+            buildingOpacity={isCrossoverFocusView ? 0.28 : (isLongCorridorView ? 0.68 : 0.5)}
+            buildingOutlineOpacity={isCrossoverFocusView ? 0.2 : (isLongCorridorView ? 0.46 : 0.32)}
             labelDistanceFactor={sourceLabelDistanceFactor}
+          />
+
+          <CorridorAttractorLayer
+            isNight={isNight}
+            showStops={isLongCorridorView}
+            showAdjacentContext={isLongCorridorView}
+            labelDistanceFactor={isLongCorridorView ? 1800 : 260}
           />
 
           {/* ── 3D Stylized Realistic Ground & Underpass Network ── */}
@@ -197,6 +210,8 @@ export const Scene: React.FC<SceneProps> = ({
           {isCrossoverFocusView && (
             <CrossoverFocusOverlay isNight={isNight} cameraMode={cameraMode} />
           )}
+
+          <ScenarioImpactOverlay visualState={scenarioVisualState} />
 
           {/* ── Realistic Pedestrian Footpaths (Paved, Missing, Encroached, Metro-Blocked) ── */}
           <Footpaths
@@ -276,6 +291,7 @@ export const Scene: React.FC<SceneProps> = ({
             simSpeedMultiplier={simSpeed}
             isNight={isNight}
             vehicleTotalCount={corridorVehicleCount}
+            congestionRatio={scenarioVisualState.congestionRatio}
           />
 
           {/* ── Interactive Junction Beacon / Clickable Trigger ── */}

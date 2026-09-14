@@ -23,11 +23,12 @@ interface SourceCorridorTrafficProps {
   simSpeedMultiplier: number;
   isNight: boolean;
   vehicleTotalCount: number;
+  congestionRatio: number;
 }
 
 interface SourceRoute {
   id: string;
-  curve: THREE.CatmullRomCurve3;
+  curve: THREE.CurvePath<THREE.Vector3>;
   length: number;
   // OSM way order is the travel direction for one-way roads. Bidirectional
   // ways are expanded into one route per direction before vehicles spawn.
@@ -87,6 +88,14 @@ function getSourceRoadY(feature: OSMPolylineFeature, z: number) {
   if (isVarthurViaductWay(feature)) return VARTHUR_VIADUCT_DECK_TOP_Y + 0.08;
   if (isSourceElevatedRoad(feature)) return 5.3;
   return 0.1;
+}
+
+function toSourcePolylineCurve(points: THREE.Vector3[]) {
+  const curve = new THREE.CurvePath<THREE.Vector3>();
+  for (let index = 1; index < points.length; index += 1) {
+    curve.add(new THREE.LineCurve3(points[index - 1], points[index]));
+  }
+  return curve;
 }
 
 /**
@@ -153,7 +162,10 @@ function buildSourceRoutes(snapshot: MarathahalliDemoSnapshot): SourceRoute[] {
   return selected
     .flatMap((feature) => {
       const points = feature.geometry.map(([x, z]) => new THREE.Vector3(x, getSourceRoadY(feature, z), z));
-      const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.18);
+      // Keep vehicles on the exact mapped way vertices. A smoothed spline
+      // can cut across a mapped corner and put a vehicle on a footway or
+      // building frontage in the audit views.
+      const curve = toSourcePolylineCurve(points);
       const oneway = feature.tags.oneway;
       const preferredDirection: 1 | -1 | null = oneway === 'yes' || oneway === '1'
         ? 1
@@ -180,7 +192,8 @@ function buildSourceRoutes(snapshot: MarathahalliDemoSnapshot): SourceRoute[] {
 export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
   simSpeedMultiplier,
   isNight,
-  vehicleTotalCount
+  vehicleTotalCount,
+  congestionRatio
 }) => {
   const [snapshot, setSnapshot] = useState<MarathahalliDemoSnapshot | null>(null);
   const carsMeshRef = useRef<THREE.InstancedMesh>(null);
@@ -324,10 +337,12 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
     const dt = Math.min(simulationAccumulator.current, 0.1) * simSpeedMultiplier;
     simulationAccumulator.current = 0;
 
+    const congestionSpeedFactor = Math.max(0.28, Math.min(1.18, congestionRatio));
+
     for (const agent of agents) {
       const route = routes[agent.routeIdx];
       const progress = agent.direction === 1 ? agent.t : 1 - agent.t;
-      agent.t += (agent.speed * dt) / route.length;
+      agent.t += (agent.speed * congestionSpeedFactor * dt) / route.length;
       if (agent.t > 1) {
         agent.t = 0.02 + (agent.id % 7) * 0.006;
         // A source route never reverses at the endpoint. Bidirectional ways

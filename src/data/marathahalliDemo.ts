@@ -127,7 +127,7 @@ function pointToSegmentDistance(
 }
 
 /**
- * Return only bridge supports with explicit metro evidence. The August 2026
+ * Return only bridge supports with explicit metro evidence. The September 2026
  * extract contains 144 concrete pier nodes near the metro alignment, but
  * their refs identify ORR / Marathahalli / Kodibeesanahalli road structures;
  * none is tagged as a Namma Metro support. Proximity alone is not enough to
@@ -197,8 +197,10 @@ export interface MarathahalliDemoSnapshot {
   crossings: OSMPointFeature[];
   busStops: OSMPointFeature[];
   trees: OSMPointFeature[];
+  sourceAnchors: OSMPointFeature[];
   bridgeSupports: OSMPointFeature[];
   railways: OSMPolylineFeature[];
+  infrastructure: OSMPolylineFeature[];
   turnRestrictions: OSMTurnRestriction[];
 }
 

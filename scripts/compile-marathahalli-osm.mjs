@@ -62,13 +62,14 @@ function inClip(lat, lon) {
 
 function compactTags(tags) {
   const allowed = [
-    'highway', 'name', 'ref', 'surface', 'lanes', 'maxspeed', 'oneway', 'sidewalk',
+    'highway', 'name', 'ref', 'surface', 'lanes', 'maxspeed', 'oneway', 'sidewalk', 'junction', 'place',
     'foot', 'bicycle', 'building', 'building:levels', 'height', 'shop', 'amenity',
     'public_transport', 'railway', 'bridge', 'tunnel', 'crossing', 'crossing:markings',
     'natural', 'barrier', 'lit', 'operator', 'addr:street', 'addr:housenumber', 'landuse',
     'traffic_signals', 'layer', 'step_count', 'width', 'incline', 'ramp', 'covered',
     'handrail', 'smoothness', 'footway', 'embankment', 'service', 'network', 'colour',
-    'gauge', 'voltage', 'frequency', 'bridge:support', 'material'
+    'gauge', 'voltage', 'frequency', 'bridge:support', 'material', 'bridge:structure', 'man_made', 'full_name',
+    'alt_name', 'official_name', 'short_name'
   ];
   return Object.fromEntries(allowed.filter((key) => tags[key] !== undefined).map((key) => [key, tags[key]]));
 }
@@ -193,6 +194,15 @@ const roads = ways.filter((way) => roadValues.has(way.tags.highway));
 const pedestrianHighwayValues = new Set(['footway', 'path', 'pedestrian', 'cycleway', 'steps', 'bridleway']);
 const footways = ways.filter((way) => pedestrianHighwayValues.has(way.tags.highway));
 const railways = ways.filter((way) => way.tags.railway);
+// Keep named transport structures separate from roads and railways. Their
+// plan geometry is source-backed, while the renderer supplies only a clearly
+// modelled display elevation because OSM layer values are relative, not a
+// surveyed height datum.
+const infrastructure = ways
+  .filter((way) => way.tags.man_made === 'tunnel' || way.tags.man_made === 'bridge' || way.tags.bridge === 'viaduct')
+  .filter((way) => /kadubeesanahalli underpass|marathahalli bridge|marathahalli rail over bridge/i.test(
+    `${way.tags.name || ''} ${way.tags.full_name || ''}`
+  ));
 const shops = [
   ...pointFeatures.filter((feature) => feature.tags.shop || feature.tags.amenity === 'restaurant'),
   ...ways.filter((way) => way.tags.shop).map((way) => ({
@@ -221,6 +231,18 @@ const busStops = pointFeatures.filter((feature) =>
   feature.tags.highway === 'bus_stop' || feature.tags.public_transport === 'platform'
 );
 const trees = pointFeatures.filter((feature) => feature.tags.natural === 'tree');
+const sourceAnchors = pointFeatures
+  .filter((feature) => (
+    feature.tags.junction === 'yes' && /kadubeesanahalli underpass/i.test(feature.tags.name || '')
+  ) || (
+    feature.tags.place === 'quarter' && /kaadubeesanahalli|kadubeesanahalli/i.test(feature.tags.name || '')
+  ))
+  .map((feature) => ({
+    id: feature.id,
+    name: feature.name,
+    tags: feature.tags,
+    position: feature.position
+  }));
 const bridgeSupports = pointFeatures
   .filter((feature) => feature.tags['bridge:support'] === 'pier')
   .map((feature) => ({
@@ -238,12 +260,15 @@ const landmarkCoverage = [
   { name: 'Oracle Tech Hub', sourceBacked: hasNamedFeature('Oracle Tech Hub') },
   { name: 'Innovative Multiplex', sourceBacked: hasNamedFeature('Innovative Multiplex') },
   { name: 'Kalamandir', sourceBacked: hasNamedFeature('Kalamandir') },
-  { name: 'Spice Garden', sourceBacked: hasNamedFeature('Spice Garden') }
+  { name: 'Spice Garden', sourceBacked: hasNamedFeature('Spice Garden') },
+  { name: 'Kadubeesanahalli Underpass', sourceBacked: sourceAnchors.some((feature) => /underpass/i.test(feature.name || '')) },
+  { name: 'Kaadubeesanahalli', sourceBacked: sourceAnchors.some((feature) => /kaadubeesanahalli/i.test(feature.name || '')) },
+  { name: 'Marathahalli Rail Over Bridge', sourceBacked: infrastructure.some((feature) => /rail over bridge/i.test(`${feature.name || ''} ${feature.tags.full_name || ''}`)) }
 ];
 const missingLandmarks = landmarkCoverage.filter((landmark) => !landmark.sourceBacked).map((landmark) => landmark.name);
 
 const dataset = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   source: {
     provider: 'OpenStreetMap',
     file: 'marathahalli_osm.xml',
@@ -262,10 +287,10 @@ const dataset = {
   bounds: sourceBounds,
   clipMarginDegrees,
   coverage: {
-    name: 'Oracle Tech Hub → Marathahalli → Kalamandir / Spice Garden OSM snapshot',
+    name: 'Kadubeesanahalli → Oracle Tech Hub → Marathahalli → Kalamandir / Spice Garden OSM snapshot',
     note: missingLandmarks.length
       ? `This snapshot covers the supplied OSM bounds. Source-backed landmark gaps remain: ${missingLandmarks.join(', ')}.`
-      : 'This wider snapshot covers the Oracle Tech Hub, Innovative Multiplex, Marathahalli signal junction, Kalamandir and Spice Garden corridor. OSM geometry is source-backed; landmark facade detail remains a modeled layer. Turn restrictions are preserved separately from drawable ways.',
+      : 'This wider snapshot covers the Kadubeesanahalli underpass, Oracle Tech Hub, Innovative Multiplex, Marathahalli signal junction, Kalamandir and Spice Garden corridor. OSM geometry is source-backed; landmark facade detail remains a modeled layer. Turn restrictions are preserved separately from drawable ways.',
     landmarks: landmarkCoverage
   },
   stats: {
@@ -280,8 +305,10 @@ const dataset = {
     crossings: crossings.length,
     busStops: busStops.length,
     trees: trees.length,
+    sourceAnchors: sourceAnchors.length,
     bridgeSupports: bridgeSupports.length,
     railways: railways.length,
+    infrastructure: infrastructure.length,
     turnRestrictions: turnRestrictions.length
   },
   buildings,
@@ -293,8 +320,10 @@ const dataset = {
   crossings,
   busStops,
   trees,
+  sourceAnchors,
   bridgeSupports,
   railways,
+  infrastructure,
   turnRestrictions
 };
 

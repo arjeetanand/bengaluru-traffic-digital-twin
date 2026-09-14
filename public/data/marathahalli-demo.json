@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "source": {
     "provider": "OpenStreetMap",
     "file": "marathahalli_osm.xml",
@@ -26,8 +26,8 @@
   },
   "clipMarginDegrees": 0.0015,
   "coverage": {
-    "name": "Oracle Tech Hub → Marathahalli → Kalamandir / Spice Garden OSM snapshot",
-    "note": "This wider snapshot covers the Oracle Tech Hub, Innovative Multiplex, Marathahalli signal junction, Kalamandir and Spice Garden corridor. OSM geometry is source-backed; landmark facade detail remains a modeled layer. Turn restrictions are preserved separately from drawable ways.",
+    "name": "Kadubeesanahalli → Oracle Tech Hub → Marathahalli → Kalamandir / Spice Garden OSM snapshot",
+    "note": "This wider snapshot covers the Kadubeesanahalli underpass, Oracle Tech Hub, Innovative Multiplex, Marathahalli signal junction, Kalamandir and Spice Garden corridor. OSM geometry is source-backed; landmark facade detail remains a modeled layer. Turn restrictions are preserved separately from drawable ways.",
     "landmarks": [
       {
         "name": "Oracle Tech Hub",
@@ -44,6 +44,18 @@
       {
         "name": "Spice Garden",
         "sourceBacked": true
+      },
+      {
+        "name": "Kadubeesanahalli Underpass",
+        "sourceBacked": true
+      },
+      {
+        "name": "Kaadubeesanahalli",
+        "sourceBacked": true
+      },
+      {
+        "name": "Marathahalli Rail Over Bridge",
+        "sourceBacked": true
       }
     ]
   },
@@ -59,8 +71,10 @@
     "crossings": 63,
     "busStops": 20,
     "trees": 41,
+    "sourceAnchors": 2,
     "bridgeSupports": 144,
     "railways": 21,
+    "infrastructure": 3,
     "turnRestrictions": 2
   },
   "buildings": [
@@ -23340,7 +23354,8 @@
       "tags": {
         "name": "Mahindra Auto Service Center",
         "building": "yes",
-        "shop": "car_repair"
+        "shop": "car_repair",
+        "alt_name": "Mahindra"
       },
       "geometry": [
         [
@@ -273558,6 +273573,7 @@
         "surface": "asphalt",
         "maxspeed": "20",
         "sidewalk": "no",
+        "junction": "roundabout",
         "foot": "yes",
         "bicycle": "private"
       },
@@ -274601,7 +274617,8 @@
     {
       "id": "way/233260155",
       "tags": {
-        "highway": "unclassified"
+        "highway": "unclassified",
+        "junction": "roundabout"
       },
       "geometry": [
         [
@@ -275228,7 +275245,8 @@
         "name": "Panathur Main Road",
         "surface": "asphalt",
         "lanes": "4",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "alt_name": "Kadubeesanahalli Road"
       },
       "geometry": [
         [
@@ -277773,7 +277791,10 @@
         "oneway": "yes",
         "sidewalk": "no",
         "foot": "no",
-        "layer": "-1"
+        "layer": "-1",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -277829,7 +277850,10 @@
         "maxspeed": "30",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Srinagar - Kanyakumari Highway",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -277902,7 +277926,9 @@
         "oneway": "yes",
         "sidewalk": "no",
         "foot": "no",
-        "layer": "-1"
+        "layer": "-1",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -277934,7 +277960,10 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Srinagar - Kanyakumari Highway",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278020,7 +278049,9 @@
         "sidewalk": "no",
         "tunnel": "yes",
         "layer": "-1",
-        "covered": "yes"
+        "covered": "yes",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278112,7 +278143,9 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "layer": "-1"
+        "layer": "-1",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278150,7 +278183,10 @@
         "sidewalk": "no",
         "tunnel": "yes",
         "layer": "-1",
-        "covered": "yes"
+        "covered": "yes",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278179,7 +278215,10 @@
         "oneway": "yes",
         "sidewalk": "no",
         "foot": "no",
-        "layer": "-1"
+        "layer": "-1",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278232,7 +278271,10 @@
         "oneway": "yes",
         "sidewalk": "no",
         "foot": "no",
-        "layer": "-1"
+        "layer": "-1",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278289,7 +278331,10 @@
         "oneway": "yes",
         "sidewalk": "no",
         "foot": "no",
-        "layer": "-1"
+        "layer": "-1",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278343,7 +278388,10 @@
         "sidewalk": "no",
         "tunnel": "yes",
         "layer": "-1",
-        "covered": "yes"
+        "covered": "yes",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278372,7 +278420,9 @@
         "oneway": "yes",
         "sidewalk": "no",
         "foot": "no",
-        "layer": "-1"
+        "layer": "-1",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278421,7 +278471,9 @@
         "oneway": "yes",
         "sidewalk": "no",
         "foot": "no",
-        "layer": "-1"
+        "layer": "-1",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -278459,7 +278511,9 @@
         "sidewalk": "no",
         "tunnel": "yes",
         "layer": "-1",
-        "covered": "yes"
+        "covered": "yes",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -287699,7 +287753,8 @@
     {
       "id": "way/718775655",
       "tags": {
-        "highway": "unclassified"
+        "highway": "unclassified",
+        "junction": "roundabout"
       },
       "geometry": [
         [
@@ -288475,7 +288530,8 @@
     {
       "id": "way/737213662",
       "tags": {
-        "highway": "unclassified"
+        "highway": "unclassified",
+        "junction": "roundabout"
       },
       "geometry": [
         [
@@ -295009,7 +295065,8 @@
         "name": "Panathur Main Road",
         "surface": "asphalt",
         "lanes": "4",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "alt_name": "Kadubeesanahalli Road"
       },
       "geometry": [
         [
@@ -295070,7 +295127,9 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "alt_name": "Doddakannelli - Kaadubeesanahalli Rd",
+        "official_name": "Dodakanneli Road"
       },
       "geometry": [
         [
@@ -295106,7 +295165,8 @@
         "name": "Panathur Main Road",
         "surface": "asphalt",
         "lanes": "2",
-        "oneway": "yes"
+        "oneway": "yes",
+        "alt_name": "Kadubeesanahalli Road"
       },
       "geometry": [
         [
@@ -295402,7 +295462,10 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Srinagar - Kanyakumari Highway",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -295495,7 +295558,10 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -295535,7 +295601,10 @@
         "maxspeed": "40",
         "oneway": "yes",
         "sidewalk": "no",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Srinagar - Kanyakumari Highway",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -295590,7 +295659,10 @@
         "lanes": "3",
         "maxspeed": "60",
         "oneway": "yes",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -296952,7 +297024,10 @@
         "oneway": "yes",
         "sidewalk": "no",
         "foot": "no",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Srinagar - Kanyakumari Highway",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -299737,7 +299812,8 @@
         "highway": "tertiary",
         "name": "Panathur Main Road",
         "surface": "asphalt",
-        "oneway": "yes"
+        "oneway": "yes",
+        "alt_name": "Kadubeesanahalli Road"
       },
       "geometry": [
         [
@@ -299786,7 +299862,9 @@
         "surface": "asphalt",
         "lanes": "2",
         "oneway": "yes",
-        "sidewalk": "separate"
+        "sidewalk": "separate",
+        "alt_name": "Doddakannelli - Kaadubeesanahalli Rd",
+        "official_name": "Dodakanneli Road"
       },
       "geometry": [
         [
@@ -301092,7 +301170,9 @@
         "maxspeed": "40",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -301148,7 +301228,9 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -301218,7 +301300,10 @@
         "sidewalk": "separate",
         "bridge": "yes",
         "lit": "yes",
-        "layer": "1"
+        "layer": "1",
+        "alt_name": "Srinagar - Kanyakumari Highway",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -301250,7 +301335,10 @@
         "maxspeed": "30",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Srinagar - Kanyakumari Highway",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -301292,7 +301380,10 @@
         "sidewalk": "separate",
         "bridge": "yes",
         "lit": "yes",
-        "layer": "1"
+        "layer": "1",
+        "alt_name": "Srinagar - Kanyakumari Highway",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -306973,7 +307064,9 @@
         "lanes": "3",
         "maxspeed": "60",
         "oneway": "yes",
-        "sidewalk": "no"
+        "sidewalk": "no",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -309127,7 +309220,10 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "no",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -309159,7 +309255,10 @@
         "maxspeed": "60",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "alt_name": "Outer Ring Road",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -309191,7 +309290,9 @@
         "maxspeed": "40",
         "oneway": "yes",
         "sidewalk": "separate",
-        "lit": "yes"
+        "lit": "yes",
+        "official_name": "KC Reddy Ring Road",
+        "short_name": "ORR"
       },
       "geometry": [
         [
@@ -322224,7 +322325,8 @@
       "name": "Odia Mess",
       "tags": {
         "name": "Odia Mess",
-        "amenity": "restaurant"
+        "amenity": "restaurant",
+        "alt_name": "Tulashi Restaurant"
       },
       "position": [
         -341.9,
@@ -324976,7 +325078,8 @@
       "name": "Mahindra",
       "tags": {
         "name": "Mahindra",
-        "shop": "car"
+        "shop": "car",
+        "alt_name": "Mahindra"
       },
       "position": [
         28.8,
@@ -326934,7 +327037,8 @@
       "tags": {
         "name": "Mahindra Auto Service Center",
         "building": "yes",
-        "shop": "car_repair"
+        "shop": "car_repair",
+        "alt_name": "Mahindra"
       },
       "position": [
         111.9,
@@ -329660,7 +329764,8 @@
       "id": "way/232866008",
       "tags": {
         "name": "V.R.R Residency",
-        "landuse": "residential"
+        "landuse": "residential",
+        "alt_name": "VRR Residency"
       },
       "geometry": [
         [
@@ -330669,7 +330774,8 @@
       "tags": {
         "name": "Kadabeesanahalli Sewage Treatment Plant",
         "operator": "Bangalore Water Supply and Sewerage Board",
-        "landuse": "industrial"
+        "landuse": "industrial",
+        "man_made": "wastewater_plant"
       },
       "geometry": [
         [
@@ -330916,7 +331022,8 @@
       "tags": {
         "name": "Mahindra Auto Service Center",
         "building": "yes",
-        "shop": "car_repair"
+        "shop": "car_repair",
+        "alt_name": "Mahindra"
       },
       "geometry": [
         [
@@ -333305,7 +333412,8 @@
       "id": "way/450601454",
       "tags": {
         "name": "Epsilon",
-        "landuse": "residential"
+        "landuse": "residential",
+        "full_name": "Epsilon Residential Villas"
       },
       "geometry": [
         [
@@ -334919,7 +335027,8 @@
       "id": "way/779346494",
       "tags": {
         "name": "Helios Business Park",
-        "landuse": "commercial"
+        "landuse": "commercial",
+        "alt_name": "Kalyani Helios Business Park"
       },
       "geometry": [
         [
@@ -335729,7 +335838,8 @@
       "id": "way/790387445",
       "tags": {
         "name": "Divyasree 77 Town Centre",
-        "landuse": "commercial"
+        "landuse": "commercial",
+        "alt_name": "Divyashree Technopark"
       },
       "geometry": [
         [
@@ -337319,7 +337429,8 @@
       "id": "way/1070516512",
       "tags": {
         "name": "Prestige Featherlite Tech Hub",
-        "landuse": "commercial"
+        "landuse": "commercial",
+        "alt_name": "Prestige Featherlite Techno Hub"
       },
       "geometry": [
         [
@@ -337430,7 +337541,9 @@
       "id": "way/1072561555",
       "tags": {
         "name": "HP",
-        "amenity": "fuel"
+        "amenity": "fuel",
+        "official_name": "Hindustan Petroleum",
+        "short_name": "HP"
       },
       "geometry": [
         [
@@ -337644,7 +337757,9 @@
       "id": "way/1073336189",
       "tags": {
         "name": "HP",
-        "amenity": "fuel"
+        "amenity": "fuel",
+        "official_name": "Hindustan Petroleum",
+        "short_name": "HP"
       },
       "geometry": [
         [
@@ -341839,7 +341954,8 @@
       "id": "way/1347724899",
       "tags": {
         "name": "Sri Vishveshathirtha Memorial Hospital",
-        "amenity": "hospital"
+        "amenity": "hospital",
+        "short_name": "SVM Hospital"
       },
       "geometry": [
         [
@@ -344719,7 +344835,8 @@
         "name": "Kaadubeesanahalli",
         "public_transport": "platform",
         "operator": "BMTC",
-        "network": "BMTC"
+        "network": "BMTC",
+        "alt_name": "JP Morgan"
       },
       "position": [
         -467.5,
@@ -345435,6 +345552,32 @@
       ],
       "lat": 12.9610601,
       "lon": 77.7013975
+    }
+  ],
+  "sourceAnchors": [
+    {
+      "id": "node/1614318567",
+      "name": "Kadubeesanahalli Underpass",
+      "tags": {
+        "name": "Kadubeesanahalli Underpass",
+        "junction": "yes"
+      },
+      "position": [
+        -649.4,
+        -1926.3
+      ]
+    },
+    {
+      "id": "node/1615766957",
+      "name": "Kaadubeesanahalli",
+      "tags": {
+        "name": "Kaadubeesanahalli",
+        "place": "quarter"
+      },
+      "position": [
+        -475.4,
+        -1914
+      ]
     }
   ],
   "bridgeSupports": [
@@ -348183,6 +348326,177 @@
       "centroid": [
         -361.9,
         -1154
+      ]
+    }
+  ],
+  "infrastructure": [
+    {
+      "id": "way/1225572735",
+      "tags": {
+        "name": "Marathahalli Bridge",
+        "bridge": "viaduct",
+        "layer": "1",
+        "bridge:structure": "beam",
+        "man_made": "bridge",
+        "full_name": "Marathahalli Rail Over Bridge"
+      },
+      "geometry": [
+        [
+          338.9,
+          0.8
+        ],
+        [
+          338.7,
+          -1.3
+        ],
+        [
+          338.3,
+          -6.9
+        ],
+        [
+          337.6,
+          -17.8
+        ],
+        [
+          337.2,
+          -23.1
+        ],
+        [
+          337,
+          -25.5
+        ],
+        [
+          339.3,
+          -25.6
+        ],
+        [
+          339.4,
+          -24.4
+        ],
+        [
+          410.8,
+          -29.4
+        ],
+        [
+          410.7,
+          -30.4
+        ],
+        [
+          413.2,
+          -30.5
+        ],
+        [
+          413.3,
+          -29.1
+        ],
+        [
+          413.7,
+          -24.1
+        ],
+        [
+          414.5,
+          -12.2
+        ],
+        [
+          414.9,
+          -6.8
+        ],
+        [
+          415.1,
+          -4.5
+        ],
+        [
+          338.9,
+          0.8
+        ]
+      ],
+      "centroid": [
+        373.6,
+        -17.1
+      ]
+    },
+    {
+      "id": "way/1302220812",
+      "tags": {
+        "name": "Kadubeesanahalli Underpass",
+        "layer": "-1",
+        "man_made": "tunnel"
+      },
+      "geometry": [
+        [
+          -648.5,
+          -1897.6
+        ],
+        [
+          -643,
+          -1901.5
+        ],
+        [
+          -638.5,
+          -1904.6
+        ],
+        [
+          -678.2,
+          -1960.5
+        ],
+        [
+          -682.8,
+          -1957.3
+        ],
+        [
+          -688.1,
+          -1953.6
+        ],
+        [
+          -648.5,
+          -1897.6
+        ]
+      ],
+      "centroid": [
+        -661.1,
+        -1924.7
+      ]
+    },
+    {
+      "id": "way/1302220813",
+      "tags": {
+        "name": "Kadubeesanahalli Underpass",
+        "layer": "-1",
+        "man_made": "tunnel"
+      },
+      "geometry": [
+        [
+          -656.1,
+          -1946.3
+        ],
+        [
+          -650.9,
+          -1950.2
+        ],
+        [
+          -646.2,
+          -1953.7
+        ],
+        [
+          -606.4,
+          -1893.6
+        ],
+        [
+          -611.6,
+          -1890.5
+        ],
+        [
+          -616.3,
+          -1887.7
+        ],
+        [
+          -656.1,
+          -1946.3
+        ]
+      ],
+      "centroid": [
+        -634.8,
+        -1924
       ]
     }
   ],

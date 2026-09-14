@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Activity,
   ArrowDownRight,
@@ -26,7 +26,7 @@ import {
   ScenarioMetrics,
   SimulationViewMode
 } from '../../types';
-import './ScenarioControlRoom.css';
+import '../../styles/scenarioControlRoom.css';
 
 export interface ScenarioControlRoomProps {
   scenarios: readonly ScenarioDefinition[];
@@ -85,6 +85,14 @@ const METRICS: readonly MetricDefinition[] = [
     precision: 0
   },
   {
+    key: 'vehicleMinutes',
+    label: 'Vehicle-minutes',
+    description: 'Total time in network',
+    unit: 'veh·min',
+    higherIsBetter: false,
+    precision: 0
+  },
+  {
     key: 'maxQueueMeters',
     label: 'Maximum queue',
     description: 'Peak queue extent',
@@ -97,7 +105,7 @@ const METRICS: readonly MetricDefinition[] = [
     label: 'Congestion ratio',
     description: 'Speed / free-flow speed',
     unit: '%',
-    higherIsBetter: false,
+    higherIsBetter: true,
     precision: 1
   },
   {
@@ -107,6 +115,14 @@ const METRICS: readonly MetricDefinition[] = [
     unit: 'm',
     higherIsBetter: false,
     precision: 0
+  },
+  {
+    key: 'idlingCO2KgHr',
+    label: 'Idling emissions',
+    description: 'Modelled CO₂ rate',
+    unit: 'kg CO₂/h',
+    higherIsBetter: false,
+    precision: 1
   }
 ];
 
@@ -277,6 +293,7 @@ export const ScenarioControlRoom: React.FC<ScenarioControlRoomProps> = ({
   onRestartSimulation,
   className
 }) => {
+  const roomRef = useRef<HTMLElement | null>(null);
   const selectedScenario = useMemo(
     () => scenarios.find((scenario) => scenario.id === selectedScenarioId) ?? scenarios[0],
     [scenarios, selectedScenarioId]
@@ -288,6 +305,17 @@ export const ScenarioControlRoom: React.FC<ScenarioControlRoomProps> = ({
   const scenarioWindowStartProgress = clamp((selectedScenario ? selectedScenario.window.startSeconds : timelineStartSeconds) - timelineStartSeconds, 0, timelineDuration) / timelineDuration;
   const scenarioWindowEndProgress = clamp((selectedScenario ? selectedScenario.window.endSeconds : timelineEndSeconds) - timelineStartSeconds, 0, timelineDuration) / timelineDuration;
   const provenanceEntries = provenance ?? selectedScenario?.provenance ?? {};
+
+  useEffect(() => {
+    if (!counterfactualMetrics) return undefined;
+
+    const resetScroll = () => {
+      if (roomRef.current) roomRef.current.scrollTop = 0;
+    };
+    resetScroll();
+    const frame = window.requestAnimationFrame(resetScroll);
+    return () => window.cancelAnimationFrame(frame);
+  }, [counterfactualMetrics]);
 
   if (!selectedScenario) {
     return (
@@ -309,6 +337,7 @@ export const ScenarioControlRoom: React.FC<ScenarioControlRoomProps> = ({
 
   return (
     <section
+      ref={roomRef}
       className={`scenario-control-room${className ? ` ${className}` : ''}`}
       aria-labelledby="scenario-control-room-title"
     >
@@ -453,7 +482,7 @@ export const ScenarioControlRoom: React.FC<ScenarioControlRoomProps> = ({
           <section className="scenario-metrics-panel" aria-labelledby="scenario-metrics-title">
             <div className="scenario-panel-heading scenario-panel-heading--metrics">
               <div>
-                <span className="scenario-section-label">MEASURED OUTPUTS</span>
+                <span className="scenario-section-label">MODELLED OUTPUTS</span>
                 <h3 id="scenario-metrics-title">Baseline vs counterfactual</h3>
               </div>
               <div className="scenario-metric-legend" aria-label="Metric comparison legend">
