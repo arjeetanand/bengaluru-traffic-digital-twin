@@ -232,13 +232,13 @@ export const HUD: React.FC<HUDProps> = ({
         <span className="hint-tag">CONTROLS</span>
         <span className="camera-mode-label">{mode.cameraMode === 'walk' ? 'PERSON · 1.7M EYE' : 'BIRD · ORBIT'}</span>
         <span className="hint-divider">•</span>
-        <span><b>WASD:</b> Move / Glide</span>
+        <span><b>WASD:</b> {mode.cameraMode === 'walk' ? 'Walk' : 'Glide'}</span>
         <span className="hint-divider">•</span>
-        <span><b>Drag:</b> Rotate Any Angle 360°</span>
+        <span><b>Drag:</b> {mode.cameraMode === 'walk' ? 'Look around' : 'Orbit 360°'}</span>
         <span className="hint-divider">•</span>
         <span><b>Arrows:</b> Turn / Tilt</span>
         <span className="hint-divider">•</span>
-        <span><b>Q/E:</b> Altitude</span>
+        <span><b>Q/E:</b> {mode.cameraMode === 'walk' ? 'Turn' : 'Altitude'}</span>
         <span className="hint-divider">•</span>
         <span><b>Shift:</b> Sprint</span>
         <span className="hint-divider">•</span>

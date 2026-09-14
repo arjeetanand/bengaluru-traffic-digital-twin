@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
@@ -6,6 +6,7 @@ import {
   getOrrOffsetPointAtZ,
   getOrrRoadFrameAtZ
 } from '../../../data/RealRoadData';
+import { MARATHAHALLI_SKYWALK_DECK_POINTS } from '../../../data/marathahalliDemo';
 
 interface FootpathsProps {
   auditMode: boolean;
@@ -25,7 +26,37 @@ interface FootpathSegment {
   height: number;
   status: FootpathStatus;
   elevation?: number; // base Y elevation for explicitly elevated paths
+  sourcePath?: [number, number][]; // source-mapped [x,z] path used by the audit overlay
+  sourceWayIds?: string[];
   description: string;
+}
+
+function createPathRibbonGeometry(points: [number, number][], width: number, y: number) {
+  const positions: number[] = [];
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const dx = current[0] - previous[0];
+    const dz = current[1] - previous[1];
+    const length = Math.hypot(dx, dz);
+    if (length < 0.05) continue;
+    const nx = (-dz / length) * (width / 2);
+    const nz = (dx / length) * (width / 2);
+    positions.push(
+      previous[0] + nx, y, previous[1] + nz,
+      current[0] + nx, y, current[1] + nz,
+      previous[0] - nx, y, previous[1] - nz,
+      current[0] + nx, y, current[1] + nz,
+      current[0] - nx, y, current[1] - nz,
+      previous[0] - nx, y, previous[1] - nz
+    );
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
 }
 
 export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false }) => {
@@ -275,87 +306,88 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       description: 'Footpath with auto parking and small shops leading to Munnekolala portal'
     },
 
-    // ── Spice Garden / Munnekolala Corridor East of the Varthur viaduct ──
-    // North edge (z ≈ +13.5)
+    // ── Spice Garden / Munnekolala source-mapped footway audit ──
+    // These paths follow the compiled OSM footway traces instead of the old
+    // x=225–270 placeholder frontage. The OSM layer renders the underlying
+    // geometry continuously; these modelled status colors appear only when
+    // AUDIT PATHS is enabled and remain explicitly field-verification data.
     {
-      id: 'spice-n-descent',
-      name: 'Bridge Exit North Slope to Munnekolala',
+      id: 'spice-source-north-frontage',
+      name: 'OSM Varthur Road North Footway to Spice Garden',
       axis: 'X',
       start: 414,
-      end: 225,
-      offset: 13.5,
+      end: 841,
+      offset: -35,
+      width: 2.0,
+      height: 0.08,
+      status: 'paved',
+      sourcePath: [[414.9, -6.8], [583.2, -19.4], [661.9, -25.7], [749.3, -32.4], [811.4, -35.8], [840.6, -35.3]],
+      sourceWayIds: ['way/1225572738'],
+      description: 'Source-mapped footway trace; surface condition still needs field verification'
+    },
+    {
+      id: 'spice-source-south-frontage',
+      name: 'OSM Varthur Road South Footway to Spice Garden',
+      axis: 'X',
+      start: 413,
+      end: 835,
+      offset: -61,
+      width: 2.0,
+      height: 0.08,
+      status: 'encroached',
+      sourcePath: [[413.3, -29.1], [442.3, -31.6], [530, -39.2], [787.9, -58.2], [834.9, -61.6]],
+      sourceWayIds: ['way/1231738940'],
+      description: 'Source-mapped footway trace; encroachment status is a modelled inspection scenario'
+    },
+    {
+      id: 'spice-source-service-footway',
+      name: 'Spice Garden Service Road Footway & Bus Stop Link',
+      axis: 'X',
+      start: 835,
+      end: 910,
+      offset: -70,
       width: 2.2,
       height: 0.08,
-      status: 'missing',
-      description: 'Abrupt end of bridge footpath; drops into unpaved dirt and muddy road edge'
-    },
-    {
-      id: 'spice-n-bazaar',
-      name: 'Spice Garden Roadside Market & Bakery Front',
-      axis: 'X',
-      start: 225,
-      end: 248,
-      offset: 13.5,
-      width: 2.4,
-      height: 0.20,
       status: 'encroached',
-      description: 'Narrow paved curb heavily encroached by bakery display, chai stall, fruit crates'
+      sourcePath: [[834.9, -70.6], [849.2, -67.6], [863.1, -68.2], [877.1, -70.4], [887.8, -69.9], [909.3, -77.1]],
+      sourceWayIds: ['way/1225572747', 'way/1225572746'],
+      description: 'Source-mapped service-road footway near Spice Garden bus stop; field condition needs verification'
     },
     {
-      id: 'spice-n-busstop',
-      name: 'Spice Garden Bus Stop Platform & Waiting Area',
+      id: 'spice-source-east-approach-north',
+      name: 'Spice Garden Inner Road North Footway Approach',
       axis: 'X',
-      start: 248,
-      end: 270,
-      offset: 13.5,
-      width: 3.2,
-      height: 0.25,
-      status: 'paved',
-      description: 'BMTC passenger boarding platform with shelter canopy and timetable post'
-    },
-
-    // South edge (z ≈ -13.5)
-    {
-      id: 'spice-s-descent',
-      name: 'Bridge Exit South Service Link',
-      axis: 'X',
-      start: 414,
-      end: 220,
-      offset: -13.5,
-      width: 2.2,
-      height: 0.06,
+      start: 837,
+      end: 905,
+      offset: 0,
+      width: 1.8,
+      height: 0.08,
       status: 'missing',
-      description: 'Completely unpaved dirt shoulder; pedestrians forced onto roadway'
+      sourcePath: [[857.7, -20.8], [857.2, -18.2], [835.9, 78.8], [832.9, 97.0], [882.7, 115.3]],
+      sourceWayIds: ['way/1311089011'],
+      description: 'Source-mapped inner-road trace; missing/unsafe status is a modelled field-audit scenario'
     },
     {
-      id: 'spice-s-shops',
-      name: 'Munnekolala Electronics & Pharmacy Row',
+      id: 'spice-source-east-approach-south',
+      name: 'Spice Garden Inner Road South Footway Approach',
       axis: 'X',
-      start: 220,
-      end: 250,
-      offset: -13.5,
-      width: 2.4,
-      height: 0.20,
-      status: 'encroached',
-      description: 'Encroached by pharmacy parking, repair shop signs, and roadside vendor stalls'
-    },
-    {
-      id: 'spice-s-terminus',
-      name: 'Spice Garden East Junction Approach',
-      axis: 'X',
-      start: 250,
-      end: 270,
-      offset: -13.5,
-      width: 2.2,
-      height: 0.06,
+      start: 857,
+      end: 904,
+      offset: -28,
+      width: 1.8,
+      height: 0.08,
       status: 'missing',
-      description: 'Missing sidewalk; open gutter culverts and dirt road boundary'
+      sourcePath: [[857.7, -20.8], [857.2, -18.2], [895.2, -27.8], [899.2, -39.4], [904.0, -47.5]],
+      sourceWayIds: ['way/1311089014'],
+      description: 'Source-mapped inner-road trace; missing/unsafe status is a modelled field-audit scenario'
     }
   ], []);
 
   return (
     <group name="MarathahalliFootpathNetwork">
-      {segments.map((seg) => (
+      {segments.map((seg) => seg.sourcePath ? (
+        <SourceMappedFootpathAuditSegment key={seg.id} segment={seg} auditMode={auditMode} />
+      ) : (
         <FootpathSegmentMesh key={seg.id} segment={seg} auditMode={auditMode} isNight={isNight} />
       ))}
       <AnimatedPedestrians isNight={isNight} />
@@ -407,6 +439,9 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
       const [x, projectedZ] = getOrrOffsetPointAtZ(z, lateralOffset);
       return [x, 0.35, projectedZ];
     };
+    const skywalkDeckRoute: [number, number, number][] = MARATHAHALLI_SKYWALK_DECK_POINTS.map(
+      ([x, z]) => [x, 7.55, z]
+    );
 
     return [
       // ORR southbound footpath: Innovative Multiplex to the signal.
@@ -441,9 +476,9 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
       createPedestrianRoute([[35, 0.35, 13.0], [74, 0.35, 13.0], [115, 0.35, 13.0]], 3.3, '#0284c7'),
       createPedestrianRoute([[110, 0.35, 13.0], [72, 0.35, 13.0], [35, 0.35, 13.0]], 2.7, '#e11d48'),
 
-      // Skywalk flow, elevated over the surface crossing.
-      createPedestrianRoute([[-18, 7.55, 32], [0, 7.55, 32], [18, 7.55, 32]], 2.5, '#15803d'),
-      createPedestrianRoute([[16, 7.55, 32], [0, 7.55, 32], [-16, 7.55, 32]], 2.6, '#9333ea'),
+      // Source-mapped Marathahalli Skywalk flow: x≈65, z≈−5→25.
+      createPedestrianRoute(skywalkDeckRoute, 2.5, '#15803d'),
+      createPedestrianRoute([...skywalkDeckRoute].reverse(), 2.6, '#9333ea'),
 
       // Varthur viaduct footway movement is supplied by the source-mapped
       // bridge footways; the old invented ROB corridor is intentionally not
@@ -699,6 +734,41 @@ const FootpathSegmentMesh: React.FC<{
           </mesh>
         </group>
       )}
+    </group>
+  );
+};
+
+const SourceMappedFootpathAuditSegment: React.FC<{
+  segment: FootpathSegment;
+  auditMode: boolean;
+}> = ({ segment, auditMode }) => {
+  const auditColor = useMemo(() => {
+    switch (segment.status) {
+      case 'paved':
+        return '#22c55e';
+      case 'missing':
+        return '#ef4444';
+      case 'encroached':
+        return '#f59e0b';
+      case 'metro_blocked':
+        return '#eab308';
+      default:
+        return '#38bdf8';
+    }
+  }, [segment.status]);
+  const geometry = useMemo(
+    () => createPathRibbonGeometry(segment.sourcePath || [], segment.width, 0.38),
+    [segment.sourcePath, segment.width]
+  );
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  if (!auditMode) return null;
+  return (
+    <group name={`SourceFootpathAudit-${segment.id}`}>
+      <mesh geometry={geometry} renderOrder={5}>
+        <meshBasicMaterial color={auditColor} transparent opacity={0.86} depthWrite={false} />
+      </mesh>
     </group>
   );
 };

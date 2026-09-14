@@ -127,100 +127,103 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
       });
     };
 
-    // 1, 2, 3. Underpass Northbound Express Lanes (ORR subterranean through-highway, free-flowing at y = -6.2m)
+    // 1, 2, 3. Underpass Northbound Express Lanes. In the source geometry
+    // northbound traffic uses the west/left carriageway (positive lateral
+    // offset in the +Z road frame).
     addLane('underpass-nb-1', [
-      orrPoint(-170, -2.7, underpassY(-170)),
-      orrPoint(-115, -2.7, underpassY(-115)),
-      orrPoint(-40, -2.7, underpassY(-40)),
-      orrPoint(0, -2.7, underpassY(0)),
-      orrPoint(40, -2.7, underpassY(40)),
-      orrPoint(115, -2.7, underpassY(115)),
-      orrPoint(170, -2.7, underpassY(170))
+      orrPoint(-170, 2.7, underpassY(-170)),
+      orrPoint(-115, 2.7, underpassY(-115)),
+      orrPoint(-40, 2.7, underpassY(-40)),
+      orrPoint(0, 2.7, underpassY(0)),
+      orrPoint(40, 2.7, underpassY(40)),
+      orrPoint(115, 2.7, underpassY(115)),
+      orrPoint(170, 2.7, underpassY(170))
     ], 'FREE');
 
     addLane('underpass-nb-2', [
-      orrPoint(-170, -5.4, underpassY(-170)),
-      orrPoint(-115, -5.4, underpassY(-115)),
-      orrPoint(-40, -5.4, underpassY(-40)),
-      orrPoint(0, -5.4, underpassY(0)),
-      orrPoint(40, -5.4, underpassY(40)),
-      orrPoint(115, -5.4, underpassY(115)),
-      orrPoint(170, -5.4, underpassY(170))
+      orrPoint(-170, 5.4, underpassY(-170)),
+      orrPoint(-115, 5.4, underpassY(-115)),
+      orrPoint(-40, 5.4, underpassY(-40)),
+      orrPoint(0, 5.4, underpassY(0)),
+      orrPoint(40, 5.4, underpassY(40)),
+      orrPoint(115, 5.4, underpassY(115)),
+      orrPoint(170, 5.4, underpassY(170))
     ], 'FREE');
 
     addLane('underpass-nb-3', [
-      orrPoint(-170, -7.8, underpassY(-170)),
-      orrPoint(-115, -7.8, underpassY(-115)),
-      orrPoint(-40, -7.8, underpassY(-40)),
-      orrPoint(0, -7.8, underpassY(0)),
-      orrPoint(40, -7.8, underpassY(40)),
-      orrPoint(115, -7.8, underpassY(115)),
-      orrPoint(170, -7.8, underpassY(170))
+      orrPoint(-170, 7.8, underpassY(-170)),
+      orrPoint(-115, 7.8, underpassY(-115)),
+      orrPoint(-40, 7.8, underpassY(-40)),
+      orrPoint(0, 7.8, underpassY(0)),
+      orrPoint(40, 7.8, underpassY(40)),
+      orrPoint(115, 7.8, underpassY(115)),
+      orrPoint(170, 7.8, underpassY(170))
     ], 'FREE');
 
-    // 4, 5, 6. Underpass Southbound Express Lanes (ORR subterranean through-highway, free-flowing at y = -6.2m)
+    // 4, 5, 6. Underpass Southbound Express Lanes use the east/right
+    // carriageway (negative lateral offset).
     addLane('underpass-sb-1', [
-      orrPoint(170, 2.7, underpassY(170)),
-      orrPoint(115, 2.7, underpassY(115)),
-      orrPoint(40, 2.7, underpassY(40)),
-      orrPoint(0, 2.7, underpassY(0)),
-      orrPoint(-40, 2.7, underpassY(-40)),
-      orrPoint(-115, 2.7, underpassY(-115)),
-      orrPoint(-170, 2.7, underpassY(-170))
+      orrPoint(170, -2.7, underpassY(170)),
+      orrPoint(115, -2.7, underpassY(115)),
+      orrPoint(40, -2.7, underpassY(40)),
+      orrPoint(0, -2.7, underpassY(0)),
+      orrPoint(-40, -2.7, underpassY(-40)),
+      orrPoint(-115, -2.7, underpassY(-115)),
+      orrPoint(-170, -2.7, underpassY(-170))
     ], 'FREE');
 
     addLane('underpass-sb-2', [
-      orrPoint(170, 5.4, underpassY(170)),
-      orrPoint(115, 5.4, underpassY(115)),
-      orrPoint(40, 5.4, underpassY(40)),
-      orrPoint(0, 5.4, underpassY(0)),
-      orrPoint(-40, 5.4, underpassY(-40)),
-      orrPoint(-115, 5.4, underpassY(-115)),
-      orrPoint(-170, 5.4, underpassY(-170))
+      orrPoint(170, -5.4, underpassY(170)),
+      orrPoint(115, -5.4, underpassY(115)),
+      orrPoint(40, -5.4, underpassY(40)),
+      orrPoint(0, -5.4, underpassY(0)),
+      orrPoint(-40, -5.4, underpassY(-40)),
+      orrPoint(-115, -5.4, underpassY(-115)),
+      orrPoint(-170, -5.4, underpassY(-170))
     ], 'FREE');
 
     addLane('underpass-sb-3', [
-      orrPoint(170, 7.8, underpassY(170)),
-      orrPoint(115, 7.8, underpassY(115)),
-      orrPoint(40, 7.8, underpassY(40)),
-      orrPoint(0, 7.8, underpassY(0)),
-      orrPoint(-40, 7.8, underpassY(-40)),
-      orrPoint(-115, 7.8, underpassY(-115)),
-      orrPoint(-170, 7.8, underpassY(-170))
+      orrPoint(170, -7.8, underpassY(170)),
+      orrPoint(115, -7.8, underpassY(115)),
+      orrPoint(40, -7.8, underpassY(40)),
+      orrPoint(0, -7.8, underpassY(0)),
+      orrPoint(-40, -7.8, underpassY(-40)),
+      orrPoint(-115, -7.8, underpassY(-115)),
+      orrPoint(-170, -7.8, underpassY(-170))
     ], 'FREE');
 
     // 7 & 8. Surface ORR Northbound Service Road (Stops at NS Signal before z = -18)
     addLane('surface-nb-1', [
-      orrPoint(-170, -14.5, 0.1),
-      orrPoint(-25, -14.5, 0.1),
-      orrPoint(0, -14.5, 0.1),
-      orrPoint(35, -14.5, 0.1),
-      orrPoint(170, -14.5, 0.1)
+      orrPoint(-170, 14.5, 0.1),
+      orrPoint(-25, 14.5, 0.1),
+      orrPoint(0, 14.5, 0.1),
+      orrPoint(35, 14.5, 0.1),
+      orrPoint(170, 14.5, 0.1)
     ], 'NS', 0.44);
 
     addLane('surface-nb-2', [
-      orrPoint(-170, -17.5, 0.1),
-      orrPoint(-25, -17.5, 0.1),
-      orrPoint(0, -17.5, 0.1),
-      orrPoint(35, -17.5, 0.1),
-      orrPoint(170, -17.5, 0.1)
+      orrPoint(-170, 17.5, 0.1),
+      orrPoint(-25, 17.5, 0.1),
+      orrPoint(0, 17.5, 0.1),
+      orrPoint(35, 17.5, 0.1),
+      orrPoint(170, 17.5, 0.1)
     ], 'NS', 0.44);
 
     // 9 & 10. Surface ORR Southbound Service Road (Stops at NS Signal before z = +18)
     addLane('surface-sb-1', [
-      orrPoint(170, 14.5, 0.1),
-      orrPoint(25, 14.5, 0.1),
-      orrPoint(0, 14.5, 0.1),
-      orrPoint(-35, 14.5, 0.1),
-      orrPoint(-170, 14.5, 0.1)
+      orrPoint(170, -14.5, 0.1),
+      orrPoint(25, -14.5, 0.1),
+      orrPoint(0, -14.5, 0.1),
+      orrPoint(-35, -14.5, 0.1),
+      orrPoint(-170, -14.5, 0.1)
     ], 'NS', 0.44);
 
     addLane('surface-sb-2', [
-      orrPoint(170, 17.5, 0.1),
-      orrPoint(25, 17.5, 0.1),
-      orrPoint(0, 17.5, 0.1),
-      orrPoint(-35, 17.5, 0.1),
-      orrPoint(-170, 17.5, 0.1)
+      orrPoint(170, -17.5, 0.1),
+      orrPoint(25, -17.5, 0.1),
+      orrPoint(0, -17.5, 0.1),
+      orrPoint(-35, -17.5, 0.1),
+      orrPoint(-170, -17.5, 0.1)
     ], 'NS', 0.44);
 
     // 11 & 12. HAL Old Airport Road to Varthur Road Eastbound (Direct Surface Road at y = 0.1, stops at EW signal)

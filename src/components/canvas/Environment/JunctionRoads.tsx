@@ -15,12 +15,14 @@ interface JunctionRoadsProps {
   isRaining: boolean;
   isNight: boolean;
   congestionRatio: number;
+  sourceBacked?: boolean;
 }
 
 export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
   isRaining,
   isNight,
-  congestionRatio
+  congestionRatio,
+  sourceBacked = true
 }) => {
   const asphaltProps = useMemo(() => {
     return {
@@ -45,20 +47,21 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
   const trenchHalfW = 11.0;
 
   // ── True-Curvature Road Spline Geometries Derived from marathahalli_osm.xml ──
-  // 1. East Service Road (Northbound along ORR towards Kalamandir)
-  const eastServiceRoadGeom = useMemo(() => {
+  // 1. West/left Service Road (Northbound along ORR towards Kalamandir).
+  // Positive lateral offset is west of the northbound source tangent.
+  const northboundServiceRoadGeom = useMemo(() => {
     return createRoadRibbonGeometry(
-      ORR_CENTERLINE_PTS.map(([, z]) => getOrrOffsetPointAtZ(z, -14.5)),
+      ORR_CENTERLINE_PTS.map(([, z]) => getOrrOffsetPointAtZ(z, 14.5)),
       11.5,
       () => 0.05,
       120
     );
   }, []);
 
-  // 2. West Service Road (Southbound along ORR towards Multiplex)
-  const westServiceRoadGeom = useMemo(() => {
+  // 2. East/right Service Road (Southbound along ORR towards Multiplex).
+  const southboundServiceRoadGeom = useMemo(() => {
     return createRoadRibbonGeometry(
-      ORR_CENTERLINE_PTS.map(([, z]) => getOrrOffsetPointAtZ(z, 14.5)),
+      ORR_CENTERLINE_PTS.map(([, z]) => getOrrOffsetPointAtZ(z, -14.5)),
       11.5,
       () => 0.05,
       120
@@ -158,7 +161,8 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {/* 2. SURFACE ROAD NETWORK (with source Varthur viaduct ramp profile)  */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group name="SurfaceRoadNetwork">
+      {!sourceBacked && (
+      <group name="AuthoredSurfaceRoadNetworkFallback">
         {/* ── Surface Intersection Table Deck (Crosses directly over the Underpass) ── */}
         <mesh position={[0, 0.05, 0]} receiveShadow>
           <boxGeometry args={[junctionEW, 0.2, junctionNS]} />
@@ -175,17 +179,18 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
         </mesh>
 
         {/* ── Real Curved ORR East Service Road (Northbound towards Kalamandir) ── */}
-        <mesh geometry={eastServiceRoadGeom} receiveShadow>
+        <mesh geometry={northboundServiceRoadGeom} receiveShadow>
           <meshStandardMaterial {...asphaltProps} />
         </mesh>
 
         {/* ── Real Curved ORR West Service Road (Southbound towards Multiplex) ── */}
-        <mesh geometry={westServiceRoadGeom} receiveShadow>
+        <mesh geometry={southboundServiceRoadGeom} receiveShadow>
           <meshStandardMaterial {...asphaltProps} />
         </mesh>
 
-        {/* Shared drivable U-turn connectors. The traffic fleet consumes the
-            same points, keeping the visible asphalt and vehicle route aligned. */}
+        {/* Shared scenario U-turn connectors. The traffic fleet consumes the
+            same points, keeping the visible asphalt and vehicle route aligned;
+            mapped OSM restrictions are surfaced separately for review. */}
         <mesh geometry={northUTurnGeom} receiveShadow renderOrder={1}>
           <meshStandardMaterial color={isRaining ? '#15181d' : '#30343b'} roughness={0.78} />
         </mesh>
@@ -360,6 +365,7 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
           <meshBasicMaterial color={congestionAccentColor} transparent opacity={0.7} />
         </mesh>
       </group>
+      )}
     </group>
   );
 };

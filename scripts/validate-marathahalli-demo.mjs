@@ -31,7 +31,7 @@ function checkGeometry(geometry, label) {
   geometry.forEach((position, index) => checkPosition(position, `${label}[${index}]`));
 }
 
-if (dataset.schemaVersion !== 1) errors.push('unsupported schemaVersion');
+if (![1, 2].includes(dataset.schemaVersion)) errors.push('unsupported schemaVersion');
 if (dataset.source?.provider !== 'OpenStreetMap') errors.push('source.provider must be OpenStreetMap');
 if (!dataset.source?.attribution?.includes('OpenStreetMap contributors')) errors.push('OSM attribution is missing');
 if (dataset.source?.license !== 'ODbL-1.0') errors.push('OSM license must be ODbL-1.0');
@@ -55,6 +55,34 @@ for (const collection of requiredCollections) {
       checkPosition(feature.position, `${collection}.${feature.id}.position`);
     } else {
       checkGeometry(feature.geometry, `${collection}.${feature.id}.geometry`);
+    }
+  }
+}
+
+if (dataset.schemaVersion >= 2) {
+  if (!Array.isArray(dataset.turnRestrictions)) {
+    errors.push('turnRestrictions collection is missing');
+  } else {
+    const restrictionIds = new Set();
+    for (const restriction of dataset.turnRestrictions) {
+      if (!restriction.id || !restriction.restriction || !Array.isArray(restriction.members)) {
+        errors.push('turn restriction is missing id, restriction, or members');
+        continue;
+      }
+      if (restrictionIds.has(restriction.id)) errors.push(`turnRestrictions contains duplicate id ${restriction.id}`);
+      restrictionIds.add(restriction.id);
+      if (!restriction.members.some((member) => member.role === 'from')) {
+        errors.push(`${restriction.id} is missing a from member`);
+      }
+      if (!restriction.members.some((member) => member.role === 'to')) {
+        errors.push(`${restriction.id} is missing a to member`);
+      }
+    }
+    if (dataset.stats?.turnRestrictions !== dataset.turnRestrictions.length) {
+      errors.push('stats.turnRestrictions does not match the serialized collection');
+    }
+    if (!dataset.turnRestrictions.some((restriction) => restriction.restriction === 'no_u_turn')) {
+      warnings.push('no no_u_turn relation is present in the clipped snapshot');
     }
   }
 }

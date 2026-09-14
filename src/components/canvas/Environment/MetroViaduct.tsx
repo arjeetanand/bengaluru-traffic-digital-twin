@@ -5,7 +5,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   getOrrMedianPointAtZ,
   getOrrOffsetPointAtZ,
-  getOrrRoadFrameAtZ
+  getOrrRoadFrameAtZ,
+  getOrrUnderpassElevation
 } from '../../../data/RealRoadData';
 
 interface MetroViaductProps {
@@ -87,6 +88,9 @@ function getMetroPathAngle(z: number) {
 export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   const metroHeight = 13.2; // median viaduct clearance above the surface and skywalk
   const metroWidth = 7.2;   // paired-track U-girder envelope
+  const trackRailY = metroHeight + 0.68; // rails sit just above the 0.55m deck crown
+  const thirdRailY = metroHeight + 0.76;
+  const cableTrayY = metroHeight - 0.85; // underside tray clears the track slab
   const metroTrainRef = useRef<THREE.Group>(null);
   const metroTrainZRef = useRef(-120);
 
@@ -94,14 +98,15 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   // pushed just beyond the underpass/skywalk clear zone so foundations do not
   // sit in the sunken carriageway or cut through the pedestrian deck.
   const pierZCoords = useMemo(
-    () => [-210, -165, -120, -75, -42, 42, 75, 120, 165],
+    () => [-210, -165, -120, -75, -42, -21, 21, 42, 75, 120, 165],
     []
   );
   const pierFrames = useMemo(
     () => pierZCoords.map((zCoord) => ({
       zCoord,
       point: getOrrMedianPointAtZ(zCoord),
-      angle: getMetroPathAngle(zCoord)
+      angle: getMetroPathAngle(zCoord),
+      foundationY: getOrrUnderpassElevation(zCoord)
     })),
     [pierZCoords]
   );
@@ -152,25 +157,25 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   );
   const cableTrayGeometry = useMemo(
     () => createCurvedBeamsGeometry(METRO_PATH_Z_COORDS, [
-      { lateralOffset: 0, width: 0.8, height: 0.6, y: metroHeight + 0.4 }
+      { lateralOffset: 0, width: 0.8, height: 0.6, y: cableTrayY }
     ]),
-    [metroHeight]
+    [cableTrayY]
   );
   const railGeometry = useMemo(
     () => createCurvedBeamsGeometry(METRO_PATH_Z_COORDS, [
-      { lateralOffset: -2.4, width: 0.12, height: 0.12, y: metroHeight + 0.4 },
-      { lateralOffset: -1.0, width: 0.12, height: 0.12, y: metroHeight + 0.4 },
-      { lateralOffset: 1.0, width: 0.12, height: 0.12, y: metroHeight + 0.4 },
-      { lateralOffset: 2.4, width: 0.12, height: 0.12, y: metroHeight + 0.4 }
+      { lateralOffset: -2.4, width: 0.12, height: 0.12, y: trackRailY },
+      { lateralOffset: -1.0, width: 0.12, height: 0.12, y: trackRailY },
+      { lateralOffset: 1.0, width: 0.12, height: 0.12, y: trackRailY },
+      { lateralOffset: 2.4, width: 0.12, height: 0.12, y: trackRailY }
     ]),
-    [metroHeight]
+    [trackRailY]
   );
   const thirdRailGeometry = useMemo(
     () => createCurvedBeamsGeometry(METRO_PATH_Z_COORDS, [
-      { lateralOffset: -3.1, width: 0.1, height: 0.1, y: metroHeight + 0.5 },
-      { lateralOffset: 3.1, width: 0.1, height: 0.1, y: metroHeight + 0.5 }
+      { lateralOffset: -3.1, width: 0.1, height: 0.1, y: thirdRailY },
+      { lateralOffset: 3.1, width: 0.1, height: 0.1, y: thirdRailY }
     ]),
-    [metroHeight]
+    [thirdRailY]
   );
   const stationPoint = useMemo(() => getOrrMedianPointAtZ(95), []);
   const stationAngle = useMemo(() => getMetroPathAngle(95), []);
@@ -194,81 +199,90 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   return (
     <group name="NammaMetroBlueLineViaduct">
       {/* ── Tall Concrete Cylindrical Metro Piers with Hammerhead Caps & BMRCL Barricades ── */}
-      {pierFrames.map(({ zCoord, point, angle }, idx) => (
-        <group
-          key={`metro-pier-${idx}`}
-          position={[point[0], 0, point[1]]}
-          rotation={[0, angle, 0]}
-        >
-          {/* Main cylindrical column */}
-          <mesh position={[0, metroHeight / 2, 0]} castShadow receiveShadow material={concreteMat}>
-            <cylinderGeometry args={[0.92, 1.1, metroHeight, 16]} />
-          </mesh>
+      {pierFrames.map(({ zCoord, point, angle, foundationY }, idx) => {
+        const columnHeight = metroHeight - foundationY;
 
-          {/* Heavy Hammerhead Pier Cap (supporting U-girders) */}
-          <mesh position={[0, metroHeight - 0.7, 0]} castShadow receiveShadow material={concreteMat}>
-            <boxGeometry args={[metroWidth + 0.35, 1.05, 2.65]} />
-          </mesh>
+        return (
+          <group
+            key={`metro-pier-${idx}`}
+            position={[point[0], 0, point[1]]}
+            rotation={[0, angle, 0]}
+          >
+            {/* Main cylindrical column */}
+            <mesh
+              position={[0, foundationY + columnHeight / 2, 0]}
+              castShadow
+              receiveShadow
+              material={concreteMat}
+            >
+              <cylinderGeometry args={[0.92, 1.1, columnHeight, 16]} />
+            </mesh>
 
-          {/* Pier base pedestal */}
-          <mesh position={[0, 0.5, 0]} castShadow receiveShadow material={concreteMat}>
-            <cylinderGeometry args={[1.7, 1.95, 0.82, 16]} />
-          </mesh>
+            {/* Heavy Hammerhead Pier Cap (supporting U-girders) */}
+            <mesh position={[0, metroHeight - 0.7, 0]} castShadow receiveShadow material={concreteMat}>
+              <boxGeometry args={[metroWidth + 0.35, 1.05, 2.65]} />
+            </mesh>
 
-          {/* ── BMRCL Ground-Level Construction Barricades enclosing Pier Foundation ── */}
-          {Math.abs(zCoord) > 35 && (
-            <group position={[0, 0, 0]}>
-              {/* North & South Barricades */}
-              <mesh position={[0, 0.82, 2.4]} castShadow>
-                <boxGeometry args={[4.8, 1.55, 0.1]} />
-                <meshStandardMaterial color="#eab308" roughness={0.6} metalness={0.3} />
-              </mesh>
-              <mesh position={[0, 0.82, -2.4]} castShadow>
-                <boxGeometry args={[4.8, 1.55, 0.1]} />
-                <meshStandardMaterial color="#eab308" roughness={0.6} metalness={0.3} />
-              </mesh>
-              {/* East & West Barricades (Blue BMRCL) */}
-              <mesh position={[2.4, 0.82, 0]} castShadow>
-                <boxGeometry args={[0.1, 1.55, 4.8]} />
-                <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.3} />
-              </mesh>
-              <mesh position={[-2.4, 0.82, 0]} castShadow>
-                <boxGeometry args={[0.1, 1.55, 4.8]} />
-                <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.3} />
-              </mesh>
-              {/* BMRCL Logo White Stripe */}
-              <mesh position={[2.46, 1.0, 0]}>
-                <boxGeometry args={[0.02, 0.3, 4.8]} />
-                <meshStandardMaterial color="#ffffff" />
-              </mesh>
-              <mesh position={[-2.46, 1.0, 0]}>
-                <boxGeometry args={[0.02, 0.3, 4.8]} />
-                <meshStandardMaterial color="#ffffff" />
-              </mesh>
+            {/* Pier base pedestal */}
+            <mesh position={[0, foundationY + 0.41, 0]} castShadow receiveShadow material={concreteMat}>
+              <cylinderGeometry args={[1.7, 1.95, 0.82, 16]} />
+            </mesh>
 
-              {/* Steel Rebar Cage on Construction Site */}
-              <mesh position={[0.9, 1.05, 0.9]}>
-                <cylinderGeometry args={[0.6, 0.6, 2.4, 8]} />
-                <meshStandardMaterial color="#64748b" wireframe />
-              </mesh>
+            {/* ── BMRCL Ground-Level Construction Barricades enclosing Pier Foundation ── */}
+            {Math.abs(zCoord) > 35 && (
+              <group position={[0, foundationY, 0]}>
+                {/* North & South Barricades */}
+                <mesh position={[0, 0.82, 2.4]} castShadow>
+                  <boxGeometry args={[4.8, 1.55, 0.1]} />
+                  <meshStandardMaterial color="#eab308" roughness={0.6} metalness={0.3} />
+                </mesh>
+                <mesh position={[0, 0.82, -2.4]} castShadow>
+                  <boxGeometry args={[4.8, 1.55, 0.1]} />
+                  <meshStandardMaterial color="#eab308" roughness={0.6} metalness={0.3} />
+                </mesh>
+                {/* East & West Barricades (Blue BMRCL) */}
+                <mesh position={[2.4, 0.82, 0]} castShadow>
+                  <boxGeometry args={[0.1, 1.55, 4.8]} />
+                  <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.3} />
+                </mesh>
+                <mesh position={[-2.4, 0.82, 0]} castShadow>
+                  <boxGeometry args={[0.1, 1.55, 4.8]} />
+                  <meshStandardMaterial color="#0284c7" roughness={0.6} metalness={0.3} />
+                </mesh>
+                {/* BMRCL Logo White Stripe */}
+                <mesh position={[2.46, 1.0, 0]}>
+                  <boxGeometry args={[0.02, 0.3, 4.8]} />
+                  <meshStandardMaterial color="#ffffff" />
+                </mesh>
+                <mesh position={[-2.46, 1.0, 0]}>
+                  <boxGeometry args={[0.02, 0.3, 4.8]} />
+                  <meshStandardMaterial color="#ffffff" />
+                </mesh>
 
-              {/* Warning hazard blinkers on barricade corners */}
-              {[-2.3, 2.3].map((xP, i) => (
-                <group key={i} position={[xP, 1.68, 2.3]}>
-                  <mesh>
-                    <boxGeometry args={[0.2, 0.25, 0.2]} />
-                    <meshStandardMaterial
-                      color="#f59e0b"
-                      emissive="#eab308"
-                      emissiveIntensity={isNight ? 3.5 : 0.8}
-                    />
-                  </mesh>
-                </group>
-              ))}
-            </group>
-          )}
-        </group>
-      ))}
+                {/* Steel Rebar Cage on Construction Site */}
+                <mesh position={[0.9, 1.05, 0.9]}>
+                  <cylinderGeometry args={[0.6, 0.6, 2.4, 8]} />
+                  <meshStandardMaterial color="#64748b" wireframe />
+                </mesh>
+
+                {/* Warning hazard blinkers on barricade corners */}
+                {[-2.3, 2.3].map((xP, i) => (
+                  <group key={i} position={[xP, 1.68, 2.3]}>
+                    <mesh>
+                      <boxGeometry args={[0.2, 0.25, 0.2]} />
+                      <meshStandardMaterial
+                        color="#f59e0b"
+                        emissive="#eab308"
+                        emissiveIntensity={isNight ? 3.5 : 0.8}
+                      />
+                    </mesh>
+                  </group>
+                ))}
+              </group>
+            )}
+          </group>
+        );
+      })}
 
       {/* ── Curved Elevated Metro Viaduct Track Deck (Multiplex → Kalamandir) ── */}
       {/* Each short precast segment follows the sampled OSM-backed ORR tangent. */}
@@ -305,9 +319,12 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
           position={[stationPoint[0], metroHeight, stationPoint[1]]}
           rotation={[0, stationAngle, 0]}
         >
-          {/* Platform Deck Expansion */}
-          <mesh position={[0, 0.2, 0]} receiveShadow material={concreteMat}>
-            <boxGeometry args={[16, 0.8, 48]} />
+          {/* Twin side platforms leave the 7.2m track envelope open. */}
+          <mesh position={[-5.2, 1.0, 0]} receiveShadow material={concreteMat}>
+            <boxGeometry args={[3.2, 0.8, 48]} />
+          </mesh>
+          <mesh position={[5.2, 1.0, 0]} receiveShadow material={concreteMat}>
+            <boxGeometry args={[3.2, 0.8, 48]} />
           </mesh>
 
           {/* Station Arched Canopy Roof (low-profile so the junction remains legible) */}

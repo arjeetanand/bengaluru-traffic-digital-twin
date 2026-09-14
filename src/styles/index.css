@@ -679,6 +679,16 @@ canvas:active {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
+/* Secondary controls remain inline on desktop. On small screens they are
+   revealed explicitly so the map keeps the largest uninterrupted viewport. */
+.controls-secondary {
+  display: contents;
+}
+
+.mobile-more-controls {
+  display: none;
+}
+
 .control-btn {
   background: rgba(30, 41, 59, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1361,15 +1371,21 @@ input:focus-visible {
   }
 
   .hud-dock-left {
-    width: calc(100vw - 20px);
-    max-height: 170px;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
+    top: 58px;
+    left: 8px;
+    width: min(218px, calc(100vw - 16px));
+    max-height: 82px;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .hud-dock-left > *:not(:first-child) {
+    display: none;
   }
 
   .hud-dock-left > * {
-    min-width: 210px;
+    min-width: 0;
+    width: 100%;
   }
 
   .camera-hint-pill {
@@ -1384,7 +1400,7 @@ input:focus-visible {
 
   .hud-dock-bottom {
     padding: 5px 6px;
-    max-height: 42vh;
+    max-height: 36vh;
     overflow-y: auto;
   }
 
@@ -1417,6 +1433,32 @@ input:focus-visible {
     overflow: hidden;
   }
 
+  .mobile-more-controls {
+    display: flex;
+  }
+
+  .controls-secondary {
+    display: none;
+    grid-column: 1 / -1;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .controls-secondary.is-open {
+    display: flex;
+  }
+
+  .controls-secondary > .control-btn {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+
+  .controls-secondary > .btn-group {
+    flex: 1 1 100%;
+  }
+
   .control-btn,
   .group-item {
     min-width: 0;
@@ -1439,10 +1481,59 @@ input:focus-visible {
   .source-attribution {
     max-width: calc(100vw - 20px);
     font-size: 7px;
+    bottom: calc(36vh + 6px);
   }
 
   .nav-widget-card {
     width: min(270px, calc(100vw - 20px));
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  .hud-top-bar {
+    padding: 5px 10px;
+  }
+
+  .camera-hint-pill {
+    display: none;
+  }
+
+  .hud-dock-left {
+    display: none;
+  }
+
+  .hud-dock-bottom {
+    padding: 4px 6px;
+    max-height: 40vh;
+  }
+
+  .hud-dock-right {
+    top: 58px;
+    bottom: auto;
+    transform: scale(0.82);
+    transform-origin: top right;
+  }
+
+  .controls-bar-container {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .controls-bar-container > .control-btn {
+    min-width: 0;
+  }
+
+  .controls-bar-container > .camera-mode-group {
+    grid-column: span 2;
+  }
+
+  .controls-bar-container > .btn-group:not(.camera-mode-group) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .source-attribution {
+    left: 8px;
+    bottom: calc(40vh + 4px);
   }
 }
 

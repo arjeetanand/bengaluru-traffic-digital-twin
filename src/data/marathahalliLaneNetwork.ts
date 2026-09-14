@@ -13,9 +13,11 @@ const orrLanePoint = (z: number, lateralOffset: number): LanePoint => {
   return [x, 0.12, projectedZ];
 };
 
-// Surface U-turn connectors model the legal loop around the signal island.
+// Surface U-turn connectors model the scenario loop around the signal island.
 // They are shared by the traffic simulation and the painted road layer so a
-// vehicle route cannot drift away from the visible connector.
+// vehicle route cannot drift away from the visible connector. OSM turn
+// restrictions are preserved separately in the compiled snapshot and must be
+// reconciled with this scenario network before any route is treated as legal.
 export const U_TURN_CONNECTORS: { north: UTurnConnector; south: UTurnConnector } = {
   north: {
     id: 'surface-u-turn-north',

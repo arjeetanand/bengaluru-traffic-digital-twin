@@ -1,4 +1,4 @@
-import { CAMERA_DEFAULT_POSITION, CAMERA_DEFAULT_TARGET } from '../config/location';
+import { CAMERA_DEFAULT_POSITION } from '../config/location';
 import { CameraMode, CameraPreset } from '../types';
 import { getOrrOffsetPointAtZ } from './RealRoadData';
 
@@ -16,6 +16,55 @@ export interface WalkObstacle {
 
 export const WALK_EYE_HEIGHT = 1.7;
 export const WALK_LOOK_DISTANCE = 8;
+
+type LocalXZ = [number, number];
+
+/**
+ * Source-backed local anchors from public/data/marathahalli-demo.json.
+ *
+ * A building centroid, an entrance/edge, a bus stop, and a road point are
+ * deliberately separate concepts. Presets use the appropriate one instead
+ * of pretending that every named place has one universally correct point.
+ */
+export const MARATHAHALLI_SOURCE_ANCHORS = {
+  junction: {
+    roadCenter: [-10.7, 12.7] as LocalXZ,
+    signalCluster: [-29.6, 2.7] as LocalXZ
+  },
+  oracleHub: {
+    campusCentroid: [-746.6, -1779.2] as LocalXZ,
+    entranceFountain: [-544.7, -1692.9] as LocalXZ,
+    approachRoad: [-553.2, -1752.6] as LocalXZ
+  },
+  innovativeMultiplex: {
+    buildingCentroid: [-286.0, -535.1] as LocalXZ,
+    exteriorEdge: [-226.3, -537.8] as LocalXZ,
+    busStop: [-136.7, -576.4] as LocalXZ
+  },
+  kalamandir: {
+    buildingCentroid: [46.0, 330.4] as LocalXZ,
+    westExteriorEdge: [40.0, 332.5] as LocalXZ,
+    busStop: [7.6, 354.2] as LocalXZ
+  },
+  spiceGarden: {
+    restaurant: [860.1, 24.0] as LocalXZ,
+    busStopPrimary: [835.8, -59.8] as LocalXZ,
+    busStopAlternate: [827.8, -39.1] as LocalXZ,
+    roadSouth: [850.6, -25.7] as LocalXZ,
+    roadNorth: [839.8, 24.9] as LocalXZ
+  },
+  underpass: {
+    southPortal: [-7.3, -8.0] as LocalXZ,
+    center: [-4.0, 12.0] as LocalXZ,
+    northPortal: [-0.6, 32.1] as LocalXZ
+  },
+  varthurViaduct: {
+    westDeck: [338.3, -6.9] as LocalXZ,
+    center: [376.0, -15.0] as LocalXZ,
+    eastDeck: [414.5, -12.2] as LocalXZ,
+    groundApproach: [300.0, -6.0] as LocalXZ
+  }
+} as const;
 
 const getOrrWalkPoint = (z: number, semanticOffset: number): [number, number, number] => {
   const lateralOffset = semanticOffset >= 0 ? -Math.abs(semanticOffset) : Math.abs(semanticOffset);
@@ -35,36 +84,63 @@ const createOrrWalkAnchor = (
 // Source-backed anchors from the widened OSM extract. These are kept in the
 // same local metre projection as the junction scene so the corridor view and
 // person mode share one coordinate contract.
-const ORACLE_HUB_LOCAL: [number, number, number] = [-746.6, WALK_EYE_HEIGHT, -1779.2];
+const ORACLE_HUB_LOCAL: [number, number, number] = [
+  MARATHAHALLI_SOURCE_ANCHORS.oracleHub.campusCentroid[0],
+  WALK_EYE_HEIGHT,
+  MARATHAHALLI_SOURCE_ANCHORS.oracleHub.campusCentroid[1]
+];
 
 const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
   overview: {
     position: CAMERA_DEFAULT_POSITION,
-    target: CAMERA_DEFAULT_TARGET
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[0],
+      0,
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[1]
+    ]
   },
   underpass: {
-    // Approach the south portal obliquely. This keeps the trench opening,
-    // curved carriageway, surface crossover, and overhead supports in one
-    // legible frame instead of placing the camera behind a metro pier.
-    position: [-24, 5, -125],
-    target: [-28, -4, -50]
+    // Source tunnel ways run from approximately z=-8 to z=32. Aim at their
+    // shared center while keeping the bird camera outside the trench.
+    position: [-82, 34, -108],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.underpass.center[0],
+      -4.5,
+      MARATHAHALLI_SOURCE_ANCHORS.underpass.center[1]
+    ]
   },
   surface: {
     position: [-34, 8, 24],
-    target: [0, 1, 0]
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[0],
+      1,
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[1]
+    ]
   },
   aerial: {
     position: [0, 160, 0.1],
-    target: [0, 0, 0]
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[0],
+      0,
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[1]
+    ]
   },
   cinematic: {
     position: CAMERA_DEFAULT_POSITION,
-    target: CAMERA_DEFAULT_TARGET
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[0],
+      0,
+      MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[1]
+    ]
   },
   flyover: {
     // Source Varthur Road viaduct (OSM ways 1157170083/1157170085).
-    position: [300, 48, 72],
-    target: [376, 8, -15]
+    position: [292, 54, 92],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.varthurViaduct.center[0],
+      8,
+      MARATHAHALLI_SOURCE_ANCHORS.varthurViaduct.center[1]
+    ]
   },
   ground: {
     position: [-34, 8, 24],
@@ -72,11 +148,19 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
   },
   multiplex: {
     position: [-190, 26, -405],
-    target: [-286, 12, -535]
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.innovativeMultiplex.buildingCentroid[0],
+      12,
+      MARATHAHALLI_SOURCE_ANCHORS.innovativeMultiplex.buildingCentroid[1]
+    ]
   },
   kalamandir: {
     position: [-10, 22, 382],
-    target: [46, 14, 332.5]
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.kalamandir.buildingCentroid[0],
+      14,
+      MARATHAHALLI_SOURCE_ANCHORS.kalamandir.buildingCentroid[1]
+    ]
   },
   brandfactory: {
     position: [-20, 28, 112],
@@ -85,24 +169,31 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
   spicegarden: {
     // OSM-backed Spice Garden restaurant point (12.9570571, 77.7091042),
     // east of the Marathahalli junction on the actual HAL Airport Road.
-    position: [930, 48, 80],
-    target: [860, 6, 24]
+    position: [930, 52, 82],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.spiceGarden.restaurant[0],
+      6,
+      MARATHAHALLI_SOURCE_ANCHORS.spiceGarden.restaurant[1]
+    ]
   },
   crossover: {
-    // A tighter north-east survey angle keeps the source-aligned U-turn loops,
-    // zebra table, metro piers and both approach roads in the central frame.
-    // The extra elevation clears the authored retail roofs that previously
-    // obscured the legal turning movement.
-    position: [92, 142, 126],
-    target: [-2, 1, 8]
+    // Center on the source underpass/arterial crossover rather than the
+    // authored origin. The camera is high enough to clear the junction table
+    // and still expose the curved approaches.
+    position: [118, 128, 142],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.underpass.center[0],
+      2,
+      MARATHAHALLI_SOURCE_ANCHORS.underpass.center[1]
+    ]
   },
   corridor: {
     // Full source corridor: Oracle Tech Hub → Marathahalli junction →
     // Kalamandir/Spice Garden. Framing is tightened so source building
     // massing and the named road spine remain legible without losing the
     // 2.1 km route from the bird view.
-    position: [1250, 1800, 1450],
-    target: [-120, 0, -720]
+    position: [1320, 1980, 1580],
+    target: [56.8, 0, -877.6]
   },
   oraclehub: {
     position: [-470, 150, -1498],
@@ -115,30 +206,93 @@ const WALK_STARTS: Record<CameraPreset, CameraView> = {
   // frontage at the junction so the first frame shows a navigable road,
   // footpath, trees, and adjacent buildings without a wall filling the lens.
   overview: createOrrWalkAnchor(-38, 5, -26.5),
-  underpass: createOrrWalkAnchor(-110, -50, -26.5),
+  underpass: createOrrWalkAnchor(-58, -28, -18),
   surface: createOrrWalkAnchor(-38, 5, -26.5),
   aerial: createOrrWalkAnchor(-38, 5, -23.5),
   cinematic: createOrrWalkAnchor(-38, 5, -26.5),
-  flyover: { position: [326, 1.7, 14], target: [358, 8, -9] },
+  flyover: {
+    position: [
+      MARATHAHALLI_SOURCE_ANCHORS.varthurViaduct.groundApproach[0],
+      WALK_EYE_HEIGHT,
+      MARATHAHALLI_SOURCE_ANCHORS.varthurViaduct.groundApproach[1]
+    ],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.varthurViaduct.westDeck[0],
+      WALK_EYE_HEIGHT,
+      MARATHAHALLI_SOURCE_ANCHORS.varthurViaduct.westDeck[1]
+    ]
+  },
   ground: createOrrWalkAnchor(-38, 5, -26.5),
-  multiplex: { position: [-220, WALK_EYE_HEIGHT, -535], target: [-226.3, WALK_EYE_HEIGHT, -537.8] },
-  kalamandir: { position: [22, WALK_EYE_HEIGHT, 332.5], target: [40, WALK_EYE_HEIGHT, 332.5] },
+  multiplex: {
+    position: [-220, WALK_EYE_HEIGHT, -535],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.innovativeMultiplex.exteriorEdge[0],
+      WALK_EYE_HEIGHT,
+      MARATHAHALLI_SOURCE_ANCHORS.innovativeMultiplex.exteriorEdge[1]
+    ]
+  },
+  kalamandir: {
+    // Keep the eye outside the coarse building footprint while looking toward
+    // the source-mapped west exterior edge.
+    position: [26.5, WALK_EYE_HEIGHT, 332.5],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.kalamandir.westExteriorEdge[0],
+      WALK_EYE_HEIGHT,
+      MARATHAHALLI_SOURCE_ANCHORS.kalamandir.westExteriorEdge[1]
+    ]
+  },
   brandfactory: { position: [15, 1.7, 58], target: [48, 1.7, 58] },
   // Start on the mapped Spice Garden Road footway near the source restaurant
   // point instead of teleporting back to the junction scene.
-  spicegarden: { position: [835, WALK_EYE_HEIGHT, 58], target: [850, WALK_EYE_HEIGHT, 30] },
-  crossover: createOrrWalkAnchor(-38, 5, -26.5),
+  spicegarden: {
+    position: [
+      832.8,
+      WALK_EYE_HEIGHT,
+      57.5
+    ],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.spiceGarden.roadNorth[0],
+      WALK_EYE_HEIGHT,
+      MARATHAHALLI_SOURCE_ANCHORS.spiceGarden.roadNorth[1]
+    ]
+  },
+  // The crossover walk view starts on the south approach and looks through
+  // the mapped underpass instead of reusing the generic junction frontage.
+  crossover: createOrrWalkAnchor(-28, 18, -18),
   corridor: { position: [-24, WALK_EYE_HEIGHT, -260], target: [-24, WALK_EYE_HEIGHT, -252] },
-  oraclehub: { position: [-470, WALK_EYE_HEIGHT, -1740], target: [-500, WALK_EYE_HEIGHT, -1740] }
+  oraclehub: {
+    position: [
+      MARATHAHALLI_SOURCE_ANCHORS.oracleHub.approachRoad[0],
+      WALK_EYE_HEIGHT,
+      MARATHAHALLI_SOURCE_ANCHORS.oracleHub.approachRoad[1]
+    ],
+    target: [
+      MARATHAHALLI_SOURCE_ANCHORS.oracleHub.entranceFountain[0],
+      WALK_EYE_HEIGHT,
+      MARATHAHALLI_SOURCE_ANCHORS.oracleHub.entranceFountain[1]
+    ]
+  }
 };
 
 // A bounded inspection envelope keeps WASD navigation inside the modeled
 // corridor while leaving the authored HAL/ORR/Spice Garden extents reachable.
 export const MARATHAHALLI_WALK_BOUNDS = {
-  minX: -1000,
-  maxX: 1000,
-  minZ: -1900,
+  minX: -1020,
+  maxX: 1020,
+  minZ: -1950,
   maxZ: 520
+};
+
+// Overview cameras need more room than a person camera to frame the full
+// Oracle-to-Spice-Garden corridor. These bounds still prevent pan/keyboard
+// drift into an unbounded empty scene.
+export const MARATHAHALLI_OVERVIEW_BOUNDS = {
+  minX: -1400,
+  maxX: 1600,
+  minY: 0.75,
+  maxY: 3000,
+  minZ: -2400,
+  maxZ: 1000
 };
 
 // Coarse, named landmark footprints prevent the person camera from walking
@@ -149,7 +303,10 @@ export const MARATHAHALLI_WALK_OBSTACLES: WalkObstacle[] = [
   { minX: 33, maxX: 64, minZ: 32, maxZ: 85 },       // Brand Factory / outlet row
   { minX: 29, maxX: 67, minZ: 310, maxZ: 371 },     // Kalamandir / Nalli frontage
   { minX: -58, maxX: -17, minZ: 87, maxZ: 130 },    // Krishna Summit block
-  { minX: -980, maxX: -480, minZ: -1900, maxZ: -1580 } // Oracle Tech Hub campus
+  // Keep the eastern entrance apron open so the source approach road and
+  // entrance fountain remain reachable in person mode. The campus itself is
+  // still guarded by the coarse western massing envelope.
+  { minX: -980, maxX: -568, minZ: -1900, maxZ: -1580 } // Oracle Tech Hub campus
 ];
 
 const isInsideObstacle = (x: number, z: number, padding = 1.2) =>
@@ -174,6 +331,46 @@ export function resolveWalkPosition(
   if (!isInsideObstacle(boundedX, currentZ)) return [boundedX, currentZ];
   if (!isInsideObstacle(currentX, boundedZ)) return [currentX, boundedZ];
   return [currentX, currentZ];
+}
+
+/**
+ * Put an externally supplied person-mode start just outside a coarse obstacle.
+ * This is used for fly-to/preset entry points; regular movement continues to
+ * use resolveWalkPosition so it never jumps through a landmark.
+ */
+export function resolveWalkStart(x: number, z: number): [number, number] {
+  let resolvedX = Math.max(MARATHAHALLI_WALK_BOUNDS.minX, Math.min(MARATHAHALLI_WALK_BOUNDS.maxX, x));
+  let resolvedZ = Math.max(MARATHAHALLI_WALK_BOUNDS.minZ, Math.min(MARATHAHALLI_WALK_BOUNDS.maxZ, z));
+
+  for (let iteration = 0; iteration < MARATHAHALLI_WALK_OBSTACLES.length + 1; iteration += 1) {
+    const obstacle = MARATHAHALLI_WALK_OBSTACLES.find((candidate) =>
+      resolvedX >= candidate.minX - 1.2 &&
+      resolvedX <= candidate.maxX + 1.2 &&
+      resolvedZ >= candidate.minZ - 1.2 &&
+      resolvedZ <= candidate.maxZ + 1.2
+    );
+
+    if (!obstacle) return [resolvedX, resolvedZ];
+
+    const candidates: LocalXZ[] = [
+      [obstacle.minX - 1.3, resolvedZ],
+      [obstacle.maxX + 1.3, resolvedZ],
+      [resolvedX, obstacle.minZ - 1.3],
+      [resolvedX, obstacle.maxZ + 1.3]
+    ].map(([candidateX, candidateZ]) => [
+      Math.max(MARATHAHALLI_WALK_BOUNDS.minX, Math.min(MARATHAHALLI_WALK_BOUNDS.maxX, candidateX)),
+      Math.max(MARATHAHALLI_WALK_BOUNDS.minZ, Math.min(MARATHAHALLI_WALK_BOUNDS.maxZ, candidateZ))
+    ]);
+
+    [resolvedX, resolvedZ] = candidates.reduce((nearest, candidate) =>
+      Math.hypot(candidate[0] - resolvedX, candidate[1] - resolvedZ) <
+        Math.hypot(nearest[0] - resolvedX, nearest[1] - resolvedZ)
+        ? candidate
+        : nearest
+    );
+  }
+
+  return [resolvedX, resolvedZ];
 }
 
 export function createWalkView(position: [number, number, number], target: [number, number, number]): CameraView {

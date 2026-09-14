@@ -48,6 +48,8 @@ const FocusLabel: React.FC<{
  * Focus aid for the crossover preset. The highlighted paths are not a second
  * traffic network: they are generated from U_TURN_CONNECTORS, the same
  * source-aligned connector points consumed by JunctionRoads and TrafficSystem.
+ * The OSM snapshot also carries a no_u_turn relation, so these remain
+ * scenario links until the turn restriction is reconciled with the field plan.
  */
 export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({ isNight = false }) => {
   const northCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.north.points), []);
@@ -63,7 +65,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({ is
         <meshBasicMaterial color="#38bdf8" transparent opacity={isNight ? 0.9 : 0.72} depthWrite={false} />
       </mesh>
 
-      {/* The two legal loop paths share their exact traffic geometry. */}
+      {/* The two scenario loop paths share their exact traffic geometry. */}
       <mesh renderOrder={8}>
         <tubeGeometry args={[northCurve, 96, 0.22, 8, false]} />
         <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
@@ -74,7 +76,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({ is
       </mesh>
 
       {/* Small source-style route gates make the loop entrance legible from a
-          bird view without inventing another road or building. */}
+          bird view without inventing another road or building. They are not a
+          legal-movement assertion while the mapped restriction is unresolved. */}
       {[
         { id: 'north', position: [30.3, 0.42, 29.0] as [number, number, number] },
         { id: 'south', position: [-7.3, 0.42, -0.1] as [number, number, number] }
@@ -94,12 +97,12 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({ is
       <FocusLabel
         position={[32, 5.1, 34]}
         title="NORTH U-TURN"
-        detail="SOURCE LINK · LIVE FLOW"
+        detail="SCENARIO LINK · OSM RULE REVIEW"
       />
       <FocusLabel
         position={[-3, 4.4, -7]}
         title="SOUTH U-TURN"
-        detail="SOURCE LINK · LIVE FLOW"
+        detail="SCENARIO LINK · OSM RULE REVIEW"
       />
       <FocusLabel
         position={[-2, 8, 14]}

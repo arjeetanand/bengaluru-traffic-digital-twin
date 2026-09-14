@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   MapPin,
   Star,
@@ -33,6 +33,49 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
 }) => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      previouslyFocusedRef.current?.focus();
+      previouslyFocusedRef.current = null;
+      return;
+    }
+
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !drawerRef.current) return;
+      const focusable = Array.from(drawerRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), a[href]'
+      ));
+      if (!focusable.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const filteredStores = useMemo(() => {
     return GOOGLE_MAPS_PROMINENT_STORES.filter((store) => {
@@ -64,6 +107,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
 
   return (
     <div
+      ref={drawerRef}
       role="dialog"
       aria-modal="true"
       aria-label="Mapped Marathahalli corridor points of interest"
@@ -124,6 +168,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
         </div>
 
         <button
+          ref={closeButtonRef}
           onClick={onClose}
           style={{
             background: 'rgba(255, 255, 255, 0.08)',
@@ -196,6 +241,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
             <button
               key={cat.id}
               onClick={() => setCategoryFilter(cat.id)}
+              aria-pressed={categoryFilter === cat.id}
               style={{
                 fontSize: '10px',
                 fontWeight: 600,
@@ -409,6 +455,7 @@ export const GoogleMapsStoreDrawer: React.FC<GoogleMapsStoreDrawerProps> = ({
                 onSelectStore(store);
                 handleFlyTo(store);
               }}
+              aria-current={isSelected ? 'true' : undefined}
               style={{
                 background: isSelected
                   ? 'rgba(14, 116, 144, 0.35)'

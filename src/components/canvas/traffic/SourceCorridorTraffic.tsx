@@ -10,13 +10,14 @@ import {
   createTwoWheelerGeometry
 } from './VehicleModels';
 import {
-  MARATHAHALLI_SNAPSHOT_URL,
   MarathahalliDemoSnapshot,
   OSMPolylineFeature,
   VARTHUR_VIADUCT_DECK_TOP_Y,
   isSourceElevatedRoad,
   isVarthurViaductWay
 } from '../../../data/marathahalliDemo';
+import { getOrrUnderpassElevation } from '../../../data/RealRoadData';
+import { loadMarathahalliSnapshot } from '../../../services/marathahalliSnapshot';
 
 interface SourceCorridorTrafficProps {
   simSpeedMultiplier: number;
@@ -29,8 +30,11 @@ interface SourceRoute {
   curve: THREE.CatmullRomCurve3;
   length: number;
   // OSM way order is the travel direction for one-way roads. Bidirectional
-  // ways may still use either direction for the modelled visual fleet.
-  preferredDirection: 1 | -1 | null;
+  // ways are expanded into one route per direction before vehicles spawn.
+  preferredDirection: 1 | -1;
+  // Lane offsets are authored in the source way's local frame. Reverse-flow
+  // routes mirror the offset so both directions stay on their LHT carriageway.
+  laneOffset: number;
 }
 
 interface SourceVehicleAgent {
@@ -73,6 +77,16 @@ function getRoadRank(feature: OSMPolylineFeature) {
     case 'tertiary': return 2;
     default: return 1;
   }
+}
+
+function getSourceRoadY(feature: OSMPolylineFeature, z: number) {
+  const name = feature.name || feature.tags.name || '';
+  if (/marathahalli underpass/i.test(name) || feature.tags.tunnel === 'yes') {
+    return getOrrUnderpassElevation(z) + 0.08;
+  }
+  if (isVarthurViaductWay(feature)) return VARTHUR_VIADUCT_DECK_TOP_Y + 0.08;
+  if (isSourceElevatedRoad(feature)) return 5.3;
+  return 0.1;
 }
 
 /**
@@ -137,13 +151,8 @@ function buildSourceRoutes(snapshot: MarathahalliDemoSnapshot): SourceRoute[] {
   }
 
   return selected
-    .map((feature) => {
-      const routeY = isVarthurViaductWay(feature)
-        ? VARTHUR_VIADUCT_DECK_TOP_Y + 0.08
-        : isSourceElevatedRoad(feature)
-          ? 5.3
-          : 0.1;
-      const points = feature.geometry.map(([x, z]) => new THREE.Vector3(x, routeY, z));
+    .flatMap((feature) => {
+      const points = feature.geometry.map(([x, z]) => new THREE.Vector3(x, getSourceRoadY(feature, z), z));
       const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.18);
       const oneway = feature.tags.oneway;
       const preferredDirection: 1 | -1 | null = oneway === 'yes' || oneway === '1'
@@ -151,7 +160,19 @@ function buildSourceRoutes(snapshot: MarathahalliDemoSnapshot): SourceRoute[] {
         : oneway === '-1'
           ? -1
           : null;
-      return { id: feature.id, curve, length: curve.getLength(), preferredDirection };
+      const laneCount = Math.max(1, Math.min(4, Number(feature.tags.lanes) || 1));
+      const laneOffsets = Array.from({ length: laneCount }, (_, index) => (
+        (index - (laneCount - 1) / 2) * 3.1
+      ));
+      const directions: (1 | -1)[] = preferredDirection ? [preferredDirection] : [1, -1];
+
+      return directions.flatMap((direction) => laneOffsets.map((offset) => ({
+        id: `${feature.id}:${direction}:${offset.toFixed(2)}`,
+        curve,
+        length: curve.getLength(),
+        preferredDirection: direction,
+        laneOffset: direction === 1 ? offset : -offset
+      })));
     })
     .filter((route) => route.length >= 45);
 }
@@ -169,19 +190,15 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
   const simulationAccumulator = useRef(0);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch(MARATHAHALLI_SNAPSHOT_URL, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`OSM corridor traffic request failed (${response.status})`);
-        return response.json() as Promise<MarathahalliDemoSnapshot>;
+    let active = true;
+    loadMarathahalliSnapshot()
+      .then((nextSnapshot) => {
+        if (active) setSnapshot(nextSnapshot);
       })
-      .then(setSnapshot)
       .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === 'AbortError')) {
-          console.warn('OSM corridor traffic unavailable; junction traffic remains active', error);
-        }
+        if (active) console.warn('OSM corridor traffic unavailable; junction traffic remains active', error);
       });
-    return () => controller.abort();
+    return () => { active = false; };
   }, []);
 
   const routes = useMemo(() => (snapshot ? buildSourceRoutes(snapshot) : []), [snapshot]);
@@ -251,11 +268,10 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
           type,
           routeIdx,
           t: 0.04 + nextRandom() * 0.9,
-          direction: routes[routeIdx].preferredDirection
-            || (nextRandom() > 0.5 ? 1 : -1),
+          direction: routes[routeIdx].preferredDirection,
           speed: maxSpeed * (0.68 + nextRandom() * 0.18),
           meshIdx: nextMeshIndex(),
-          lateralOffset: (nextRandom() > 0.5 ? 1 : -1) * (0.55 + nextRandom() * 0.55),
+          lateralOffset: routes[routeIdx].laneOffset + (nextRandom() - 0.5) * 0.22,
           lengthMeters
         });
       }
@@ -314,9 +330,9 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
       agent.t += (agent.speed * dt) / route.length;
       if (agent.t > 1) {
         agent.t = 0.02 + (agent.id % 7) * 0.006;
-        // Preserve mapped flow on one-way ways. Only bidirectional source
-        // roads reverse at the end of their visual loop.
-        agent.direction = route.preferredDirection || (agent.direction === 1 ? -1 : 1);
+        // A source route never reverses at the endpoint. Bidirectional ways
+        // already have a separate route for each legal travel direction.
+        agent.direction = route.preferredDirection;
       }
 
       route.curve.getPointAt(progress, position);

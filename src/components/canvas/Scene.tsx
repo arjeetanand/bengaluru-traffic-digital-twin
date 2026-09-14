@@ -84,10 +84,16 @@ export const Scene: React.FC<SceneProps> = ({
     'flyover',
     'underpass',
     'spicegarden',
-    'oraclehub'
+    'oraclehub',
+    'brandfactory',
+    'kalamandir',
+    'multiplex'
   ].includes(cameraPreset);
-  const corridorVehicleCount = Math.min(vehicleCount, Math.max(32, Math.round(vehicleCount * 0.18)));
-  const junctionVehicleCount = Math.max(0, vehicleCount - corridorVehicleCount);
+  // The compiled source snapshot is the canonical road graph. Keep the full
+  // fleet on source ways so no vehicle falls back to the old mirrored,
+  // schematic junction lanes.
+  const corridorVehicleCount = vehicleCount;
+  const junctionVehicleCount = 0;
   const fogDensity = isLongCorridorView
     ? (isNight ? 0.00018 : (isRaining ? 0.00034 : 0.00012))
     : (isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY));
@@ -170,6 +176,7 @@ export const Scene: React.FC<SceneProps> = ({
             isRaining={isRaining}
             isNight={isNight}
             congestionRatio={congestionRatio}
+            sourceBacked
           />
 
           {isCrossoverFocusView && (
@@ -229,7 +236,7 @@ export const Scene: React.FC<SceneProps> = ({
           {/* ── Surrounding Commercial Landmarks / Google 3D Tiles ── */}
           {buildingMode === 'google-tiles' ? (
             <Google3DTiles apiKey={googleMapsApiKey} />
-          ) : !isCrossoverFocusView ? (
+          ) : !isSourceGeometryFocusView ? (
           <Buildings isNight={isNight} includeSurroundingBuildings={false} />
           ) : null}
 

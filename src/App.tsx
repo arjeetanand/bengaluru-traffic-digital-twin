@@ -45,6 +45,9 @@ export const App: React.FC = () => {
   // ── Prominent Google Maps Stores Explorer State ──
   const [selectedStore, setSelectedStore] = useState<GoogleMapsStore | undefined>(undefined);
   const [isStoreDrawerOpen, setIsStoreDrawerOpen] = useState(false);
+  const handleToggleStoreDrawer = useCallback(() => {
+    setIsStoreDrawerOpen((prev) => !prev);
+  }, []);
 
   // ── Traffic Signals State Machine Hook ──
   const signalStatus = useTrafficSignals({ simSpeedMultiplier: mode.simSpeed });
@@ -123,15 +126,16 @@ export const App: React.FC = () => {
   const handleToggleDemo = () => {
     const nextDemoState = !forceDemo;
     setForceDemo(nextDemoState);
-    loadTraffic(nextDemoState);
   };
 
   const handleResetUsage = () => {
     const freshUsage = resetApiUsage();
     setUsage(freshUsage);
     setNotice('TomTom API local usage counter reset to 0');
-    // If we were demo or capped, try live fetch
-    loadTraffic(false);
+    // Demo mode is intentionally offline. Resetting its local quota must not
+    // unexpectedly spend a live request; the forceDemo transition effect will
+    // fetch exactly once when the user explicitly switches to live mode.
+    if (!forceDemo) loadTraffic(false);
   };
 
   return (
@@ -168,7 +172,7 @@ export const App: React.FC = () => {
         notice={notice}
         isStoreDrawerOpen={isStoreDrawerOpen}
         selectedStoreId={selectedStore?.id}
-        onToggleStoreDrawer={() => setIsStoreDrawerOpen((prev) => !prev)}
+        onToggleStoreDrawer={handleToggleStoreDrawer}
         onSelectStore={(store) => setSelectedStore(store)}
         onUpdateMode={handleUpdateMode}
         onToggleDemo={handleToggleDemo}

@@ -3,14 +3,17 @@ import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
-  MARATHAHALLI_SNAPSHOT_URL,
   MarathahalliDemoSnapshot,
   OSMPolylineFeature,
   VARTHUR_VIADUCT_DECK_TOP_Y,
   isSourceElevatedRoad,
+  isMarathahalliSkywalkDeck,
+  isMarathahalliSkywalkStair,
+  isMarathahalliUnderpassWay,
   isVarthurViaductFootway,
   isVarthurViaductWay
 } from '../../../data/marathahalliDemo';
+import { loadMarathahalliSnapshot } from '../../../services/marathahalliSnapshot';
 
 interface OsmSnapshotLayerProps {
   isNight?: boolean;
@@ -90,7 +93,9 @@ function getRoadRibbonWidth(feature: OSMPolylineFeature) {
   return 5.4;
 }
 
-function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
+function selectBuildingFeatures(features: OSMPolylineFeature[], limit: number) {
+  if (limit <= 0 || features.length === 0) return [];
+
   const byDistance = [...features]
     .sort((a, b) => {
       const aDistance = a.centroid[0] ** 2 + a.centroid[1] ** 2;
@@ -126,6 +131,11 @@ function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
     selected.push(feature);
     selectedIds.add(feature.id);
   }
+  return selected;
+}
+
+function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
+  const selected = selectBuildingFeatures(features, limit);
   const geometries: THREE.BufferGeometry[] = [];
 
   for (const feature of selected) {
@@ -159,9 +169,9 @@ function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
   return merged;
 }
 
-function createBuildingOutlineGeometry(features: OSMPolylineFeature[]) {
+function createBuildingOutlineGeometry(features: OSMPolylineFeature[], limit: number) {
   const positions: number[] = [];
-  for (const feature of features) {
+  for (const feature of selectBuildingFeatures(features, limit)) {
     if (feature.geometry.length < 2) continue;
     for (let index = 1; index <= feature.geometry.length; index += 1) {
       const previous = feature.geometry[index - 1];
@@ -200,32 +210,32 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   const [snapshot, setSnapshot] = useState<MarathahalliDemoSnapshot | null>(null);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch(MARATHAHALLI_SNAPSHOT_URL, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`OSM snapshot request failed (${response.status})`);
-        return response.json() as Promise<MarathahalliDemoSnapshot>;
+    let active = true;
+    loadMarathahalliSnapshot()
+      .then((nextSnapshot) => {
+        if (active) setSnapshot(nextSnapshot);
       })
-      .then((nextSnapshot) => setSnapshot(nextSnapshot))
       .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === 'AbortError')) {
-          console.warn('OSM snapshot layer unavailable; using authored demo geometry', error);
-        }
+        if (active) console.warn('OSM snapshot layer unavailable; using authored demo geometry', error);
       });
 
-    return () => controller.abort();
+    return () => { active = false; };
   }, []);
 
   const roadGeometry = useMemo(
     () => (snapshot
-      ? createPolylineGeometry(snapshot.roads.filter((feature) => !isVarthurViaductWay(feature)))
+      ? createPolylineGeometry(snapshot.roads.filter((feature) =>
+        !isVarthurViaductWay(feature) && !isMarathahalliUnderpassWay(feature)
+      ))
       : null),
     [snapshot]
   );
   const roadSurfaceGeometry = useMemo(
     () => (snapshot
       ? createRibbonGeometry(
-        snapshot.roads.filter((feature) => !isVarthurViaductWay(feature)),
+        snapshot.roads.filter((feature) =>
+          !isVarthurViaductWay(feature) && !isMarathahalliUnderpassWay(feature)
+        ),
         getRoadRibbonWidth,
         0.075
       )
@@ -257,22 +267,22 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   );
   const footwayGeometry = useMemo(
     () => (snapshot
-      ? createPolylineGeometry(snapshot.footways, (feature) => {
+      ? createPolylineGeometry(snapshot.footways.filter((feature) => !isMarathahalliSkywalkStair(feature)), (feature) => {
         if (isVarthurViaductFootway(feature)) {
           return VARTHUR_VIADUCT_DECK_TOP_Y + 0.16;
         }
-        return feature.tags.bridge ? 7.55 : 0.12;
+        return isMarathahalliSkywalkDeck(feature) || feature.tags.bridge ? 7.55 : 0.12;
       })
       : null),
     [snapshot]
   );
   const footwaySurfaceGeometry = useMemo(
     () => (snapshot
-      ? createRibbonGeometry(snapshot.footways, 1.8, (feature) => {
+      ? createRibbonGeometry(snapshot.footways.filter((feature) => !isMarathahalliSkywalkStair(feature)), 1.8, (feature) => {
         if (isVarthurViaductFootway(feature)) {
           return VARTHUR_VIADUCT_DECK_TOP_Y + 0.16;
         }
-        return feature.tags.bridge ? 7.55 : 0.14;
+        return isMarathahalliSkywalkDeck(feature) || feature.tags.bridge ? 7.55 : 0.14;
       })
       : null),
     [snapshot]
@@ -286,13 +296,26 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [buildingLimit, showBuildings, snapshot]
   );
   const buildingOutlineGeometry = useMemo(
-    () => (snapshot && showBuildings ? createBuildingOutlineGeometry(snapshot.buildings) : null),
-    [showBuildings, snapshot]
+    () => (snapshot && showBuildings ? createBuildingOutlineGeometry(snapshot.buildings, buildingLimit) : null),
+    [buildingLimit, showBuildings, snapshot]
   );
   const namedAreaGeometry = useMemo(
     () => (snapshot && showBuildings ? createNamedAreaGeometry(snapshot.places) : null),
     [showBuildings, snapshot]
   );
+  const sourceShopFeatures = useMemo(() => {
+    if (!snapshot) return [];
+    // Keep every named source POI ahead of unnamed shop nodes so landmark
+    // anchors are never lost just because the XML ordering changed.
+    const named = snapshot.shops.filter((shop) => shop.name || shop.tags.name);
+    const unnamed = snapshot.shops.filter((shop) => !shop.name && !shop.tags.name);
+    return [...named, ...unnamed].slice(0, 160);
+  }, [snapshot]);
+  const sourceShopLabelFeatures = useMemo(() => {
+    if (!snapshot) return [];
+    const landmarkShopPattern = /spice garden|pizza hut|village hypermart|holly flames|sweet chariot|kalamandir|nalli|tanishq|kalyan|brand factory/i;
+    return snapshot.shops.filter((shop) => landmarkShopPattern.test(shop.name || shop.tags.name || '')).slice(0, 24);
+  }, [snapshot]);
 
   useEffect(() => () => {
     roadGeometry?.dispose();
@@ -413,7 +436,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       )}
 
       <group name="OSMSnapshotPointFeatures">
-        {snapshot.shops.slice(0, 160).map((shop) => (
+        {sourceShopFeatures.map((shop) => (
           <mesh key={`shop-${shop.id}`} position={[shop.position[0], 0.55, shop.position[1]]}>
             <cylinderGeometry args={[0.45, 0.45, 1.1, 8]} />
             <meshStandardMaterial color="#f59e0b" emissive="#b45309" emissiveIntensity={isNight ? 0.9 : 0.15} />
@@ -456,6 +479,33 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       </group>
 
       <group name="OSMSourceLandmarkLabels">
+        {sourceShopLabelFeatures.map((shop) => (
+          <Html
+            key={`source-shop-label-${shop.id}`}
+            position={[shop.position[0], 2.4, shop.position[1]]}
+            center
+            distanceFactor={Math.max(45, labelDistanceFactor * 0.82)}
+            zIndexRange={[18, 0]}
+          >
+            <div
+              style={{
+                background: 'rgba(69, 26, 3, 0.86)',
+                border: '1px solid rgba(251, 191, 36, 0.65)',
+                borderRadius: '4px',
+                color: '#fef3c7',
+                fontFamily: 'monospace',
+                fontSize: '8px',
+                letterSpacing: '0.18px',
+                padding: '3px 5px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(2, 6, 23, 0.35)'
+              }}
+            >
+              OSM · {(shop.name || shop.tags.name || 'SHOP').toUpperCase()}
+            </div>
+          </Html>
+        ))}
+
         {['Oracle Tech Hub', 'Innovative Multiplex', 'Kalamandir', 'Spice Garden'].map((label) => {
           const place = snapshot.places.find((feature) => feature.name?.toLowerCase() === label.toLowerCase())
             || snapshot.places.find((feature) => feature.name?.toLowerCase().includes(label.toLowerCase()));
@@ -492,6 +542,27 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             </Html>
           );
         })}
+
+        {snapshot.turnRestrictions.some((restriction) => restriction.restriction === 'no_u_turn') && (
+          <Html position={[-24, 5.2, 16]} center distanceFactor={labelDistanceFactor} zIndexRange={[24, 0]}>
+            <div
+              style={{
+                background: 'rgba(69, 26, 3, 0.9)',
+                border: '1px solid rgba(251, 191, 36, 0.8)',
+                borderRadius: '5px',
+                color: '#fef3c7',
+                fontFamily: 'monospace',
+                fontSize: '8px',
+                letterSpacing: '0.25px',
+                padding: '4px 7px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 3px 12px rgba(2, 6, 23, 0.4)'
+              }}
+            >
+              OSM RULE · NO U-TURN · SCENARIO LINK NEEDS REVIEW
+            </div>
+          </Html>
+        )}
       </group>
     </group>
   );

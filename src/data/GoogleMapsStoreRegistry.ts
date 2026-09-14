@@ -188,8 +188,9 @@ export const GOOGLE_MAPS_PROMINENT_STORES: GoogleMapsStore[] = [
     name: 'Kalyan Jewellers',
     kannadaName: 'ಕಲ್ಯಾಣ್ ಜ್ಯುವೆಲ್ಲರ್ಸ್',
     category: 'jewellery',
-    lat: 12.956570,
-    lng: 77.696800,
+    // Snapped to OSM node/12460866495 (x=-198.7m, z=-6.6m).
+    lat: 12.956780,
+    lng: 77.699344,
     rating: 4.5,
     reviewCount: 3420,
     address: 'Old Airport Rd, Near Tulasi Theatre, Marathahalli, Bengaluru 560037',
@@ -203,8 +204,10 @@ export const GOOGLE_MAPS_PROMINENT_STORES: GoogleMapsStore[] = [
     name: 'Brand Factory Outlet (KLM Fashion Mall)',
     kannadaName: 'ಬ್ರಾಂಡ್ ಫ್ಯಾಕ್ಟರಿ',
     category: 'apparel',
-    lat: 12.957360,
-    lng: 77.701620,
+    // Snapped to OSM node/6095248120 (x=-378.4m, z=-35.4m). The old
+    // catalogue point landed on the opposite side of the junction.
+    lat: 12.956520,
+    lng: 77.697692,
     rating: 4.1,
     reviewCount: 14890,
     address: 'Vanshee Towers, Outer Ring Rd, Marathahalli, Bengaluru 560037',
@@ -270,7 +273,7 @@ export function getStoreCameraFraming(store: GoogleMapsStore): {
     case 'krishna_summit':
       return { position: [12, 24, 115], target: [-37.5, 18, 109.4] };
     case 'brand_factory_mall':
-      return { position: [2, 18, 55], target: [48, 14, 57.5] };
+      return { position: [-430, 24, 12], target: [-378.4, 14, -35.4] };
     case 'innovative_multiplex':
       return { position: [-190, 26, -405], target: [-286, 12, -535] };
     case 'tanishq_hal':
@@ -284,7 +287,7 @@ export function getStoreCameraFraming(store: GoogleMapsStore): {
     case 'vijay_sales':
       return { position: [-373.1, 16, 18], target: [-373.1, 9, -13.2] };
     case 'kalyan_jewellers':
-      return { position: [-474.6, 16, 2], target: [-474.6, 9, -29.9] };
+      return { position: [-250, 20, 34], target: [-198.7, 10, -6.6] };
     case 'spice_garden_bus_stop':
       // OSM-backed Spice Garden BMTC platform (x≈836m, z≈-60m).
       return { position: [745, 30, 50], target: [835.8, 4, -59.8] };

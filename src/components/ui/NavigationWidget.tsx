@@ -22,9 +22,28 @@ interface NavigationWidgetProps {
 }
 
 export const NavigationWidget: React.FC<NavigationWidgetProps> = ({ cameraMode }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(() => (
+    typeof window === 'undefined' || !window.matchMedia('(max-width: 900px)').matches
+  ));
   const [speedMultiplier, setSpeedMultiplier] = useState<1 | 2 | 4>(1);
   const [activeButton, setActiveButton] = useState<string | null>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    const closeForCompactViewport = (event?: MediaQueryListEvent) => {
+      if (event?.matches ?? mediaQuery.matches) setIsOpen(false);
+    };
+
+    closeForCompactViewport();
+    // Some embedded surfaces apply their viewport override just after the
+    // first paint; re-check once so the full pad does not flash open there.
+    const delayedViewportCheck = window.setTimeout(closeForCompactViewport, 250);
+    mediaQuery.addEventListener('change', closeForCompactViewport);
+    return () => {
+      window.clearTimeout(delayedViewportCheck);
+      mediaQuery.removeEventListener('change', closeForCompactViewport);
+    };
+  }, []);
 
   useEffect(() => {
     cameraControlBus.setInput({ speedMultiplier });
@@ -96,7 +115,7 @@ export const NavigationWidget: React.FC<NavigationWidgetProps> = ({ cameraMode }
       <div className="nav-widget-header">
         <div className="nav-widget-title">
           <Compass size={13} className="text-cyan" />
-          <span>CAMERA CONTROLLER</span>
+          <span>{cameraMode === 'walk' ? 'PERSON NAVIGATION' : 'BIRD NAVIGATION'}</span>
         </div>
         <button
           className="nav-close-btn"

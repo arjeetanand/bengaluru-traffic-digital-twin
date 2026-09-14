@@ -111,6 +111,36 @@ for (const match of xml.matchAll(/<way\b([^>]*)>([\s\S]*?)<\/way>/g)) {
   if (way) ways.push(way);
 }
 
+// Keep turn restrictions as first-class source data. The renderer can use
+// these to avoid presenting a mapped-prohibited movement as a legal loop.
+const turnRestrictions = [];
+for (const match of xml.matchAll(/<relation\b([^>]*)>([\s\S]*?)<\/relation>/g)) {
+  const attrs = match[1];
+  const body = match[2] || '';
+  const tags = parseTags(body);
+  if (tags.type !== 'restriction' || !tags.restriction) continue;
+
+  const id = attr(attrs, 'id');
+  const members = [...body.matchAll(/<member\b([^>]*)\/>/g)]
+    .map((memberMatch) => ({
+      type: attr(memberMatch[1], 'type'),
+      ref: attr(memberMatch[1], 'ref'),
+      role: attr(memberMatch[1], 'role')
+    }))
+    .filter((member) => member.type && member.ref && member.role);
+  if (!id || !members.some((member) => member.role === 'from') || !members.some((member) => member.role === 'to')) continue;
+
+  turnRestrictions.push({
+    id: `relation/${id}`,
+    restriction: tags.restriction,
+    members: members.map((member) => ({
+      type: member.type,
+      ref: `${member.type}/${member.ref}`,
+      role: member.role
+    }))
+  });
+}
+
 const pointFeatures = [];
 for (const [id, node] of nodes) {
   if (!inClip(node.lat, node.lon)) continue;
@@ -139,9 +169,8 @@ const roadValues = new Set([
   'unclassified', 'service', 'living_street', 'road'
 ]);
 const roads = ways.filter((way) => roadValues.has(way.tags.highway));
-const footways = ways.filter((way) =>
-  ['footway', 'path', 'pedestrian', 'cycleway', 'steps'].includes(way.tags.highway) || way.tags.sidewalk
-);
+const pedestrianHighwayValues = new Set(['footway', 'path', 'pedestrian', 'cycleway', 'steps', 'bridleway']);
+const footways = ways.filter((way) => pedestrianHighwayValues.has(way.tags.highway));
 const railways = ways.filter((way) => way.tags.railway);
 const shops = [
   ...pointFeatures.filter((feature) => feature.tags.shop || feature.tags.amenity === 'restaurant'),
@@ -185,7 +214,7 @@ const landmarkCoverage = [
 const missingLandmarks = landmarkCoverage.filter((landmark) => !landmark.sourceBacked).map((landmark) => landmark.name);
 
 const dataset = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   source: {
     provider: 'OpenStreetMap',
     file: 'marathahalli_osm.xml',
@@ -207,7 +236,7 @@ const dataset = {
     name: 'Oracle Tech Hub → Marathahalli → Kalamandir / Spice Garden OSM snapshot',
     note: missingLandmarks.length
       ? `This snapshot covers the supplied OSM bounds. Source-backed landmark gaps remain: ${missingLandmarks.join(', ')}.`
-      : 'This wider snapshot covers the Oracle Tech Hub, Innovative Multiplex, Marathahalli signal junction, Kalamandir and Spice Garden corridor. OSM geometry is source-backed; landmark facade detail remains a modeled layer.',
+      : 'This wider snapshot covers the Oracle Tech Hub, Innovative Multiplex, Marathahalli signal junction, Kalamandir and Spice Garden corridor. OSM geometry is source-backed; landmark facade detail remains a modeled layer. Turn restrictions are preserved separately from drawable ways.',
     landmarks: landmarkCoverage
   },
   stats: {
@@ -222,7 +251,8 @@ const dataset = {
     crossings: crossings.length,
     busStops: busStops.length,
     trees: trees.length,
-    railways: railways.length
+    railways: railways.length,
+    turnRestrictions: turnRestrictions.length
   },
   buildings,
   roads,
@@ -233,7 +263,8 @@ const dataset = {
   crossings,
   busStops,
   trees,
-  railways
+  railways,
+  turnRestrictions
 };
 
 await mkdir(path.dirname(outputPath), { recursive: true });

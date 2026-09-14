@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Moon,
   Sun,
@@ -35,6 +35,8 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
   isStoreDrawerOpen,
   onToggleStoreDrawer
 }) => {
+  const [showMoreControls, setShowMoreControls] = useState(false);
+
   return (
     <div className="controls-bar-container">
       {/* ── Google Maps Prominent Stores Explorer Toggle ── */}
@@ -85,66 +87,125 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
         <span>AUDIT PATHS</span>
       </button>
 
-      {/* ── 3D Building Engine Toggle: Real OSM Digital Twin vs Google 3D Tiles ── */}
+      {/* Keep the map-first mobile surface compact while preserving access to
+          weather, rendering, playback, and traffic-source controls. */}
       <button
-        className={`control-btn ${mode.buildingMode === 'google-tiles' ? 'active' : ''}`}
-        onClick={() => {
-          const next = mode.buildingMode === 'google-tiles' ? 'osm' : 'google-tiles';
-          if (next === 'google-tiles' && !mode.googleMapsApiKey) {
-            const entered = window.prompt(
-              'Enter your Google Maps Platform API Key (with Map Tiles API enabled) to stream Google Photorealistic 3D Tiles:',
-              mode.googleMapsApiKey || ''
-            );
-            if (entered) {
-              onUpdateMode({ buildingMode: 'google-tiles', googleMapsApiKey: entered.trim() });
+        type="button"
+        className="control-btn mobile-more-controls"
+        onClick={() => setShowMoreControls((open) => !open)}
+        aria-expanded={showMoreControls}
+        aria-controls="secondary-simulation-controls"
+        title={showMoreControls ? 'Hide secondary simulation controls' : 'Show secondary simulation controls'}
+      >
+        <Sliders size={14} />
+        <span>{showMoreControls ? 'LESS' : 'MORE'}</span>
+      </button>
+
+      <div
+        id="secondary-simulation-controls"
+        className={`controls-secondary ${showMoreControls ? 'is-open' : ''}`}
+        aria-label="Secondary simulation controls"
+      >
+        {/* ── 3D Building Engine Toggle: Real OSM Digital Twin vs Google 3D Tiles ── */}
+        <button
+          className={`control-btn ${mode.buildingMode === 'google-tiles' ? 'active' : ''}`}
+          onClick={() => {
+            const next = mode.buildingMode === 'google-tiles' ? 'osm' : 'google-tiles';
+            if (next === 'google-tiles' && !mode.googleMapsApiKey) {
+              const entered = window.prompt(
+                'Enter your Google Maps Platform API Key (with Map Tiles API enabled) to stream Google Photorealistic 3D Tiles:',
+                mode.googleMapsApiKey || ''
+              );
+              if (entered) {
+                onUpdateMode({ buildingMode: 'google-tiles', googleMapsApiKey: entered.trim() });
+              }
+            } else {
+              onUpdateMode({ buildingMode: next });
             }
-          } else {
-            onUpdateMode({ buildingMode: next });
+          }}
+          aria-pressed={mode.buildingMode === 'google-tiles'}
+          title={
+            mode.buildingMode === 'google-tiles'
+              ? 'Active: Google Photorealistic 3D Tiles. Click to switch to OSM Digital Twin.'
+              : 'Active: OSM massing snapshot. Click to stream optional Google 3D Tiles.'
           }
-        }}
-        aria-pressed={mode.buildingMode === 'google-tiles'}
-        title={
-          mode.buildingMode === 'google-tiles'
-            ? 'Active: Google Photorealistic 3D Tiles. Click to switch to OSM Digital Twin.'
-            : 'Active: OSM massing snapshot. Click to stream optional Google 3D Tiles.'
-        }
-      >
-        <Building2 size={15} />
-        <span>{mode.buildingMode === 'google-tiles' ? 'GOOGLE 3D TILES' : 'OSM 3D TWIN'}</span>
-      </button>
+        >
+          <Building2 size={15} />
+          <span>{mode.buildingMode === 'google-tiles' ? 'GOOGLE 3D TILES' : 'OSM 3D TWIN'}</span>
+        </button>
 
-      {/* ── Night Mode Toggle ── */}
-      <button
-        className={`control-btn ${mode.isNight ? 'active' : ''}`}
-        onClick={() => onUpdateMode({ isNight: !mode.isNight })}
-        aria-pressed={mode.isNight}
-        title={mode.isNight ? 'Switch to Golden Hour Day' : 'Switch to Night View'}
-      >
-        {mode.isNight ? <Moon size={15} /> : <Sun size={15} />}
-        <span>{mode.isNight ? 'NIGHT' : 'DAY'}</span>
-      </button>
+        {/* ── Night Mode Toggle ── */}
+        <button
+          className={`control-btn ${mode.isNight ? 'active' : ''}`}
+          onClick={() => onUpdateMode({ isNight: !mode.isNight })}
+          aria-pressed={mode.isNight}
+          title={mode.isNight ? 'Switch to Golden Hour Day' : 'Switch to Night View'}
+        >
+          {mode.isNight ? <Moon size={15} /> : <Sun size={15} />}
+          <span>{mode.isNight ? 'NIGHT' : 'DAY'}</span>
+        </button>
 
-      {/* ── Rain Simulation Toggle ── */}
-      <button
-        className={`control-btn ${mode.isRaining ? 'active' : ''}`}
-        onClick={() => onUpdateMode({ isRaining: !mode.isRaining })}
-        aria-pressed={mode.isRaining}
-        title={mode.isRaining ? 'Clear Weather' : 'Simulate Rain & Wet Roads'}
-      >
-        {mode.isRaining ? <CloudRain size={15} /> : <Cloud size={15} />}
-        <span>{mode.isRaining ? 'RAIN' : 'CLEAR'}</span>
-      </button>
+        {/* ── Rain Simulation Toggle ── */}
+        <button
+          className={`control-btn ${mode.isRaining ? 'active' : ''}`}
+          onClick={() => onUpdateMode({ isRaining: !mode.isRaining })}
+          aria-pressed={mode.isRaining}
+          title={mode.isRaining ? 'Clear Weather' : 'Simulate Rain & Wet Roads'}
+        >
+          {mode.isRaining ? <CloudRain size={15} /> : <Cloud size={15} />}
+          <span>{mode.isRaining ? 'RAIN' : 'CLEAR'}</span>
+        </button>
 
-      {/* ── Cinematic Auto-Orbit Toggle ── */}
-      <button
-        className={`control-btn ${mode.isCinematic ? 'active' : ''}`}
-        onClick={() => onUpdateMode({ isCinematic: !mode.isCinematic })}
-        aria-pressed={mode.isCinematic}
-        title="Toggle automatic cinematic camera rotation"
-      >
-        <Video size={15} />
-        <span>CINEMATIC</span>
-      </button>
+        {/* ── Cinematic Auto-Orbit Toggle ── */}
+        <button
+          className={`control-btn ${mode.isCinematic ? 'active' : ''}`}
+          onClick={() => onUpdateMode({ isCinematic: !mode.isCinematic })}
+          aria-pressed={mode.isCinematic}
+          title="Toggle automatic cinematic camera rotation"
+        >
+          <Video size={15} />
+          <span>CINEMATIC</span>
+        </button>
+
+        {/* ── Live / Demo Toggle ── */}
+        <button
+          className={`control-btn live-toggle-btn ${!isDemo ? 'active-live' : 'active-demo'}`}
+          onClick={onToggleDemo}
+          aria-pressed={!isDemo}
+          title="Toggle between Live TomTom API data and Baked Demo Traffic"
+        >
+          <Radio size={14} className={!isDemo ? 'pulse-live' : ''} />
+          <span>{!isDemo ? 'LIVE TOMTOM' : 'DEMO MODE'}</span>
+        </button>
+
+        {/* ── Simulation Speed 1x / 10x / 60x ── */}
+        <div className="btn-group" role="group" aria-label="Simulation speed">
+          <button
+            className={`group-item ${mode.simSpeed === 1 ? 'active' : ''}`}
+            onClick={() => onUpdateMode({ simSpeed: 1 })}
+            title="Real-time 1x speed"
+          >
+            <Play size={11} />
+            <span>1×</span>
+          </button>
+          <button
+            className={`group-item ${mode.simSpeed === 10 ? 'active' : ''}`}
+            onClick={() => onUpdateMode({ simSpeed: 10 })}
+            title="Accelerated 10x speed"
+          >
+            <FastForward size={11} />
+            <span>10×</span>
+          </button>
+          <button
+            className={`group-item ${mode.simSpeed === 60 ? 'active' : ''}`}
+            onClick={() => onUpdateMode({ simSpeed: 60 })}
+            title="High-speed stress test 60x speed"
+          >
+            <Zap size={11} />
+            <span>60×</span>
+          </button>
+        </div>
+      </div>
 
       {/* ── Camera View Angle Presets (Corridors & Landmarks) ── */}
       <div className="btn-group" role="group" aria-label="Camera preset">
@@ -168,45 +229,6 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
           </button>
         ))}
       </div>
-
-      {/* ── Simulation Speed 1x / 10x / 60x ── */}
-      <div className="btn-group" role="group" aria-label="Simulation speed">
-        <button
-          className={`group-item ${mode.simSpeed === 1 ? 'active' : ''}`}
-          onClick={() => onUpdateMode({ simSpeed: 1 })}
-          title="Real-time 1x speed"
-        >
-          <Play size={11} />
-          <span>1×</span>
-        </button>
-        <button
-          className={`group-item ${mode.simSpeed === 10 ? 'active' : ''}`}
-          onClick={() => onUpdateMode({ simSpeed: 10 })}
-          title="Accelerated 10x speed"
-        >
-          <FastForward size={11} />
-          <span>10×</span>
-        </button>
-        <button
-          className={`group-item ${mode.simSpeed === 60 ? 'active' : ''}`}
-          onClick={() => onUpdateMode({ simSpeed: 60 })}
-          title="High-speed stress test 60x speed"
-        >
-          <Zap size={11} />
-          <span>60×</span>
-        </button>
-      </div>
-
-      {/* ── Live / Demo Toggle ── */}
-      <button
-        className={`control-btn live-toggle-btn ${!isDemo ? 'active-live' : 'active-demo'}`}
-        onClick={onToggleDemo}
-        aria-pressed={!isDemo}
-        title="Toggle between Live TomTom API data and Baked Demo Traffic"
-      >
-        <Radio size={14} className={!isDemo ? 'pulse-live' : ''} />
-        <span>{!isDemo ? 'LIVE TOMTOM' : 'DEMO MODE'}</span>
-      </button>
 
       {/* ── Inspect Junction Button ── */}
       <button

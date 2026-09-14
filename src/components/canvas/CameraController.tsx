@@ -10,7 +10,10 @@ import {
   WALK_LOOK_DISTANCE,
   createWalkView,
   getCameraView,
-  resolveWalkPosition
+  resolveWalkPosition,
+  resolveWalkStart,
+  MARATHAHALLI_OVERVIEW_BOUNDS,
+  MARATHAHALLI_WALK_BOUNDS
 } from '../../data/marathahalliNavigation';
 
 interface CameraControllerProps {
@@ -219,11 +222,18 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
     // Register dynamic fly-to handler (e.g. clicking on a store marker or store list item)
     const unsubscribeFlyTo = cameraControlBus.onFlyTo((pos, target) => {
-      const view = cameraModeRef.current === 'walk' ? createWalkView(pos, target) : { position: pos, target };
-      targetCamPos.current.set(...view.position);
-      targetLookAt.current.set(...view.target);
+      if (cameraModeRef.current === 'walk') {
+        const [safeX, safeZ] = resolveWalkStart(pos[0], pos[2]);
+        const view = createWalkView([safeX, WALK_EYE_HEIGHT, safeZ], target);
+        targetCamPos.current.set(...view.position);
+        targetLookAt.current.set(...view.target);
+      } else {
+        targetCamPos.current.set(...pos);
+        targetLookAt.current.set(...target);
+      }
       isTransitioning.current = true;
       transitionProgress.current = 0;
+      cameraControlBus.releaseAllInputs();
     });
 
     return () => {
@@ -480,12 +490,39 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       controlsRef.current.autoRotate = false;
     }
 
-    // Ensure orbit controls updates every frame for smooth damping
+    // Ensure orbit controls updates every frame for smooth damping.
     controlsRef.current.update();
     if (cameraMode === 'walk') {
       camera.position.y = WALK_EYE_HEIGHT;
     } else if (camera.position.y < 0.75) {
       camera.position.y = 0.75;
+      controlsRef.current.update();
+    }
+
+    // OrbitControls can pan outside the modeled corridor. Keep both the
+    // camera and its target inside the bounded local overview envelope.
+    if (cameraMode === 'overview') {
+      camera.position.x = Math.max(
+        MARATHAHALLI_OVERVIEW_BOUNDS.minX,
+        Math.min(MARATHAHALLI_OVERVIEW_BOUNDS.maxX, camera.position.x)
+      );
+      camera.position.y = Math.max(
+        MARATHAHALLI_OVERVIEW_BOUNDS.minY,
+        Math.min(MARATHAHALLI_OVERVIEW_BOUNDS.maxY, camera.position.y)
+      );
+      camera.position.z = Math.max(
+        MARATHAHALLI_OVERVIEW_BOUNDS.minZ,
+        Math.min(MARATHAHALLI_OVERVIEW_BOUNDS.maxZ, camera.position.z)
+      );
+      controlsRef.current.target.x = Math.max(
+        MARATHAHALLI_WALK_BOUNDS.minX,
+        Math.min(MARATHAHALLI_WALK_BOUNDS.maxX, controlsRef.current.target.x)
+      );
+      controlsRef.current.target.z = Math.max(
+        MARATHAHALLI_WALK_BOUNDS.minZ,
+        Math.min(MARATHAHALLI_WALK_BOUNDS.maxZ, controlsRef.current.target.z)
+      );
+      controlsRef.current.target.y = Math.max(-6, Math.min(32, controlsRef.current.target.y));
       controlsRef.current.update();
     }
   });
