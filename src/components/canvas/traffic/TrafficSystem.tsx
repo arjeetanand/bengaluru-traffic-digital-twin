@@ -485,8 +485,17 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
 
         dummy.position.copy(pos);
 
+        // ── Per-vehicle-type wheel radius Y-offset so tires sit ON the road surface ──
+        // Car: wheel radius 0.32m, Two-Wheeler: 0.30m, Auto: 0.26m, Bus: 0.50m
+        switch (veh.type) {
+          case 'car':        dummy.position.y += 0.32; break;
+          case 'twoWheeler': dummy.position.y += 0.30; break;
+          case 'auto':       dummy.position.y += 0.26; break;
+          case 'bus':        dummy.position.y += 0.50; break;
+        }
+
         // Orient vehicle along spline tangent direction
-        dummy.lookAt(pos.x + tangent.x, pos.y + tangent.y, pos.z + tangent.z);
+        dummy.lookAt(dummy.position.x + tangent.x, dummy.position.y + tangent.y, dummy.position.z + tangent.z);
         dummy.rotateY(Math.PI);
 
         dummy.updateMatrix();

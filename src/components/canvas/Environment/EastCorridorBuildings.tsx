@@ -1,10 +1,54 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import * as THREE from 'three';
+import { BrandFactoryMall } from './BrandFactoryMall';
+import { KalamandirPalace } from './KalamandirPalace';
 
 interface EastCorridorBuildingsProps {
   isNight: boolean;
 }
 
 export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ isNight }) => {
+  // ── High-Resolution Canvas Brand Textures for Outlet Row & Nalli Silks ──
+  const outletTextures = useMemo(() => {
+    const makeTexture = (brand: string, subtitle: string, bg: string, textCol: string) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return new THREE.CanvasTexture(canvas);
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 512, 128);
+
+      ctx.strokeStyle = textCol;
+      ctx.lineWidth = 6;
+      ctx.strokeRect(4, 4, 504, 120);
+
+      ctx.fillStyle = textCol;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Impact", sans-serif';
+      ctx.fillText(brand, 256, 48);
+
+      if (subtitle) {
+        ctx.font = '600 18px sans-serif';
+        ctx.fillText(subtitle, 256, 92);
+      }
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    };
+
+    return {
+      nike: makeTexture('NIKE FACTORY STORE', 'FLAT 40% - 60% OFF', '#ea580c', '#ffffff'),
+      adidas: makeTexture('ADIDAS OUTLET', 'ORIGINALS & PERFORMANCE', '#0f172a', '#ffffff'),
+      puma: makeTexture('PUMA FACTORY OUTLET', 'FOREVER FASTER', '#b91c1c', '#ffffff'),
+      reebok: makeTexture('REEBOK OUTLET', 'FITNESS & FOOTWEAR', '#1e3a8a', '#38bdf8'),
+      nalli: makeTexture('ನಳ್ಳಿ ಸಿಲ್ಕ್ಸ್ NALLI SILK SAREE', 'ESTABLISHED 1928 • PURE HERITAGE SILKS', '#701a75', '#fde047')
+    };
+  }, []);
+
   return (
     <group name="EastSideCorridor_KalamandirToSouth">
       {/* ═════════════════════════════════════════════════════════════════════ */}
@@ -34,223 +78,92 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
         {/* Nike Factory Store Section (z = -28) */}
         <group position={[-14.2, 11, -28]}>
           <mesh>
-            <boxGeometry args={[0.2, 3.2, 18]} />
+            <boxGeometry args={[0.2, 3.4, 18]} />
             <meshStandardMaterial color="#18181b" />
           </mesh>
-          <mesh position={[-0.12, 0, 0]}>
-            <boxGeometry args={[0.05, 1.8, 16]} />
-            <meshStandardMaterial color="#ea580c" emissive="#ea580c" emissiveIntensity={isNight ? 3.5 : 1.2} />
+          <mesh position={[-0.12, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[17.5, 3.1]} />
+            <meshStandardMaterial
+              map={outletTextures.nike}
+              emissive="#ea580c"
+              emissiveIntensity={isNight ? 2.5 : 0.6}
+            />
           </mesh>
         </group>
 
         {/* Adidas Factory Outlet Section (z = -6) */}
         <group position={[-14.2, 11, -6]}>
           <mesh>
-            <boxGeometry args={[0.2, 3.2, 18]} />
+            <boxGeometry args={[0.2, 3.4, 18]} />
             <meshStandardMaterial color="#0f172a" />
           </mesh>
-          <mesh position={[-0.12, 0, 0]}>
-            <boxGeometry args={[0.05, 1.8, 16]} />
-            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={isNight ? 3.5 : 1.2} />
+          <mesh position={[-0.12, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[17.5, 3.1]} />
+            <meshStandardMaterial
+              map={outletTextures.adidas}
+              emissive="#ffffff"
+              emissiveIntensity={isNight ? 2.5 : 0.6}
+            />
           </mesh>
         </group>
 
         {/* Puma Outlet Section (z = +16) */}
         <group position={[-14.2, 11, 16]}>
           <mesh>
-            <boxGeometry args={[0.2, 3.2, 18]} />
+            <boxGeometry args={[0.2, 3.4, 18]} />
             <meshStandardMaterial color="#b91c1c" />
           </mesh>
-          <mesh position={[-0.12, 0, 0]}>
-            <boxGeometry args={[0.05, 1.8, 16]} />
-            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={isNight ? 3.5 : 1.2} />
+          <mesh position={[-0.12, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[17.5, 3.1]} />
+            <meshStandardMaterial
+              map={outletTextures.puma}
+              emissive="#b91c1c"
+              emissiveIntensity={isNight ? 2.5 : 0.6}
+            />
           </mesh>
         </group>
 
         {/* Reebok & FirstCry Outlet Section (z = +36) */}
         <group position={[-14.2, 11, 36]}>
           <mesh>
-            <boxGeometry args={[0.2, 3.2, 16]} />
+            <boxGeometry args={[0.2, 3.4, 16]} />
             <meshStandardMaterial color="#1e3a8a" />
           </mesh>
-          <mesh position={[-0.12, 0, 0]}>
-            <boxGeometry args={[0.05, 1.8, 14]} />
-            <meshStandardMaterial color="#38bdf8" emissive="#0284c7" emissiveIntensity={isNight ? 3.5 : 1.2} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 2. BRAND FACTORY / FASHION FACTORY (Vanshee Towers, Z = 58, X = 48)  */}
-      {/* Real Architecture: 4-story retail department warehouse, navy blue    */}
-      {/* facade with red & yellow branding, giant discount billboard posters  */}
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[48, 0, 58]} name="BrandFactory_VansheeTowers">
-        {/* Main 4-Story Warehouse Retail Block */}
-        <mesh position={[0, 14, 0]} castShadow receiveShadow>
-          <boxGeometry args={[32, 28, 42]} />
-          <meshStandardMaterial color="#1e3a8a" roughness={0.5} metalness={0.4} />
-        </mesh>
-
-        {/* Vibrant Red Brand Accent Panels */}
-        <mesh position={[-16.1, 14, 0]}>
-          <boxGeometry args={[0.1, 26, 38]} />
-          <meshStandardMaterial color="#991b1b" roughness={0.4} />
-        </mesh>
-
-        {/* Large Storefront Glazing on Ground & 1st Floors */}
-        <mesh position={[-16.2, 5, 0]}>
-          <boxGeometry args={[0.1, 9.5, 34]} />
-          <meshStandardMaterial
-            color={isNight ? '#fef08a' : '#ffffff'}
-            emissive={isNight ? '#fde047' : '#000000'}
-            emissiveIntensity={isNight ? 2.2 : 0}
-            roughness={0.1}
-            metalness={0.8}
-          />
-        </mesh>
-
-        {/* ── Giant Signature Signboard: "BRAND FACTORY" ── */}
-        <group position={[-16.3, 23, 0]}>
-          <mesh>
-            <boxGeometry args={[0.2, 4.8, 36]} />
-            <meshStandardMaterial color="#7f1d1d" />
-          </mesh>
-          <mesh position={[-0.15, 0, 0]}>
-            <boxGeometry args={[0.08, 3.4, 34]} />
+          <mesh position={[-0.12, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[15.5, 3.1]} />
             <meshStandardMaterial
-              color="#facc15"
-              emissive="#eab308"
-              emissiveIntensity={isNight ? 4.5 : 1.5}
+              map={outletTextures.reebok}
+              emissive="#38bdf8"
+              emissiveIntensity={isNight ? 2.5 : 0.6}
             />
           </mesh>
-          {isNight && (
-            <pointLight position={[-3, 0, 0]} intensity={22} distance={28} color="#fde047" />
-          )}
-        </group>
-
-        {/* Giant Promotional Discount Billboard Banner ("20% - 70% OFF") */}
-        <mesh position={[-16.25, 14, 0]}>
-          <boxGeometry args={[0.1, 6.5, 24]} />
-          <meshStandardMaterial
-            color="#dc2626"
-            emissive="#991b1b"
-            emissiveIntensity={isNight ? 2.5 : 0.8}
-          />
-        </mesh>
-      </group>
-
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 3. KALAMANDIR PALATIAL WEDDING SILK PALACE (Z = 112, X = 48)         */}
-      {/* Real Architecture: Imposing 4-story South Indian temple-motif facade  */}
-      {/* Mustard-gold & terracotta, ornate arched window bays, roof chhatris,  */}
-      {/* grand entrance portico, glowing "KALAMANDIR" peacock brand sign       */}
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[48, 0, 115]} name="KalamandirPalace_Real">
-        {/* Main 4-Story Palatial Body */}
-        <mesh position={[0, 16, 0]} castShadow receiveShadow>
-          <boxGeometry args={[34, 32, 46]} />
-          <meshStandardMaterial color="#b45309" roughness={0.6} metalness={0.2} />
-        </mesh>
-
-        {/* Mustard-Gold Plaster Decorative Facade Layer */}
-        <mesh position={[-17.1, 16, 0]}>
-          <boxGeometry args={[0.2, 31, 44]} />
-          <meshStandardMaterial color="#d97706" roughness={0.5} />
-        </mesh>
-
-        {/* Classical Terracotta Red Accent Pilasters */}
-        {[-20, -10, 0, 10, 20].map((zPos, idx) => (
-          <mesh key={idx} position={[-17.3, 16, zPos]} castShadow>
-            <boxGeometry args={[0.3, 31.5, 1.2]} />
-            <meshStandardMaterial color="#7f1d1d" roughness={0.6} />
-          </mesh>
-        ))}
-
-        {/* Classical Arched Display Window Bays */}
-        {[-15, -5, 5, 15].map((zPos, idx) => (
-          <group key={idx} position={[-17.35, 14, zPos]}>
-            <mesh>
-              <boxGeometry args={[0.1, 14, 6.5]} />
-              <meshStandardMaterial
-                color={isNight ? '#fef08a' : '#ffffff'}
-                emissive={isNight ? '#ca8a04' : '#000000'}
-                emissiveIntensity={isNight ? 2.5 : 0}
-                roughness={0.1}
-                metalness={0.8}
-              />
-            </mesh>
-            {/* Arched Gold Header Molding */}
-            <mesh position={[0, 7.5, 0]}>
-              <boxGeometry args={[0.25, 1.0, 7.2]} />
-              <meshStandardMaterial color="#fde047" metalness={0.8} roughness={0.2} />
-            </mesh>
-          </group>
-        ))}
-
-        {/* Roof Terrace Parapet with Traditional Temple Chhatri / Jharokha Balustrades */}
-        <group position={[-17.3, 32.5, 0]}>
-          {/* Balustrade ledge */}
-          <mesh>
-            <boxGeometry args={[0.6, 1.2, 45]} />
-            <meshStandardMaterial color="#7f1d1d" />
-          </mesh>
-          {/* Ornamental decorative finials / mini chhatris */}
-          {[-20, -10, 0, 10, 20].map((zPos, idx) => (
-            <mesh key={idx} position={[0, 1.2, zPos]}>
-              <coneGeometry args={[0.6, 1.4, 8]} />
-              <meshStandardMaterial color="#facc15" metalness={0.8} roughness={0.3} />
-            </mesh>
-          ))}
-        </group>
-
-        {/* Grand Golden Entrance Portico with Classical Pillars */}
-        <group position={[-20.5, 0, 0]}>
-          {/* Portico Roof Canopy */}
-          <mesh position={[0, 7.2, 0]} castShadow>
-            <boxGeometry args={[6.5, 0.8, 22]} />
-            <meshStandardMaterial color="#b45309" metalness={0.6} roughness={0.4} />
-          </mesh>
-          {/* Portico Classical Gold Pillars */}
-          {[-9, -3, 3, 9].map((zPos, idx) => (
-            <mesh key={idx} position={[-2.8, 3.4, zPos]} castShadow>
-              <cylinderGeometry args={[0.35, 0.45, 6.8, 12]} />
-              <meshStandardMaterial color="#facc15" metalness={0.7} roughness={0.3} />
-            </mesh>
-          ))}
-        </group>
-
-        {/* ── GIANT ILLUMINATED NEON SIGNBOARD: "KALAMANDIR" ── */}
-        <group position={[-17.6, 26, 0]}>
-          {/* Signboard Backing Plate in Royal Maroon */}
-          <mesh>
-            <boxGeometry args={[0.2, 5.2, 34]} />
-            <meshStandardMaterial color="#450a0a" roughness={0.4} />
-          </mesh>
-          {/* Glowing Golden "KALAMANDIR" Letters */}
-          <mesh position={[-0.15, 0, 0]}>
-            <boxGeometry args={[0.08, 3.6, 32]} />
-            <meshStandardMaterial
-              color="#fef08a"
-              emissive="#facc15"
-              emissiveIntensity={isNight ? 5.0 : 1.8}
-            />
-          </mesh>
-          {/* Peacock Emblem Disc */}
-          <mesh position={[-0.25, 3.2, 0]}>
-            <cylinderGeometry args={[1.6, 1.6, 0.1, 16]} />
-            <meshStandardMaterial color="#ca8a04" emissive="#eab308" emissiveIntensity={isNight ? 3 : 1} />
-          </mesh>
-          {isNight && (
-            <pointLight position={[-3.5, 0, 0]} intensity={32} distance={40} color="#fde047" />
-          )}
         </group>
       </group>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 4. NALLI SILKS & AMBARA COMMERCIAL SHOWROOM (Z = 158, X = 48)         */}
+      {/* 2. BRAND FACTORY / KLM FASHION MALL (Vanshee Towers, Z = 58, X = 48)  */}
+      {/* Hyper-Realistic 4-Storey Retail Mall with Fashion Displays & Signage  */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[48, 0, 160]} name="NalliSilksShowroom">
+      <BrandFactoryMall
+        isNight={isNight}
+        position={[48, 0, 58]}
+        rotationY={-Math.PI / 2}
+      />
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* 3. KALAMANDIR PALATIAL WEDDING SILK PALACE (Real OSM: Z = 332.5, X = 46)*/}
+      {/* Palatial South Indian Temple Facade with Ruby Silk Showrooms & Gold  */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      <KalamandirPalace
+        isNight={isNight}
+        position={[46, 0, 332.5]}
+        rotationY={-Math.PI / 2 - 0.2}
+      />
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* 4. NALLI SILKS & HERITAGE SHOWROOM (Real OSM: Z = 354, X = 49)        */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      <group position={[49, 0, 354]} name="NalliSilksShowroom">
         <mesh position={[0, 10, 0]} castShadow receiveShadow>
           <boxGeometry args={[28, 20, 32]} />
           <meshStandardMaterial color="#1e293b" roughness={0.6} />
@@ -259,36 +172,27 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
           <boxGeometry args={[0.1, 10, 26]} />
           <meshStandardMaterial
             color={isNight ? '#fef08a' : '#ffffff'}
-            emissive={isNight ? '#eab308' : '#000000'}
+            emissive={isNight ? '#ca8a04' : '#000000'}
             emissiveIntensity={isNight ? 1.8 : 0}
             roughness={0.1}
+            metalness={0.7}
           />
         </mesh>
-        {/* Nalli Saree Signboard in Deep Crimson Red */}
-        <mesh position={[-14.2, 16, 0]}>
-          <boxGeometry args={[0.15, 2.2, 22]} />
-          <meshStandardMaterial color="#881337" emissive="#be123c" emissiveIntensity={isNight ? 3.2 : 1.0} />
-        </mesh>
-      </group>
-
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 5. COMMERCIAL IT TECH PARK TOWERS (Setback East, X = 95)              */}
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[95, 0, 110]} name="EastCommercialTechTowers">
-        <mesh position={[0, 30, 0]} castShadow receiveShadow>
-          <boxGeometry args={[42, 60, 48]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.8} />
-        </mesh>
-        <mesh position={[-21.1, 30, 0]}>
-          <boxGeometry args={[0.1, 56, 44]} />
-          <meshStandardMaterial
-            color={isNight ? '#93c5fd' : '#38bdf8'}
-            emissive={isNight ? '#1d4ed8' : '#000000'}
-            emissiveIntensity={isNight ? 1.6 : 0}
-            roughness={0.1}
-            metalness={0.9}
-          />
-        </mesh>
+        {/* Nalli Saree Front Signboard */}
+        <group position={[-14.2, 16, 0]}>
+          <mesh>
+            <boxGeometry args={[0.2, 4.0, 24]} />
+            <meshStandardMaterial color="#4a044e" />
+          </mesh>
+          <mesh position={[-0.12, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[23.5, 3.7]} />
+            <meshStandardMaterial
+              map={outletTextures.nalli}
+              emissive="#fde047"
+              emissiveIntensity={isNight ? 3.0 : 0.8}
+            />
+          </mesh>
+        </group>
       </group>
     </group>
   );

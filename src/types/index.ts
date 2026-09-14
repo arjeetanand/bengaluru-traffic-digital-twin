@@ -34,6 +34,7 @@ export type CameraPreset =
   | 'ground'
   | 'multiplex'
   | 'kalamandir'
+  | 'brandfactory'
   | 'spicegarden'
   | 'crossover';
 

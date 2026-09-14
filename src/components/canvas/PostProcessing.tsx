@@ -1,5 +1,5 @@
 import React from 'react';
-import { EffectComposer, Bloom, Vignette, ToneMapping, N8AO } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, Vignette, ToneMapping, N8AO, ChromaticAberration } from '@react-three/postprocessing';
 import {
   BLOOM_INTENSITY_DAY,
   BLOOM_INTENSITY_NIGHT,
@@ -36,6 +36,12 @@ const SafeVignette = Vignette as unknown as (props: {
 
 const SafeToneMapping = ToneMapping as unknown as (props: Record<string, unknown>) => JSX.Element;
 
+const SafeChromaticAberration = ChromaticAberration as unknown as (props: {
+  offset?: [number, number];
+  radialModulation?: boolean;
+  modulationOffset?: number;
+}) => JSX.Element;
+
 const SafeEffectComposer = EffectComposer as unknown as React.FC<{
   disableNormalPass?: boolean;
   multisampling?: number;
@@ -51,12 +57,13 @@ export const PostProcessingPipeline: React.FC<PostProcessingPipelineProps> = ({
 
   return (
     <SafeEffectComposer disableNormalPass multisampling={0}>
-      {/* Ambient Occlusion: soft contact shadows under flyovers, vehicles, and buildings */}
+      {/* Ambient Occlusion: soft contact shadows under flyovers, vehicles, and buildings
+          aoRadius tuned for scene scale (0–300 world units): 4.5m gives realistic contact shadow */}
       <SafeN8AO
-        aoRadius={3.5}
-        intensity={1.4}
-        color="#080c10"
-        distanceFalloff={0.6}
+        aoRadius={4.5}
+        intensity={1.2}
+        color="#060a0e"
+        distanceFalloff={1.0}
         quality="medium"
       />
 
@@ -73,6 +80,13 @@ export const PostProcessingPipeline: React.FC<PostProcessingPipelineProps> = ({
         eskil={false}
         offset={0.15}
         darkness={vignetteDarkness}
+      />
+
+      {/* Subtle Chromatic Aberration: realistic camera lens fringe at 1:1 pixel scale */}
+      <SafeChromaticAberration
+        offset={[0.00018, 0.00018]}
+        radialModulation
+        modulationOffset={0.65}
       />
 
       {/* Filmic Tone Mapping */}

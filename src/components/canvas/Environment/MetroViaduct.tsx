@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface MetroViaductProps {
@@ -6,9 +7,10 @@ interface MetroViaductProps {
 }
 
 export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
-  const metroHeight = 15.5; // elevated cleanly above underpass (-5.2m), surface (0m), and skywalk (7.2m)
+  const metroHeight = 15.5; // elevated cleanly above underpass (-7.5m), surface (0m), and skywalk (7.2m)
   const metroLength = 430;  // spans Z = -225 to +205 (Multiplex to Kalamandir)
-  const metroWidth = 9.8;
+  const metroWidth = 6.8;   // corrected: real BMRCL U-girder width (was 9.8m — too wide)
+  const metroTrainRef = useRef<THREE.Group>(null);
 
   // Metro pier coordinates along the median (Z-axis, every 45m)
   const pierZCoords = useMemo(
@@ -32,6 +34,16 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     });
   }, []);
 
+  // Animate 6-Coach Namma Metro Train smoothly gliding on Track 1 (Northbound)
+  // Speed: 16 units/sec ≈ 58 km/h (realistic viaduct approach speed)
+  useFrame((_, delta) => {
+    if (!metroTrainRef.current) return;
+    metroTrainRef.current.position.z += 16 * delta;
+    if (metroTrainRef.current.position.z > 210) {
+      metroTrainRef.current.position.z = -210;
+    }
+  });
+
   return (
     <group name="NammaMetroBlueLineViaduct">
       {/* ── Tall Concrete Cylindrical Metro Piers with Hammerhead Caps & BMRCL Barricades ── */}
@@ -53,7 +65,6 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
           </mesh>
 
           {/* ── BMRCL Ground-Level Construction Barricades enclosing Pier Foundation ── */}
-          {/* Only render on surface level (avoid deep sunken underpass center at |z| < 35) */}
           {Math.abs(zCoord) > 35 && (
             <group position={[0, 0, 0]}>
               {/* North & South Barricades */}
@@ -84,6 +95,12 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
                 <meshStandardMaterial color="#ffffff" />
               </mesh>
 
+              {/* Steel Rebar Cage on Construction Site */}
+              <mesh position={[1.2, 1.2, 1.2]}>
+                <cylinderGeometry args={[0.6, 0.6, 2.4, 8]} />
+                <meshStandardMaterial color="#64748b" wireframe />
+              </mesh>
+
               {/* Warning hazard blinkers on barricade corners */}
               {[-3.0, 3.0].map((xP, i) => (
                 <group key={i} position={[xP, 1.9, 3.1]}>
@@ -92,7 +109,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
                     <meshStandardMaterial
                       color="#f59e0b"
                       emissive="#eab308"
-                      emissiveIntensity={isNight ? 3.0 : 0.8}
+                      emissiveIntensity={isNight ? 3.5 : 0.8}
                     />
                   </mesh>
                 </group>
@@ -143,6 +160,11 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
           <cylinderGeometry args={[0.06, 0.06, metroLength, 6]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.95} roughness={0.1} />
         </mesh>
+        {/* Third Rail (DC 750V with yellow cover) */}
+        <mesh position={[-3.1, 0.5, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.05, 0.05, metroLength, 4]} />
+          <meshStandardMaterial color="#eab308" roughness={0.4} />
+        </mesh>
 
         {/* Track 2 Rails (Southbound to Silk Board) */}
         <mesh position={[1.0, 0.4, 0]} rotation={[Math.PI / 2, 0, 0]}>
@@ -153,51 +175,74 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
           <cylinderGeometry args={[0.06, 0.06, metroLength, 6]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.95} roughness={0.1} />
         </mesh>
+        {/* Third Rail Track 2 */}
+        <mesh position={[3.1, 0.5, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.05, 0.05, metroLength, 4]} />
+          <meshStandardMaterial color="#eab308" roughness={0.4} />
+        </mesh>
+
+        {/* ── Animated 6-Coach Namma Metro Train Gliding on Track 1 ── */}
+        <group ref={metroTrainRef} position={[-1.7, 0.7, -120]}>
+          {/* Train Head Car Cab */}
+          <MetroTrainCar position={[0, 1.4, 30]} isHead isNight={isNight} />
+          {/* Middle Coaches */}
+          <MetroTrainCar position={[0, 1.4, 15]} isNight={isNight} />
+          <MetroTrainCar position={[0, 1.4, 0]} isNight={isNight} />
+          <MetroTrainCar position={[0, 1.4, -15]} isNight={isNight} />
+          <MetroTrainCar position={[0, 1.4, -30]} isNight={isNight} />
+          {/* Rear Car */}
+          <MetroTrainCar position={[0, 1.4, -45]} isTail isNight={isNight} />
+        </group>
 
         {/* ── Elevated Marathahalli Metro Station (Near Kalamandir at z = 95) ── */}
         <group position={[0, 0, 95]}>
           {/* Platform Deck Expansion */}
           <mesh position={[0, 0.2, 0]} receiveShadow material={concreteMat}>
-            <boxGeometry args={[18, 0.8, 56]} />
+            <boxGeometry args={[18, 0.8, 58]} />
           </mesh>
 
           {/* Station Arched Canopy Roof (Blue Steel Space Frame) */}
           <mesh position={[0, 6.4, 0]}>
-            <cylinderGeometry args={[9.5, 9.5, 56, 16, 1, false, 0, Math.PI]} />
+            <cylinderGeometry args={[9.8, 9.8, 58, 16, 1, false, 0, Math.PI]} />
             <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.3} side={THREE.DoubleSide} />
           </mesh>
 
           {/* Lower Concourse Level (y = -5.0m below track deck = 10.5m above ground) */}
           <mesh position={[0, -4.8, 0]} receiveShadow material={concreteMat}>
-            <boxGeometry args={[15, 0.6, 44]} />
+            <boxGeometry args={[16, 0.6, 46]} />
           </mesh>
 
           {/* Station Signage Boards */}
-          <mesh position={[0, 3.8, -28.2]}>
+          <mesh position={[0, 3.8, -29.2]}>
             <boxGeometry args={[14, 1.4, 0.2]} />
-            <meshStandardMaterial color="#0284c7" emissive="#0369a1" emissiveIntensity={0.5} />
+            <meshStandardMaterial color="#0284c7" emissive="#0369a1" emissiveIntensity={0.6} />
           </mesh>
-          <mesh position={[0, 3.8, 28.2]}>
+          <mesh position={[0, 3.8, 29.2]}>
             <boxGeometry args={[14, 1.4, 0.2]} />
-            <meshStandardMaterial color="#0284c7" emissive="#0369a1" emissiveIntensity={0.5} />
+            <meshStandardMaterial color="#0284c7" emissive="#0369a1" emissiveIntensity={0.6} />
           </mesh>
 
-          {/* Pedestrian Access Stair Portal Framework (Descending towards East Footpath) */}
+          {/* East Pedestrian Access Stair Portal (Descending towards Kalamandir Footpath) */}
           <group position={[11, -7.5, 0]}>
-            {/* Diagonal Stair Flight */}
             <mesh rotation={[0, 0, -Math.PI / 5]} position={[0, 0, 0]}>
               <boxGeometry args={[8.5, 0.4, 2.6]} />
               <meshStandardMaterial color="#334155" />
             </mesh>
-            {/* Stair Enclosure Cage */}
             <mesh position={[0, 1.2, 0]}>
               <boxGeometry args={[8.5, 2.2, 2.8]} />
-              <meshStandardMaterial
-                color="#0284c7"
-                transparent
-                opacity={0.35}
-                roughness={0.2}
-              />
+              <meshStandardMaterial color="#0284c7" transparent opacity={0.35} roughness={0.2} />
+            </mesh>
+          </group>
+
+          {/* West Pedestrian Access Stair Portal (Descending towards Krishna Summit Footpath) */}
+          <group position={[-11, -7.5, 0]}>
+            <mesh rotation={[0, 0, Math.PI / 5]} position={[0, 0, 0]}>
+              <boxGeometry args={[8.5, 0.4, 2.6]} />
+              <meshStandardMaterial color="#334155" />
+            </mesh>
+            <mesh position={[0, 1.2, 0]}>
+              <boxGeometry args={[8.5, 2.2, 2.8]} />
+              <meshStandardMaterial color="#0284c7" transparent opacity={0.35} roughness={0.2} />
             </mesh>
           </group>
         </group>
@@ -216,6 +261,83 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
           </group>
         ))}
       </group>
+    </group>
+  );
+};
+
+// Subcomponent: Namma Metro Stainless Steel Train Car
+const MetroTrainCar: React.FC<{
+  position: [number, number, number];
+  isHead?: boolean;
+  isTail?: boolean;
+  isNight: boolean;
+}> = ({ position, isHead = false, isTail = false, isNight }) => {
+  return (
+    <group position={position}>
+      {/* Stainless Steel Car Body */}
+      <mesh castShadow>
+        <boxGeometry args={[2.7, 2.6, 14]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* Signature Namma Metro Blue / Purple Livery Cheatline */}
+      <mesh position={[-1.37, 0, 0]}>
+        <boxGeometry args={[0.02, 0.4, 13.8]} />
+        <meshStandardMaterial color="#0284c7" roughness={0.3} />
+      </mesh>
+      <mesh position={[1.37, 0, 0]}>
+        <boxGeometry args={[0.02, 0.4, 13.8]} />
+        <meshStandardMaterial color="#0284c7" roughness={0.3} />
+      </mesh>
+
+      {/* Tinted Window Ribbon */}
+      <mesh position={[-1.37, 0.4, 0]}>
+        <boxGeometry args={[0.02, 0.7, 13.0]} />
+        <meshStandardMaterial
+          color={isNight ? '#93c5fd' : '#1e293b'}
+          emissive={isNight ? '#3b82f6' : '#000000'}
+          emissiveIntensity={isNight ? 1.8 : 0}
+        />
+      </mesh>
+      <mesh position={[1.37, 0.4, 0]}>
+        <boxGeometry args={[0.02, 0.7, 13.0]} />
+        <meshStandardMaterial
+          color={isNight ? '#93c5fd' : '#1e293b'}
+          emissive={isNight ? '#3b82f6' : '#000000'}
+          emissiveIntensity={isNight ? 1.8 : 0}
+        />
+      </mesh>
+
+      {/* Headlights on Leading Cab */}
+      {isHead && (
+        <group position={[0, 0, 7.1]}>
+          <mesh position={[-0.7, 0.3, 0]}>
+            <sphereGeometry args={[0.18, 8, 8]} />
+            <meshStandardMaterial color="#ffffff" emissive="#fffae0" emissiveIntensity={isNight ? 5 : 2} />
+          </mesh>
+          <mesh position={[0.7, 0.3, 0]}>
+            <sphereGeometry args={[0.18, 8, 8]} />
+            <meshStandardMaterial color="#ffffff" emissive="#fffae0" emissiveIntensity={isNight ? 5 : 2} />
+          </mesh>
+          {isNight && (
+            <pointLight position={[0, 0.3, 2]} intensity={25} distance={35} color="#fffbe6" />
+          )}
+        </group>
+      )}
+
+      {/* Red Taillights on Trailing Cab */}
+      {isTail && (
+        <group position={[0, 0, -7.1]}>
+          <mesh position={[-0.7, 0.3, 0]}>
+            <sphereGeometry args={[0.15, 8, 8]} />
+            <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={isNight ? 4 : 1.5} />
+          </mesh>
+          <mesh position={[0.7, 0.3, 0]}>
+            <sphereGeometry args={[0.15, 8, 8]} />
+            <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={isNight ? 4 : 1.5} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 };

@@ -1,4 +1,9 @@
 import React, { useMemo } from 'react';
+import {
+  ORR_CENTERLINE_PTS,
+  createRoadRibbonGeometry,
+  createCurveLineGeometry
+} from '../../../data/RealRoadData';
 
 interface UnderpassTrenchProps {
   isRaining: boolean;
@@ -7,15 +12,12 @@ interface UnderpassTrenchProps {
 
 export const UnderpassTrench: React.FC<UnderpassTrenchProps> = ({ isRaining, isNight }) => {
   // Physical parameters of Marathahalli 6-Lane Sunken Expressway
-  const underpassWidth = 17.2;   // 17.2m wide roadway (3 lanes NB + 3 lanes SB + center barrier)
-  const underpassDepth = 5.2;    // 5.2m deep below surface grade
-  const trenchHalfW = underpassWidth / 2; // 8.6m
-  const rampLength = 90;         // smooth descent/ascent ramps (z: 35 to 125, -35 to -125)
-  const flatTrenchLength = 70;   // central flat trench (-35 to +35)
-  const tunnelLength = 36;       // covered box tunnel under surface crossroads (-18 to +18)
-
-  const rampAngle = Math.atan2(underpassDepth, rampLength);
-  const rampHypot = Math.hypot(underpassDepth, rampLength);
+  const underpassWidth = 22.0;   // 22m wide roadway (3×3.5m lanes NB + barrier + 3×3.5m lanes SB)
+  const underpassDepth = 6.2;    // sunken trench depth below surface grade
+  const trenchHalfW = underpassWidth / 2; // 11.0m
+  const flatTrenchLength = 70;   // 70m flat section under crossroads (-35 to +35)
+  const rampLength = 115;        // 115m entry/exit ramps (35 to 150)
+  const tunnelLength = 36;       // 36m covered box tunnel (-18 to +18)
 
   const underpassAsphaltProps = useMemo(() => {
     return {
@@ -33,35 +35,47 @@ export const UnderpassTrench: React.FC<UnderpassTrenchProps> = ({ isRaining, isN
     };
   }, [isRaining]);
 
+  // Elevation along the curved Outer Ring Road:
+  // Flat at -6.2m under the crossroads (|z| < 35), ramping smoothly to 0 at |z| = 150
+  const underpassElevation = (_t: number, _x: number, z: number) => {
+    const absZ = Math.abs(z);
+    if (absZ <= 35) return -underpassDepth;
+    if (absZ >= 150) return 0.05;
+    const progress = (absZ - 35) / (150 - 35);
+    return -underpassDepth * (1 - progress) + 0.05 * progress;
+  };
+
+  const underpassRoadGeom = useMemo(() => {
+    return createRoadRibbonGeometry(
+      ORR_CENTERLINE_PTS,
+      underpassWidth,
+      underpassElevation,
+      140
+    );
+  }, []);
+
+  const underpassBarrierGeom = useMemo(() => {
+    return createCurveLineGeometry(
+      ORR_CENTERLINE_PTS,
+      0,
+      (t, x, z) => underpassElevation(t, x, z) + 0.45,
+      0.65,
+      140
+    );
+  }, []);
+
   return (
     <group name="MarathahalliUnderpass_RealEngineered">
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 1. SUNKEN ASPHALT ROADBED (Flat Trench + South & North Ramps)        */}
+      {/* 1. CURVED SUNKEN ASPHALT ROADBED FOLLOWING REAL ORR TRAJECTORY       */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* Flat Central Roadbed (-35 to +35 at y = -5.2m) */}
-      <mesh position={[0, -underpassDepth + 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[underpassWidth, flatTrenchLength]} />
+      <mesh geometry={underpassRoadGeom} receiveShadow>
         <meshStandardMaterial {...underpassAsphaltProps} />
       </mesh>
 
-      {/* South Descent Ramp (from z = -125 at y = 0 down to z = -35 at y = -5.2m) */}
-      <mesh
-        position={[0, -underpassDepth / 2, -35 - rampLength / 2]}
-        rotation={[-Math.PI / 2 + rampAngle, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[underpassWidth, rampHypot]} />
-        <meshStandardMaterial {...underpassAsphaltProps} />
-      </mesh>
-
-      {/* North Ascent Ramp (from z = 35 at y = -5.2m up to z = 125 at y = 0) */}
-      <mesh
-        position={[0, -underpassDepth / 2, 35 + rampLength / 2]}
-        rotation={[-Math.PI / 2 - rampAngle, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[underpassWidth, rampHypot]} />
-        <meshStandardMaterial {...underpassAsphaltProps} />
+      {/* Central Jersey Crash Divider following the curve */}
+      <mesh geometry={underpassBarrierGeom} castShadow receiveShadow>
+        <meshStandardMaterial color="#94a3b8" roughness={0.7} />
       </mesh>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
@@ -104,7 +118,7 @@ export const UnderpassTrench: React.FC<UnderpassTrenchProps> = ({ isRaining, isN
       </mesh>
 
       {/* Underpass Lane Dashed Dividers (3 Lanes Northbound + 3 Lanes Southbound) */}
-      {[-5.4, -2.7, 2.7, 5.4].map((xOffset, i) => (
+      {[-6.75, -3.3, 3.3, 6.75].map((xOffset, i) => (
         <mesh key={`up-lane-${i}`} position={[xOffset, -underpassDepth + 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.2, flatTrenchLength + 45]} />
           <meshBasicMaterial color="#ffffff" />
@@ -164,7 +178,7 @@ export const UnderpassTrench: React.FC<UnderpassTrenchProps> = ({ isRaining, isN
       </mesh>
 
       {/* Ceiling-Mounted Industrial LED Lighting Strips */}
-      {[-4.2, 4.2].map((xOffset, idx) => (
+      {[-5.5, 5.5].map((xOffset, idx) => (
         <group key={`tunnel-strip-${idx}`} position={[xOffset, -0.74, 0]}>
           {[-12, -4, 4, 12].map((zOffset, zIdx) => (
             <group key={zIdx} position={[0, 0, zOffset]}>
@@ -186,6 +200,11 @@ export const UnderpassTrench: React.FC<UnderpassTrenchProps> = ({ isRaining, isN
           ))}
         </group>
       ))}
+
+      {/* Night Sodium Vapor Ambient Glow (Orange underpass atmosphere) */}
+      {isNight && (
+        <pointLight position={[0, -underpassDepth + 2.5, 0]} intensity={35} distance={50} color="#ff8c00" />
+      )}
     </group>
   );
 };

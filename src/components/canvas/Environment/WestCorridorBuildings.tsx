@@ -248,10 +248,9 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
       </group>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 4. SOUTH-WEST CROSSROADS JEWELLERY HUB (Z = -28, X = -46)             */}
-      {/* Real Brands: Tanishq, PMJ Jewels, Max, Forever 21, Reebok             */}
+      {/* 4. TANISHQ & HAL AIRPORT ROAD JEWELLERY (Real OSM: X = -70.2, Z = -7.0) */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[-46, 0, -28]} name="SouthWestCorner_TanishqAndJewels">
+      <group position={[-70.2, 0, -7.0]} name="SouthWestCorner_TanishqAndJewels">
         <mesh position={[0, 9, 0]} castShadow receiveShadow>
           <boxGeometry args={[26, 18, 30]} />
           <meshStandardMaterial color="#1e293b" roughness={0.6} />
@@ -279,11 +278,11 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
       </group>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 5. KRISHNA SUMMIT TECH CENTER & BANQUET HALL (Z = +55, X = -46)       */}
+      {/* 5. KRISHNA SUMMIT TECH CENTER & BANQUET (Real OSM: Z = 109.4, X = -37.5)*/}
       {/* Real Architecture: Sleek blue-gray reflective curtain glass wall,     */}
       {/* angled steel entrance canopy, manicured date palms, valet portico     */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[-46, 0, 55]} name="KrishnaSummit_Real">
+      <group position={[-37.5, 0, 109.4]} name="KrishnaSummit_Real">
         {/* Main 7-Story Modern Corporate Tech Block */}
         <mesh position={[0, 18, 0]} castShadow receiveShadow>
           <boxGeometry args={[30, 36, 38]} />
@@ -364,11 +363,11 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
       </group>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 6. THE KRISHNA GRAND HOTEL & PURE VEG RESTAURANT (Z = +95, X = -46)   */}
+      {/* 6. THE KRISHNA GRAND HOTEL (Real OSM: Z = 136.8, X = -34.7)          */}
       {/* Real Architecture: 4-story cream/brown hotel, ground floor restaurant */}
       {/* with bright orange/green illuminated sign, balconies                 */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[-46, 0, 98]} name="KrishnaGrandHotel_Real">
+      <group position={[-34.7, 0, 136.8]} name="KrishnaGrandHotel_Real">
         {/* 4-Story Hotel Block */}
         <mesh position={[0, 11, 0]} castShadow receiveShadow>
           <boxGeometry args={[28, 22, 34]} />

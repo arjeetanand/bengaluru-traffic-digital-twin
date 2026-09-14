@@ -11,7 +11,8 @@ import {
   Radio,
   Sliders,
   Footprints,
-  Building2
+  Building2,
+  MapPin
 } from 'lucide-react';
 import { SimulationMode } from '../../types';
 
@@ -21,6 +22,8 @@ interface ControlsBarProps {
   isDemo: boolean;
   onToggleDemo: () => void;
   onOpenJunctionDetail: () => void;
+  isStoreDrawerOpen?: boolean;
+  onToggleStoreDrawer?: () => void;
 }
 
 export const ControlsBar: React.FC<ControlsBarProps> = ({
@@ -28,10 +31,26 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
   onUpdateMode,
   isDemo,
   onToggleDemo,
-  onOpenJunctionDetail
+  onOpenJunctionDetail,
+  isStoreDrawerOpen,
+  onToggleStoreDrawer
 }) => {
   return (
     <div className="controls-bar-container">
+      {/* ── Google Maps Prominent Stores Explorer Toggle ── */}
+      <button
+        className={`control-btn ${isStoreDrawerOpen ? 'active' : ''}`}
+        onClick={onToggleStoreDrawer}
+        title="Explore prominent stores from Google Maps with real latitude & longitude (Kalamandir, Multiplex, Tanishq, Vijay Sales...)"
+        style={{
+          borderColor: isStoreDrawerOpen ? '#38bdf8' : undefined,
+          color: isStoreDrawerOpen ? '#38bdf8' : undefined
+        }}
+      >
+        <MapPin size={15} color={isStoreDrawerOpen ? '#38bdf8' : '#ea4335'} />
+        <span>MAP STORES</span>
+      </button>
+
       {/* ── Footpath Walkability Audit Toggle ── */}
       <button
         className={`control-btn ${mode.footpathAuditMode ? 'audit-active' : ''}`}
@@ -101,14 +120,14 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
 
       {/* ── Camera View Angle Presets (Corridors & Landmarks) ── */}
       <div className="btn-group">
-        {(['overview', 'crossover', 'multiplex', 'kalamandir', 'spicegarden', 'underpass'] as const).map((preset) => (
+        {(['overview', 'crossover', 'brandfactory', 'kalamandir', 'multiplex', 'spicegarden', 'underpass'] as const).map((preset) => (
           <button
             key={preset}
             className={`group-item ${mode.cameraPreset === preset ? 'active' : ''}`}
             onClick={() => onUpdateMode({ cameraPreset: preset })}
             title={`Switch to ${preset} view`}
           >
-            {preset === 'spicegarden' ? 'SPICE GARDEN' : preset.toUpperCase()}
+            {preset === 'spicegarden' ? 'SPICE GARDEN' : preset === 'brandfactory' ? 'BRAND FACTORY' : preset.toUpperCase()}
           </button>
         ))}
       </div>

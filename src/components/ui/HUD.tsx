@@ -18,6 +18,8 @@ import { ControlsBar } from './ControlsBar';
 import { ApiUsageBadge } from './ApiUsageBadge';
 import { FallbackBanner } from './FallbackBanner';
 import { NavigationWidget } from './NavigationWidget';
+import { GoogleMapsStoreDrawer } from './GoogleMapsStoreDrawer';
+import { GoogleMapsStore } from '../../data/GoogleMapsStoreRegistry';
 
 interface HUDProps {
   flowData: TrafficFlowData;
@@ -26,6 +28,10 @@ interface HUDProps {
   usage: ApiUsageStats;
   signalStatus: SignalStatus;
   notice?: string;
+  isStoreDrawerOpen: boolean;
+  selectedStoreId?: string;
+  onToggleStoreDrawer: () => void;
+  onSelectStore: (store: GoogleMapsStore) => void;
   onUpdateMode: (updates: Partial<SimulationMode>) => void;
   onToggleDemo: () => void;
   onResetUsage: () => void;
@@ -40,6 +46,10 @@ export const HUD: React.FC<HUDProps> = ({
   usage,
   signalStatus,
   notice,
+  isStoreDrawerOpen,
+  selectedStoreId,
+  onToggleStoreDrawer,
+  onSelectStore,
   onUpdateMode,
   onToggleDemo,
   onResetUsage,
@@ -55,7 +65,7 @@ export const HUD: React.FC<HUDProps> = ({
       : 'health-red';
 
   return (
-    <div className="hud-overlay" pointer-events="none">
+    <div className="hud-overlay" style={{ pointerEvents: 'none' }}>
       {/* ── Top Header Navigation Bar ── */}
       <header className="hud-top-bar">
         <div className="hud-brand">
@@ -231,8 +241,18 @@ export const HUD: React.FC<HUDProps> = ({
           isDemo={flowData.isDemo}
           onToggleDemo={onToggleDemo}
           onOpenJunctionDetail={onOpenJunctionDetail}
+          isStoreDrawerOpen={isStoreDrawerOpen}
+          onToggleStoreDrawer={onToggleStoreDrawer}
         />
       </footer>
+
+      {/* ── Sliding Google Maps Prominent Stores Explorer Drawer ── */}
+      <GoogleMapsStoreDrawer
+        isOpen={isStoreDrawerOpen}
+        onClose={onToggleStoreDrawer}
+        selectedStoreId={selectedStoreId}
+        onSelectStore={onSelectStore}
+      />
     </div>
   );
 };

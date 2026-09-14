@@ -19,8 +19,12 @@ import { FlyoverBridge } from './Environment/FlyoverBridge';
 import { RailwayTracks } from './Environment/RailwayTracks';
 import { MetroViaduct } from './Environment/MetroViaduct';
 import { Skywalk } from './Environment/Skywalk';
+import { WestCorridorBuildings } from './Environment/WestCorridorBuildings';
+import { EastCorridorBuildings } from './Environment/EastCorridorBuildings';
 import { Buildings } from './Environment/Buildings';
 import { Google3DTiles } from './Environment/Google3DTiles';
+import { GoogleMaps3DMarkers } from './Environment/GoogleMaps3DMarkers';
+import { GoogleMapsStore } from '../../data/GoogleMapsStoreRegistry';
 import { StreetFurniture } from './Environment/StreetFurniture';
 import { Greenery } from './Environment/Greenery';
 import { RainParticles } from './Environment/RainParticles';
@@ -38,6 +42,8 @@ interface SceneProps {
   signalStatus: SignalStatus;
   congestionRatio: number;
   vehicleCount: number;
+  selectedStoreId?: string;
+  onSelectStore?: (store: GoogleMapsStore) => void;
   onInspectJunction: () => void;
 }
 
@@ -53,6 +59,8 @@ export const Scene: React.FC<SceneProps> = ({
   signalStatus,
   congestionRatio,
   vehicleCount,
+  selectedStoreId,
+  onSelectStore,
   onInspectJunction
 }) => {
   // Lighting & Atmospheric parameters
@@ -100,14 +108,14 @@ export const Scene: React.FC<SceneProps> = ({
           intensity={sunIntensity}
           color={sunColor}
           castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
+          shadow-mapSize-width={4096}
+          shadow-mapSize-height={4096}
           shadow-camera-near={10}
           shadow-camera-far={350}
-          shadow-camera-left={-120}
-          shadow-camera-right={120}
-          shadow-camera-top={120}
-          shadow-camera-bottom={-120}
+          shadow-camera-left={-160}
+          shadow-camera-right={160}
+          shadow-camera-top={160}
+          shadow-camera-bottom={-160}
           shadow-bias={-0.0003}
         />
 
@@ -120,7 +128,12 @@ export const Scene: React.FC<SceneProps> = ({
           />
         )}
 
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <mesh position={[0, 0, 0]}>
+            <sphereGeometry args={[0.5, 6, 4]} />
+            <meshBasicMaterial color="#1e40af" transparent opacity={0.3} />
+          </mesh>
+        }>
           {/* ── 3D Stylized Realistic Ground & Underpass Network ── */}
           <JunctionRoads
             isRaining={isRaining}
@@ -157,6 +170,23 @@ export const Scene: React.FC<SceneProps> = ({
 
           {/* ── Pedestrian Skywalk Crossing Over ORR ── */}
           <Skywalk
+            isNight={isNight}
+          />
+
+          {/* ── Realistic West Corridor Landmarks (Innovative Multiplex, Krishna Summit, Krishna Grand, Novel MSR) ── */}
+          <WestCorridorBuildings
+            isNight={isNight}
+          />
+
+          {/* ── Realistic East Corridor Landmarks (Brand Factory, Kalamandir Palace, Factory Outlets Row, Nalli Silks) ── */}
+          <EastCorridorBuildings
+            isNight={isNight}
+          />
+
+          {/* ── 3D Google Maps Prominent Store Pins & Billboard Badges (Real Lat/Long) ── */}
+          <GoogleMaps3DMarkers
+            selectedStoreId={selectedStoreId}
+            onSelectStore={onSelectStore || (() => {})}
             isNight={isNight}
           />
 

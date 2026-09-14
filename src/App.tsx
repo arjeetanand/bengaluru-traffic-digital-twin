@@ -16,6 +16,7 @@ import { useTrafficSignals } from './components/canvas/traffic/TrafficSignals';
 import { Scene } from './components/canvas/Scene';
 import { HUD } from './components/ui/HUD';
 import { JunctionDetailModal } from './components/ui/JunctionDetailModal';
+import { GoogleMapsStore } from './data/GoogleMapsStoreRegistry';
 
 export const App: React.FC = () => {
   // ── Simulation Controls Mode ──
@@ -39,6 +40,10 @@ export const App: React.FC = () => {
   const [usage, setUsage] = useState<ApiUsageStats>(() => getApiUsageStats());
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const [isJunctionModalOpen, setIsJunctionModalOpen] = useState(false);
+
+  // ── Prominent Google Maps Stores Explorer State ──
+  const [selectedStore, setSelectedStore] = useState<GoogleMapsStore | undefined>(undefined);
+  const [isStoreDrawerOpen, setIsStoreDrawerOpen] = useState(false);
 
   // ── Traffic Signals State Machine Hook ──
   const signalStatus = useTrafficSignals({ simSpeedMultiplier: mode.simSpeed });
@@ -143,6 +148,11 @@ export const App: React.FC = () => {
         signalStatus={signalStatus}
         congestionRatio={flowData.congestionRatio}
         vehicleCount={mode.vehicleCount}
+        selectedStoreId={selectedStore?.id}
+        onSelectStore={(store) => {
+          setSelectedStore(store);
+          setIsStoreDrawerOpen(true);
+        }}
         onInspectJunction={() => setIsJunctionModalOpen(true)}
       />
 
@@ -154,6 +164,10 @@ export const App: React.FC = () => {
         usage={usage}
         signalStatus={signalStatus}
         notice={notice}
+        isStoreDrawerOpen={isStoreDrawerOpen}
+        selectedStoreId={selectedStore?.id}
+        onToggleStoreDrawer={() => setIsStoreDrawerOpen((prev) => !prev)}
+        onSelectStore={(store) => setSelectedStore(store)}
         onUpdateMode={handleUpdateMode}
         onToggleDemo={handleToggleDemo}
         onResetUsage={handleResetUsage}

@@ -18,6 +18,10 @@ export interface CameraInputState {
 }
 
 type ResetCallback = () => void;
+export type FlyToCallback = (
+  position: [number, number, number],
+  target: [number, number, number]
+) => void;
 
 class CameraControlBus {
   public state: CameraInputState = {
@@ -35,6 +39,7 @@ class CameraControlBus {
   };
 
   private resetListeners: Set<ResetCallback> = new Set();
+  private flyToListeners: Set<FlyToCallback> = new Set();
 
   public setInput(input: Partial<CameraInputState>) {
     Object.assign(this.state, input);
@@ -69,6 +74,27 @@ class CameraControlBus {
       this.resetListeners.delete(callback);
     };
   }
+
+  public flyTo(
+    position: [number, number, number],
+    target: [number, number, number]
+  ) {
+    this.flyToListeners.forEach((cb) => {
+      try {
+        cb(position, target);
+      } catch (err) {
+        console.error('Error in camera flyTo listener', err);
+      }
+    });
+  }
+
+  public onFlyTo(callback: FlyToCallback): () => void {
+    this.flyToListeners.add(callback);
+    return () => {
+      this.flyToListeners.delete(callback);
+    };
+  }
 }
 
 export const cameraControlBus = new CameraControlBus();
+

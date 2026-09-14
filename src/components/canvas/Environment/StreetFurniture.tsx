@@ -1,4 +1,5 @@
 import React from 'react';
+import * as THREE from 'three';
 import { SignalStatus } from '../../../types';
 
 interface StreetFurnitureProps {
@@ -28,24 +29,24 @@ export const StreetFurniture: React.FC<StreetFurnitureProps> = ({ isNight, signa
         </React.Fragment>
       ))}
 
-      {/* ── 4 Traffic Signal Posts at Crossroads ── */}
+      {/* ── 4 Traffic Signal Posts at Crossroads (Repositioned to curb line of expanded 56x42m junction) ── */}
       <TrafficSignalPost
-        position={[orrX - 1.5, 0, oarZ + 3]}
+        position={[28.5, 0, 21.5]}
         rotationY={Math.PI}
         activeColor={signalStatus.nsColor}
       />
       <TrafficSignalPost
-        position={[-orrX + 1.5, 0, -oarZ - 3]}
+        position={[-28.5, 0, -21.5]}
         rotationY={0}
         activeColor={signalStatus.nsColor}
       />
       <TrafficSignalPost
-        position={[orrX + 3, 0, -oarZ + 1.5]}
+        position={[28.5, 0, -21.5]}
         rotationY={-Math.PI / 2}
         activeColor={signalStatus.ewColor}
       />
       <TrafficSignalPost
-        position={[-orrX - 3, 0, oarZ - 1.5]}
+        position={[-28.5, 0, 21.5]}
         rotationY={Math.PI / 2}
         activeColor={signalStatus.ewColor}
       />
@@ -55,19 +56,19 @@ export const StreetFurniture: React.FC<StreetFurnitureProps> = ({ isNight, signa
         position={[0, 0, 85]}
         rotationY={0}
         title="MARATHAHALLI UNDERPASS // ಮಾರತ್ತಹಳ್ಳಿ ಅಂಡರ್‌ಪಾಸ್"
-        lanes="↓ BELLANDUR / SILK BOARD (UNDERPASS)   |   ← HAL AIRPORT ROAD"
+        lanes="↓ BELLANDUR (UNDERPASS - FREEWAY)   |   ↰ U-TURN (SIGNAL)   |   ← HAL AIRPORT RD"
       />
       <HighwayGantry
         position={[0, 0, -85]}
         rotationY={Math.PI}
         title="MARATHAHALLI JUNCTION // ಮಾರತ್ತಹಳ್ಳಿ ಜಂಕ್ಷನ್"
-        lanes="↑ KR PURAM / HEBBAL (UNDERPASS)   |   → WHITEFIELD / ITPL"
+        lanes="↑ KR PURAM (UNDERPASS - FREEWAY)   |   ↰ U-TURN (SIGNAL)   |   → WHITEFIELD"
       />
       <HighwayGantry
         position={[95, 0, 0]}
         rotationY={-Math.PI / 2}
         title="VARTHUR ROAD // ವರ್ತೂರು ರಸ್ತೆ"
-        lanes="↑ WHITEFIELD / VARTHUR / ITPL"
+        lanes="← AIRPORT RD / CITY   |   ↰ U-TURN   |   ↑ WHITEFIELD / ITPL"
       />
 
       {/* ── The Famous Marathahalli Bridge Bus Bay (Bottleneck Transit Stop) ── */}
@@ -109,6 +110,65 @@ export const StreetFurniture: React.FC<StreetFurnitureProps> = ({ isNight, signa
           <meshStandardMaterial color="#374151" />
         </mesh>
       </group>
+
+      {/* ── Traffic Police Control Booth at Junction Center ── */}
+      <group position={[0, 0.44, 0]} name="PoliceControlBooth">
+        {/* Main booth enclosure */}
+        <mesh position={[0, 1.2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.8, 2.4, 1.8]} />
+          <meshStandardMaterial color="#1e40af" roughness={0.6} metalness={0.2} />
+        </mesh>
+        {/* Khaki/white roof canopy */}
+        <mesh position={[0, 2.55, 0]} castShadow>
+          <boxGeometry args={[2.2, 0.2, 2.2]} />
+          <meshStandardMaterial color="#fef9c3" roughness={0.7} />
+        </mesh>
+        {/* Glass observation windows */}
+        {([[0, 1.2, 0.92], [0, 1.2, -0.92], [0.92, 1.2, 0], [-0.92, 1.2, 0]] as [number, number, number][]).map(([wx, wy, wz], i) => (
+          <mesh key={i} position={[wx, wy, wz]}>
+            <boxGeometry args={[i < 2 ? 1.2 : 0.12, 1.0, i < 2 ? 0.08 : 1.2]} />
+            <meshStandardMaterial
+              color={isNight ? '#bfdbfe' : '#e0f2fe'}
+              transparent
+              opacity={0.5}
+              roughness={0.1}
+              metalness={0.8}
+              emissive={isNight ? '#3b82f6' : '#000000'}
+              emissiveIntensity={isNight ? 0.6 : 0}
+            />
+          </mesh>
+        ))}
+        {/* BBMP white-blue color band stripe */}
+        <mesh position={[0, 0.35, 0]}>
+          <boxGeometry args={[1.82, 0.35, 1.82]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.7} />
+        </mesh>
+        {/* TRAFFIC POLICE text panel */}
+        <mesh position={[0, 2.3, 0.93]}>
+          <boxGeometry args={[1.6, 0.28, 0.06]} />
+          <meshStandardMaterial
+            color="#1e40af"
+            emissive={isNight ? '#1d4ed8' : '#000000'}
+            emissiveIntensity={isNight ? 0.8 : 0}
+          />
+        </mesh>
+      </group>
+
+      {/* ── BBMP Green/Blue Dustbins at Junction Footpath Corners ── */}
+      {[
+        [32, 0, 24], [-32, 0, 24], [32, 0, -24], [-32, 0, -24]
+      ].map(([bx, by, bz], i) => (
+        <group key={`bin-${i}`} position={[bx, by, bz]}>
+          <mesh position={[0, 0.55, 0]} castShadow>
+            <cylinderGeometry args={[0.22, 0.18, 0.75, 8]} />
+            <meshStandardMaterial color={i % 2 === 0 ? '#15803d' : '#1d4ed8'} roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.97, 0]}>
+            <cylinderGeometry args={[0.23, 0.23, 0.12, 8]} />
+            <meshStandardMaterial color="#374151" roughness={0.6} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 };
@@ -192,6 +252,24 @@ const TrafficSignalPost: React.FC<{
           emissiveIntensity={activeColor === 'green' ? 3.5 : 0}
         />
       </mesh>
+
+      {/* LED Countdown Timer display below signal head */}
+      <group position={[3.2, 6.0 - 2.5, 0.2]}>
+        <mesh>
+          <boxGeometry args={[0.65, 0.45, 0.12]} />
+          <meshStandardMaterial
+            color={activeColor === 'green' ? '#00ff44' : activeColor === 'amber' ? '#ff8c00' : '#ff2222'}
+            emissive={activeColor === 'green' ? '#00ff44' : activeColor === 'amber' ? '#ff8c00' : '#ff2222'}
+            emissiveIntensity={2.2}
+            roughness={0.2}
+          />
+        </mesh>
+        {/* Black outer bezel */}
+        <mesh position={[0, 0, -0.07]}>
+          <boxGeometry args={[0.72, 0.52, 0.06]} />
+          <meshStandardMaterial color="#0f172a" roughness={0.6} />
+        </mesh>
+      </group>
     </group>
   );
 };
@@ -202,9 +280,55 @@ const HighwayGantry: React.FC<{
   rotationY: number;
   title: string;
   lanes: string;
-}> = ({ position, rotationY }) => {
+}> = ({ position, rotationY, title, lanes }) => {
   const gantryWidth = 26;
   const gantryHeight = 8.8;
+
+  const texture = React.useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return new THREE.CanvasTexture(canvas);
+
+    // Green highway signboard background
+    ctx.fillStyle = '#065f46';
+    ctx.fillRect(0, 0, 1024, 256);
+
+    // White outer border
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(10, 10, 1004, 236);
+
+    // Inner yellow accent line
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(20, 20, 984, 216);
+
+    // Title (Top line)
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 40px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(title, 512, 75);
+
+    // Divider line
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(40, 128);
+    ctx.lineTo(984, 128);
+    ctx.stroke();
+
+    // Lanes / Instructions (Bottom line)
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 32px -apple-system, sans-serif';
+    ctx.fillText(lanes, 512, 185);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4;
+    return tex;
+  }, [title, lanes]);
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
@@ -221,18 +345,15 @@ const HighwayGantry: React.FC<{
         <meshStandardMaterial color="#475569" metalness={0.7} />
       </mesh>
 
-      {/* Green signboard */}
-      <mesh position={[0, gantryHeight - 1.2, 0.35]}>
-        <boxGeometry args={[gantryWidth * 0.78, 1.8, 0.12]} />
-        <meshStandardMaterial color="#047857" roughness={0.3} />
+      {/* Board backing */}
+      <mesh position={[0, gantryHeight - 1.2, 0.28]}>
+        <boxGeometry args={[gantryWidth * 0.78, 2.2, 0.12]} />
+        <meshStandardMaterial color="#064e3b" roughness={0.3} />
       </mesh>
-      <mesh position={[0, gantryHeight - 1.2, 0.42]}>
-        <boxGeometry args={[gantryWidth * 0.76, 1.68, 0.02]} />
-        <meshStandardMaterial color="#ffffff" />
-      </mesh>
-      <mesh position={[0, gantryHeight - 1.2, 0.44]}>
-        <boxGeometry args={[gantryWidth * 0.74, 1.5, 0.02]} />
-        <meshStandardMaterial color="#047857" />
+      {/* Front Face with high-res text texture */}
+      <mesh position={[0, gantryHeight - 1.2, 0.36]}>
+        <planeGeometry args={[gantryWidth * 0.76, 2.1]} />
+        <meshBasicMaterial map={texture} />
       </mesh>
     </group>
   );

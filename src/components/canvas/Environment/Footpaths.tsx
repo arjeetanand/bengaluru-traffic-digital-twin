@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface FootpathsProps {
@@ -28,7 +29,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
     // ══════════════════════════════════════════════════════════════════════════
     // CORRIDOR 1: OUTER RING ROAD (Multiplex to Kalamandir, Z-axis)
     // ══════════════════════════════════════════════════════════════════════════
-    // ── West Footpath (Southbound ORR Service Road edge, x ≈ -23) ──
+    // ── West Footpath (Southbound ORR Service Road edge, x ≈ -23.5) ──
     {
       id: 'orr-w-multiplex',
       name: 'Innovative Multiplex Entrance Frontage',
@@ -58,7 +59,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       name: 'ORR South Underpass Approach Shoulder',
       axis: 'Z',
       start: -110,
-      end: -45,
+      end: -50,
       offset: -23.0,
       width: 2.0,
       height: 0.05,
@@ -69,8 +70,8 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       id: 'orr-w-junction-sw',
       name: 'South-West Junction Corner (Tanishq/Reebok)',
       axis: 'Z',
-      start: -45,
-      end: -15,
+      start: -50,
+      end: -21,
       offset: -23.5,
       width: 3.2,
       height: 0.25,
@@ -81,7 +82,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       id: 'orr-w-junction-nw',
       name: 'North-West Junction Corner (Krishna Summit)',
       axis: 'Z',
-      start: 15,
+      start: 21,
       end: 55,
       offset: -23.5,
       width: 3.2,
@@ -114,7 +115,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       description: 'Intact paver blocks in front of commercial IT offices'
     },
 
-    // ── East Footpath (Northbound ORR Service Road edge, x ≈ +23) ──
+    // ── East Footpath (Northbound ORR Service Road edge, x ≈ +23.5) ──
     {
       id: 'orr-e-multiplex-opp',
       name: 'Multiplex East Service Road Margin',
@@ -132,7 +133,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       name: 'Marathahalli Village South Approach',
       axis: 'Z',
       start: -145,
-      end: -45,
+      end: -50,
       offset: 23.5,
       width: 2.4,
       height: 0.22,
@@ -143,8 +144,8 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       id: 'orr-e-junction-se',
       name: 'South-East Junction Corner (Factory Outlets)',
       axis: 'Z',
-      start: -45,
-      end: -15,
+      start: -50,
+      end: -21,
       offset: 23.5,
       width: 3.4,
       height: 0.25,
@@ -155,7 +156,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       id: 'orr-e-brandfactory',
       name: 'Brand Factory Frontage',
       axis: 'Z',
-      start: 15,
+      start: 21,
       end: 65,
       offset: 23.5,
       width: 3.6,
@@ -209,7 +210,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       name: 'Kalyan & Tanishq Showroom Strip',
       axis: 'X',
       start: -140,
-      end: -35,
+      end: -28,
       offset: 13.0,
       width: 3.2,
       height: 0.25,
@@ -235,12 +236,38 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
       name: 'HAL Road Street Market & Snacks Row',
       axis: 'X',
       start: -120,
-      end: -35,
+      end: -28,
       offset: -13.0,
       width: 2.6,
       height: 0.22,
       status: 'encroached',
       description: 'Encroached by mobile chai stalls, fruit vendors, and customer bike parking'
+    },
+
+    // ── Varthur Road West Approach Link (X: 28 to 120) ──
+    {
+      id: 'varthur-n-approach',
+      name: 'Varthur Road North Footpath to Bridge',
+      axis: 'X',
+      start: 28,
+      end: 120,
+      offset: 13.0,
+      width: 2.8,
+      height: 0.25,
+      status: 'paved',
+      description: 'Direct pedestrian link from junction crosswalk to Marathahalli Bridge'
+    },
+    {
+      id: 'varthur-s-approach',
+      name: 'Varthur Road South Footpath to Bridge',
+      axis: 'X',
+      start: 28,
+      end: 120,
+      offset: -13.0,
+      width: 2.6,
+      height: 0.22,
+      status: 'encroached',
+      description: 'Footpath with auto parking and small shops leading to Munnekolala portal'
     },
 
     // ── Marathahalli Railway Overbridge (ROB) Elevated Sidewalks (X: 120 to 195) ──
@@ -353,6 +380,83 @@ export const Footpaths: React.FC<FootpathsProps> = ({ auditMode, isNight = false
     <group name="MarathahalliFootpathNetwork">
       {segments.map((seg) => (
         <FootpathSegmentMesh key={seg.id} segment={seg} auditMode={auditMode} isNight={isNight} />
+      ))}
+      <AnimatedPedestrians isNight={isNight} />
+    </group>
+  );
+};
+
+// ── Subcomponent: Animated Pedestrians walking along footpaths and crossings ──
+const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
+  const pedestriansRef = useRef<THREE.Group>(null);
+  
+  // Define pedestrian routes along major footpaths and crossings
+  const routes = useMemo(() => [
+    // 1. Southbound ORR footpath (Multiplex to signal)
+    { start: [-23.5, 0.35, -150], end: [-23.5, 0.35, -25], speed: 3.2, dir: 1, color: '#1e3a8a' },
+    { start: [-23.5, 0.35, -30], end: [-23.5, 0.35, -140], speed: 2.8, dir: -1, color: '#b91c1c' },
+    // 2. Northbound ORR footpath (Kalamandir/Brand Factory to signal)
+    { start: [23.5, 0.35, 120], end: [23.5, 0.35, 25], speed: 3.0, dir: -1, color: '#047857' },
+    { start: [23.5, 0.35, 30], end: [23.5, 0.35, 140], speed: 3.4, dir: 1, color: '#d97706' },
+    // 3. HAL Road North footpath
+    { start: [-140, 0.35, 13.0], end: [-30, 0.35, 13.0], speed: 3.1, dir: 1, color: '#4338ca' },
+    { start: [-35, 0.35, 13.0], end: [-135, 0.35, 13.0], speed: 2.9, dir: -1, color: '#c026d3' },
+    // 4. Varthur Road North footpath (Spice Garden to bridge)
+    { start: [35, 0.35, 13.0], end: [115, 0.35, 13.0], speed: 3.3, dir: 1, color: '#0284c7' },
+    { start: [110, 0.35, 13.0], end: [35, 0.35, 13.0], speed: 2.7, dir: -1, color: '#e11d48' },
+    // 5. Skywalk pedestrian flow (elevated at y = 7.5)
+    { start: [-18, 7.55, 32], end: [18, 7.55, 32], speed: 2.5, dir: 1, color: '#15803d' },
+    { start: [16, 7.55, 32], end: [-16, 7.55, 32], speed: 2.6, dir: -1, color: '#9333ea' },
+    // 6. ROB bridge sidewalk
+    { start: [125, 7.8, 7.2], end: [190, 7.8, 7.2], speed: 3.0, dir: 1, color: '#f59e0b' },
+    { start: [185, 7.8, -7.2], end: [125, 7.8, -7.2], speed: 2.9, dir: -1, color: '#64748b' }
+  ], []);
+
+  // Track progress of each pedestrian
+  const progress = useRef(routes.map((_, i) => (i * 0.15) % 1.0));
+
+  useFrame((_, delta) => {
+    if (!pedestriansRef.current) return;
+    const safeDelta = Math.min(delta, 0.1);
+    
+    pedestriansRef.current.children.forEach((child, idx) => {
+      const route = routes[idx];
+      const dist = Math.hypot(route.end[0] - route.start[0], route.end[2] - route.start[2]);
+      const advance = (route.speed * safeDelta) / dist;
+      
+      progress.current[idx] = (progress.current[idx] + advance) % 1.0;
+      const t = progress.current[idx];
+      
+      const px = route.start[0] + (route.end[0] - route.start[0]) * t;
+      const py = route.start[1];
+      const pz = route.start[2] + (route.end[2] - route.start[2]) * t;
+      
+      child.position.set(px, py, pz);
+    });
+  });
+
+  return (
+    <group ref={pedestriansRef} name="PedestrianWalkers">
+      {routes.map((r, i) => (
+        <group key={i} position={r.start as [number, number, number]}>
+          {/* Person Torso */}
+          <mesh position={[0, 0.65, 0]} castShadow>
+            <cylinderGeometry args={[0.16, 0.18, 0.85, 8]} />
+            <meshStandardMaterial color={r.color} roughness={0.7} />
+          </mesh>
+          {/* Head */}
+          <mesh position={[0, 1.25, 0]}>
+            <sphereGeometry args={[0.13, 8, 8]} />
+            <meshStandardMaterial color="#fed7aa" />
+          </mesh>
+          {/* Night subtle silhouette / visibility glow */}
+          {isNight && (
+            <mesh position={[0, 0.65, 0]}>
+              <sphereGeometry args={[0.22, 6, 6]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.12} />
+            </mesh>
+          )}
+        </group>
       ))}
     </group>
   );

@@ -180,11 +180,20 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       transitionProgress.current = 0;
     });
 
+    // Register dynamic fly-to handler (e.g. clicking on a store marker or store list item)
+    const unsubscribeFlyTo = cameraControlBus.onFlyTo((pos, target) => {
+      targetCamPos.current.set(...pos);
+      targetLookAt.current.set(...target);
+      isTransitioning.current = true;
+      transitionProgress.current = 0;
+    });
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
       unsubscribeReset();
+      unsubscribeFlyTo();
     };
   }, []);
 
@@ -195,24 +204,29 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
     switch (cameraPreset) {
       case 'underpass':
-        // Inside the subterranean underpass trench looking along the tunnel
-        targetCamPos.current.set(0, -2.8, 38);
-        targetLookAt.current.set(0, -4.8, -15);
+        // Overlooking the subterranean underpass trench entrance looking down the curved expressway
+        targetCamPos.current.set(-18, 6, 65);
+        targetLookAt.current.set(0, -4.5, 5);
         break;
       case 'multiplex':
         // Focused on Innovative Multiplex, entrance marquee, and South Bus Bay
-        targetCamPos.current.set(-24, 14, -142);
-        targetLookAt.current.set(-35, 4, -180);
+        targetCamPos.current.set(12, 14, -185);
+        targetLookAt.current.set(-52, 12, -185);
         break;
       case 'kalamandir':
-        // Focused on Kalamandir silks, Brand Factory, and Marathahalli Metro Station
-        targetCamPos.current.set(22, 16, 68);
-        targetLookAt.current.set(38, 6, 105);
+        // Grand frontal view of Kalamandir Wedding Silks royal palace facade (Z = 332.5, X = 46)
+        targetCamPos.current.set(-6, 14, 332.5);
+        targetLookAt.current.set(46, 15, 332.5);
+        break;
+      case 'brandfactory':
+        // Grand frontal view of Brand Factory Mall and roof signboards (Z = 58, X = 48)
+        targetCamPos.current.set(-6, 14, 58);
+        targetLookAt.current.set(48, 14, 58);
         break;
       case 'spicegarden':
         // Focused on Spice Garden BMTC bus stop, Iyengar bakery, and roadside bazaar
-        targetCamPos.current.set(205, 12, 6);
-        targetLookAt.current.set(242, 3, 16);
+        targetCamPos.current.set(210, 16, 15);
+        targetLookAt.current.set(260, 4, -10);
         break;
       case 'crossover':
         // Wide elevated 3-tier view showing Underpass, Surface crossroads, ROB bridge, and Metro viaduct
@@ -283,17 +297,13 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
       if (moveVec.lengthSq() > 0) {
         moveVec.normalize();
-        const baseSpeed = 32; // world units / sec
-        const sprintMultiplier = (keys.current.sprint ? 2.5 : 1.0) * busState.speedMultiplier;
-        const step = baseSpeed * sprintMultiplier * safeDelta;
-
-        // Move BOTH camera position and orbit target together to preserve orientation
-        camera.position.addScaledVector(moveVec, step);
-        controlsRef.current.target.addScaledVector(moveVec, step);
+        const moveSpeed = (keys.current.sprint ? 50 : 25) * safeDelta;
+        camera.position.addScaledVector(moveVec, moveSpeed);
+        controlsRef.current.target.addScaledVector(moveVec, moveSpeed);
       }
     }
 
-    // 2. Check for Active Rotation Inputs (Arrow keys or HUD NavPad)
+    // 2. Check for Active Rotation Inputs
     const isTurnLeft = keys.current.turnLeft || busState.turnLeft;
     const isTurnRight = keys.current.turnRight || busState.turnRight;
     const isTiltUp = keys.current.tiltUp || busState.tiltUp;
@@ -303,25 +313,24 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
     if (hasRotateInput) {
       isTransitioning.current = false;
-      const rotSpeed = 1.6 * safeDelta * (keys.current.sprint ? 2.0 : 1.0) * busState.speedMultiplier;
+      const rotSpeed = 1.4 * safeDelta;
       const target = controlsRef.current.target;
       const offset = camera.position.clone().sub(target);
 
-      // Horizontal yaw rotation around world Y
-      if (isTurnLeft) {
-        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotSpeed);
-      }
-      if (isTurnRight) {
-        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), -rotSpeed);
+      if (isTurnLeft || isTurnRight) {
+        const yawAngle = (isTurnLeft ? 1 : -1) * rotSpeed;
+        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawAngle);
       }
 
-      // Vertical pitch rotation around camera's local right vector
       if (isTiltUp || isTiltDown) {
-        let camRight = new THREE.Vector3().crossVectors(offset, new THREE.Vector3(0, 1, 0));
-        if (camRight.lengthSq() < 0.0001) {
-          camRight = new THREE.Vector3(1, 0, 0);
-        } else {
+        const camRight = new THREE.Vector3().crossVectors(
+          camera.getWorldDirection(new THREE.Vector3()),
+          new THREE.Vector3(0, 1, 0)
+        );
+        if (camRight.lengthSq() > 0.001) {
           camRight.normalize();
+        } else {
+          camRight.set(1, 0, 0);
         }
         const tiltAngle = (isTiltUp ? 1 : -1) * rotSpeed;
         offset.applyAxisAngle(camRight, tiltAngle);
@@ -331,16 +340,18 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       camera.lookAt(target);
     }
 
-    // 3. Smooth Preset Transitions (when triggered and not interrupted)
+    // 3. Smooth Preset Transitions
     if (isTransitioning.current) {
-      transitionProgress.current += delta * 2.8;
+      transitionProgress.current += safeDelta * 2.5;
       const t = Math.min(1, transitionProgress.current);
 
-      camera.position.lerp(targetCamPos.current, 0.12);
-      controlsRef.current.target.lerp(targetLookAt.current, 0.12);
+      camera.position.lerp(targetCamPos.current, 0.25);
+      controlsRef.current.target.lerp(targetLookAt.current, 0.25);
 
-      // Once close enough or time elapsed, yield complete unhindered control to the user
-      if (camera.position.distanceTo(targetCamPos.current) < 0.25 || t >= 1) {
+      if (t >= 1 || camera.position.distanceTo(targetCamPos.current) < 0.2) {
+        camera.position.copy(targetCamPos.current);
+        controlsRef.current.target.copy(targetLookAt.current);
+        controlsRef.current.update();
         isTransitioning.current = false;
       }
     }

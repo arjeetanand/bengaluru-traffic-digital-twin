@@ -51,7 +51,21 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
       }
     };
 
+    const isInsideHandcraftedCorridor = (cx: number, cz: number) => {
+      // Brand Factory Mall zone (East side, x: 25 to 75, z: 35 to 85)
+      if (cx >= 25 && cx <= 75 && cz >= 35 && cz <= 85) return true;
+      // Kalamandir & Nalli Silks zone (East side north, x: 25 to 75, z: 300 to 375)
+      if (cx >= 25 && cx <= 75 && cz >= 300 && cz <= 375) return true;
+      // Innovative Multiplex zone (West side south, x: -80 to -20, z: -220 to -150)
+      if (cx >= -80 && cx <= -20 && cz >= -220 && cz <= -150) return true;
+      // Outlet Row (Nike, Adidas, Puma, Reebok) (East side south, x: 25 to 75, z: -170 to -55)
+      if (cx >= 25 && cx <= 75 && cz >= -170 && cz <= -55) return true;
+      return false;
+    };
+
     for (const b of SURROUNDING_OSM_BUILDINGS) {
+      if (isInsideHandcraftedCorridor(b.cx, b.cz)) continue;
+
       const g = makeExtrudedGeom(b);
       if (!g) continue;
 
@@ -85,6 +99,12 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
   const curtainTexture = useMemo(() => createGlassCurtainTexture(isNight), [isNight]);
   const commercialTexture = useMemo(() => createCommercialGridTexture(isNight), [isNight]);
   const apartmentTexture = useMemo(() => createResidentialApartmentTexture(isNight), [isNight]);
+
+  // Filter out landmarks custom-built in West and East corridor models
+  const remainingLandmarks = useMemo(
+    () => REAL_LANDMARKS.filter((lm) => !HANDCRAFTED_CORRIDOR_LANDMARKS.has(lm.id)),
+    []
+  );
 
   return (
     <group name="MarathahalliRealOsmBuildings">
@@ -125,13 +145,24 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight }) => {
         </mesh>
       )}
 
-      {/* ── Real Landmark Buildings with High-Res Storefront Signage ── */}
-      {REAL_LANDMARKS.map((lm) => (
+      {/* ── Real Landmark Buildings with High-Res Storefront Signage (Excluding Handcrafted Corridor Twins) ── */}
+      {remainingLandmarks.map((lm) => (
         <LandmarkBuildingBlock key={lm.id} landmark={lm} isNight={isNight} />
       ))}
     </group>
   );
 };
+
+// Handcrafted landmarks already built with 100% realism in WestCorridorBuildings & EastCorridorBuildings
+const HANDCRAFTED_CORRIDOR_LANDMARKS = new Set([
+  'lm_brand_factory',
+  'lm_tanishq',
+  'lm_krisna_senate',
+  'lm_krishna_summit',
+  'lm_krishna_grand',
+  'lm_kalamandir',
+  'lm_nalli'
+]);
 
 // ── Landmark Building Component with Extruded Footprint, Storefront Banner & Rooftops ──
 const LandmarkBuildingBlock: React.FC<{

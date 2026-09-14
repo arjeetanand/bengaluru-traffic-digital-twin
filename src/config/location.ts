@@ -15,9 +15,9 @@ export const ACTIVE_COORDINATES = {
 // ═════════════════════════════════════════════════════════════════════════════
 
 // Post-processing Bloom strength (subtle daytime glow vs heightened night glow)
-export const BLOOM_INTENSITY_DAY = 0.45;
+export const BLOOM_INTENSITY_DAY = 0.18;   // Reduced: realistic sun-lit scene, no broad glow
 export const BLOOM_INTENSITY_NIGHT = 1.35;
-export const BLOOM_LUMINANCE_THRESHOLD = 0.85;
+export const BLOOM_LUMINANCE_THRESHOLD = 0.90;  // Higher threshold: only emissives bloom in day
 export const BLOOM_LUMINANCE_SMOOTHING = 0.25;
 
 // Sun direction & angle (Golden hour warm lighting)

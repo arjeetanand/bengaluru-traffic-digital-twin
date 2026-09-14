@@ -104,20 +104,20 @@ export function createGlassCurtainTexture(isNight: boolean): THREE.CanvasTexture
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
+  canvas.width = 1024;
+  canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
   if (!ctx) return new THREE.CanvasTexture(canvas);
 
   // Base background (dark structural spandrel)
   ctx.fillStyle = isNight ? '#0b1120' : '#1e293b';
-  ctx.fillRect(0, 0, 512, 512);
+  ctx.fillRect(0, 0, 1024, 1024);
 
   const cols = 8;
   const rows = 8;
-  const cellW = 512 / cols;
-  const cellH = 512 / rows;
+  const cellW = 1024 / cols;
+  const cellH = 1024 / rows;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -125,8 +125,8 @@ export function createGlassCurtainTexture(isNight: boolean): THREE.CanvasTexture
       const y = r * cellH;
 
       // Mullion margin
-      const marginX = 4;
-      const marginY = 5;
+      const marginX = 8;
+      const marginY = 10;
 
       // Window glass tint
       if (isNight) {
@@ -170,6 +170,13 @@ export function createGlassCurtainTexture(isNight: boolean): THREE.CanvasTexture
       ctx.strokeRect(x + marginX, y + marginY, cellW - marginX * 2, cellH - marginY * 2);
     }
   }
+
+  // ── Realistic Urban Ground-Floor Dirt/Weathering Band (Lower 12%) ──
+  const dirtGrad = ctx.createLinearGradient(0, 896, 0, 1024);
+  dirtGrad.addColorStop(0, 'rgba(30, 20, 10, 0)');
+  dirtGrad.addColorStop(1, isNight ? 'rgba(10, 8, 5, 0.65)' : 'rgba(45, 35, 25, 0.45)');
+  ctx.fillStyle = dirtGrad;
+  ctx.fillRect(0, 896, 1024, 128);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
