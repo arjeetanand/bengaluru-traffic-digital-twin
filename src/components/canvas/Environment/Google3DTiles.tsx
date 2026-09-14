@@ -32,16 +32,32 @@ function attributionText(value: unknown) {
 export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError }) => {
   const { scene, camera, gl } = useThree();
   const tilesRef = useRef<TilesRenderer | null>(null);
+  const hasReportedError = useRef(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attribution, setAttribution] = useState<string | null>(null);
 
   const effectiveKey = apiKey || (import.meta.env.VITE_GOOGLE_MAPS_KEY as string) || '';
 
   useEffect(() => {
+    hasReportedError.current = false;
+
+    const reportLoadError = (error: unknown) => {
+      if (hasReportedError.current) return;
+      hasReportedError.current = true;
+      const providerMessage = error instanceof Error ? error.message : String(error || '');
+      const message = /403/.test(providerMessage)
+        ? 'Google Photorealistic 3D Tiles unavailable (provider returned 403).'
+        : 'Google Photorealistic 3D Tiles unavailable.';
+      setLoadError(message);
+      setAttribution(null);
+      onError?.(message);
+    };
+
     if (!effectiveKey) {
       const msg = 'Google Maps API key missing. Add VITE_GOOGLE_MAPS_KEY to .env or enter your key to stream Photorealistic 3D Tiles.';
       setLoadError(msg);
       setAttribution(null);
+      hasReportedError.current = true;
       onError?.(msg);
       return;
     }
@@ -94,8 +110,17 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
         const uniqueSources = [...new Set(sourceLines)];
         setAttribution(['Google Maps', ...uniqueSources].join(' · '));
       };
+      const handleLoadError = (event: { error?: unknown }) => {
+        reportLoadError(event.error);
+        if (tilesRef.current === tiles) {
+          tilesRef.current = null;
+          scene.remove(tiles.group);
+          tiles.dispose();
+        }
+      };
       tiles.addEventListener('tile-visibility-change', updateAttribution);
       tiles.addEventListener('load-tileset', updateAttribution);
+      tiles.addEventListener('load-error', handleLoadError);
 
       // ── Spatial Bounding: keep loading inside the full Oracle → Spice Garden corridor ──
       const loadRegion = new LoadRegionPlugin();
@@ -120,16 +145,14 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
         tiles.removeEventListener('load-root-tileset', applyAppCoordinateFrame);
         tiles.removeEventListener('tile-visibility-change', updateAttribution);
         tiles.removeEventListener('load-tileset', updateAttribution);
+        tiles.removeEventListener('load-error', handleLoadError);
         scene.remove(tiles.group);
         tiles.dispose();
         tilesRef.current = null;
         setAttribution(null);
       };
     } catch (e: any) {
-      console.error('Failed to initialize Google 3D Tiles:', e);
-      setLoadError(e?.message || 'Failed to initialize Google 3D Tiles');
-      setAttribution(null);
-      onError?.(e?.message || 'Failed to load Google 3D Tiles');
+      reportLoadError(e);
     }
   }, [effectiveKey, camera, gl, scene, onError]);
 
@@ -143,10 +166,31 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
   });
 
   if (loadError) {
-    // Keep the OSM scene unobstructed when the optional provider is unavailable.
-    // Status is reported to the caller; a world-space billboard is not a useful
-    // fallback because it can occlude the very scene the user is inspecting.
-    return null;
+    return (
+      <Html fullscreen style={{ pointerEvents: 'none' }} zIndexRange={[50, 0]}>
+        <div
+          aria-label="Google 3D Tiles fallback status"
+          style={{
+            position: 'absolute',
+            right: 20,
+            bottom: 112,
+            maxWidth: 'min(440px, calc(100vw - 40px))',
+            padding: '5px 8px',
+            borderRadius: 3,
+            border: '1px solid rgba(251, 191, 36, 0.6)',
+            background: 'rgba(69, 26, 3, 0.86)',
+            color: '#fef3c7',
+            fontFamily: 'monospace',
+            fontSize: 8,
+            lineHeight: 1.35,
+            textAlign: 'right',
+            textShadow: '0 1px 3px rgba(2, 6, 23, 0.9)'
+          }}
+        >
+          GOOGLE 3D TILES UNAVAILABLE · OSM SOURCE TWIN ACTIVE
+        </div>
+      </Html>
+    );
   }
 
   return attribution ? (

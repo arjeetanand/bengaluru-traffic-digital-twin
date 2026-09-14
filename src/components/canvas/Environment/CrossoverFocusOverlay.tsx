@@ -5,6 +5,7 @@ import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
 
 interface CrossoverFocusOverlayProps {
   isNight?: boolean;
+  cameraMode?: 'walk' | 'overview';
 }
 
 const createConnectorCurve = (points: readonly [number, number, number][]) => new THREE.CatmullRomCurve3(
@@ -51,7 +52,10 @@ const FocusLabel: React.FC<{
  * The OSM snapshot also carries a no_u_turn relation, so these remain
  * scenario links until the turn restriction is reconciled with the field plan.
  */
-export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({ isNight = false }) => {
+export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
+  isNight = false,
+  cameraMode = 'overview'
+}) => {
   const northCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.north.points), []);
   const southCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.south.points), []);
   const accent = isNight ? '#fbbf24' : '#f59e0b';
@@ -94,21 +98,25 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({ is
         </group>
       ))}
 
-      <FocusLabel
-        position={[32, 5.1, 34]}
-        title="NORTH U-TURN"
-        detail="MODELLED ROUTE · OSM no_u_turn"
-      />
-      <FocusLabel
-        position={[-3, 4.4, -7]}
-        title="SOUTH U-TURN"
-        detail="MODELLED ROUTE · OSM no_u_turn"
-      />
-      <FocusLabel
-        position={[-2, 8, 14]}
-        title="MARATHAHALLI CROSSOVER"
-        detail="OSM ROAD FRAME · MODELLED SIGNAL"
-      />
+      {cameraMode === 'overview' && (
+        <>
+          <FocusLabel
+            position={[32, 5.1, 34]}
+            title="NORTH U-TURN"
+            detail="MODELLED ROUTE · OSM no_u_turn"
+          />
+          <FocusLabel
+            position={[-3, 4.4, -7]}
+            title="SOUTH U-TURN"
+            detail="MODELLED ROUTE · OSM no_u_turn"
+          />
+          <FocusLabel
+            position={[-2, 8, 14]}
+            title="MARATHAHALLI CROSSOVER"
+            detail="OSM ROAD FRAME · MODELLED SIGNAL"
+          />
+        </>
+      )}
     </group>
   );
 };

@@ -18,6 +18,7 @@ import { RoadsideShops } from './Environment/RoadsideShops';
 import { FlyoverBridge } from './Environment/FlyoverBridge';
 import { MetroViaduct } from './Environment/MetroViaduct';
 import { Skywalk } from './Environment/Skywalk';
+import { Greenery } from './Environment/Greenery';
 import { WestCorridorBuildings } from './Environment/WestCorridorBuildings';
 import { EastCorridorBuildings } from './Environment/EastCorridorBuildings';
 import { Buildings } from './Environment/Buildings';
@@ -66,6 +67,16 @@ export const Scene: React.FC<SceneProps> = ({
   onSelectStore,
   onInspectJunction
 }) => {
+  const [googleTilesFailed, setGoogleTilesFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setGoogleTilesFailed(false);
+  }, [buildingMode, googleMapsApiKey]);
+
+  const handleGoogleTilesError = React.useCallback(() => {
+    setGoogleTilesFailed(true);
+  }, []);
+
   // Lighting & Atmospheric parameters
   const sunPosition: [number, number, number] = isRaining ? SUN_POSITION_OVERCAST : SUN_POSITION_DAY;
   const sunIntensity = isNight ? 0.05 : (isRaining ? 1.2 : 3.2);
@@ -90,10 +101,14 @@ export const Scene: React.FC<SceneProps> = ({
     'multiplex'
   ].includes(cameraPreset);
   // The compiled source snapshot is the canonical road graph. Keep the full
-  // fleet on source ways so no vehicle falls back to the old mirrored,
-  // schematic junction lanes or the mapped no-U-turn restriction is bypassed.
-  const junctionVehicleCount = 0;
-  const corridorVehicleCount = vehicleCount;
+  // fleet on source ways everywhere except the dedicated crossover audit,
+  // where a small, explicitly modelled scenario fleet demonstrates the
+  // visible U-turn connectors. The OSM no_u_turn relation remains labelled as
+  // source evidence; this scenario is not presented as a legal movement.
+  const junctionVehicleCount = isCrossoverFocusView
+    ? Math.max(12, Math.round(vehicleCount * 0.02))
+    : 0;
+  const corridorVehicleCount = Math.max(0, vehicleCount - junctionVehicleCount);
   const fogDensity = isLongCorridorView
     ? (isNight ? 0.00006 : (isRaining ? 0.00012 : 0.00004))
     : (isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY));
@@ -167,7 +182,7 @@ export const Scene: React.FC<SceneProps> = ({
           {/* Source-backed roads, footways, crossings, signals and shop POIs. */}
           <OsmSnapshotLayer
             isNight={isNight}
-            showBuildings={buildingMode !== 'google-tiles'}
+            showBuildings={buildingMode !== 'google-tiles' || googleTilesFailed}
             buildingLimit={isCrossoverFocusView ? 520 : 1000}
             buildingOpacity={isCrossoverFocusView ? 0.28 : 0.5}
             buildingOutlineOpacity={isCrossoverFocusView ? 0.2 : 0.32}
@@ -183,7 +198,7 @@ export const Scene: React.FC<SceneProps> = ({
           />
 
           {isCrossoverFocusView && (
-            <CrossoverFocusOverlay isNight={isNight} />
+            <CrossoverFocusOverlay isNight={isNight} cameraMode={cameraMode} />
           )}
 
           {/* ── Realistic Pedestrian Footpaths (Paved, Missing, Encroached, Metro-Blocked) ── */}
@@ -215,6 +230,14 @@ export const Scene: React.FC<SceneProps> = ({
             isNight={isNight}
           />
 
+          {/* Source OSM tree nodes are rendered by OsmSnapshotLayer. This
+              deterministic planting buffer fills the mapped road edge and
+              median in the visual demo; it is explicitly planned greenery,
+              not a surveyed inventory of every tree. */}
+          {cameraMode === 'overview' && (
+            <Greenery isRaining={isRaining} />
+          )}
+
           {/* ── Realistic West Corridor Landmarks (Innovative Multiplex, Krishna Summit, Krishna Grand, Novel MSR) ── */}
           {!isSourceGeometryFocusView && (
             <WestCorridorBuildings
@@ -238,7 +261,7 @@ export const Scene: React.FC<SceneProps> = ({
 
           {/* ── Surrounding Commercial Landmarks / Google 3D Tiles ── */}
           {buildingMode === 'google-tiles' ? (
-            <Google3DTiles apiKey={googleMapsApiKey} />
+            <Google3DTiles apiKey={googleMapsApiKey} onError={handleGoogleTilesError} />
           ) : !isSourceGeometryFocusView ? (
           <Buildings isNight={isNight} includeSurroundingBuildings={false} />
           ) : null}
@@ -254,7 +277,7 @@ export const Scene: React.FC<SceneProps> = ({
             simSpeedMultiplier={simSpeed}
             isNight={isNight}
             vehicleTotalCount={junctionVehicleCount}
-            scenarioOnly={false}
+            scenarioOnly={isCrossoverFocusView}
           />
 
           {/* Source-road vehicles extend the configured modelled fleet across
