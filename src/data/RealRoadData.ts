@@ -328,11 +328,13 @@ export function createRoadRibbonGeometry(
   width: number,
   elevationFn: (t: number, x: number, z: number) => number = () => 0.08,
   sampleSteps = 120,
-  curveType: 'catmullrom' | 'centripetal' | 'chordal' = 'catmullrom'
+  curveType: 'catmullrom' | 'centripetal' | 'chordal' | 'linear' = 'catmullrom'
 ): THREE.BufferGeometry {
   // Build 3D vector points for CatmullRom curve interpolation
   const v3Points = controlPoints.map((p) => new THREE.Vector3(p[0], 0, p[1]));
-  const curve = new THREE.CatmullRomCurve3(v3Points, false, curveType, 0.25);
+  const curve = curveType === 'linear'
+    ? createLinearCurve(v3Points)
+    : new THREE.CatmullRomCurve3(v3Points, false, curveType, 0.25);
 
   const halfWidth = width / 2;
   const positions: number[] = [];
@@ -340,7 +342,9 @@ export function createRoadRibbonGeometry(
   const uvs: number[] = [];
   const indices: number[] = [];
 
-  const points = curve.getPoints(sampleSteps);
+  const points = curveType === 'linear'
+    ? curve.getSpacedPoints(sampleSteps)
+    : curve.getPoints(sampleSteps);
   let accumulatedDistance = 0;
 
   for (let i = 0; i <= sampleSteps; i++) {
@@ -398,10 +402,12 @@ export function createCurveLineGeometry(
   elevationFn: (t: number, x: number, z: number) => number = () => 0.1,
   lineWidth = 0.25,
   sampleSteps = 120,
-  curveType: 'catmullrom' | 'centripetal' | 'chordal' = 'catmullrom'
+  curveType: 'catmullrom' | 'centripetal' | 'chordal' | 'linear' = 'catmullrom'
 ): THREE.BufferGeometry {
   const v3Points = controlPoints.map((p) => new THREE.Vector3(p[0], 0, p[1]));
-  const curve = new THREE.CatmullRomCurve3(v3Points, false, curveType, 0.25);
+  const curve = curveType === 'linear'
+    ? createLinearCurve(v3Points)
+    : new THREE.CatmullRomCurve3(v3Points, false, curveType, 0.25);
 
   const halfLineWidth = lineWidth / 2;
   const positions: number[] = [];
@@ -409,7 +415,9 @@ export function createCurveLineGeometry(
   const uvs: number[] = [];
   const indices: number[] = [];
 
-  const points = curve.getPoints(sampleSteps);
+  const points = curveType === 'linear'
+    ? curve.getSpacedPoints(sampleSteps)
+    : curve.getPoints(sampleSteps);
   let dist = 0;
 
   for (let i = 0; i <= sampleSteps; i++) {
@@ -449,4 +457,12 @@ export function createCurveLineGeometry(
   geom.setIndex(indices);
 
   return geom;
+}
+
+function createLinearCurve(points: THREE.Vector3[]): THREE.CurvePath<THREE.Vector3> {
+  const curve = new THREE.CurvePath<THREE.Vector3>();
+  for (let index = 1; index < points.length; index += 1) {
+    curve.add(new THREE.LineCurve3(points[index - 1], points[index]));
+  }
+  return curve;
 }

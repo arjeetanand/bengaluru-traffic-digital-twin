@@ -1,15 +1,18 @@
 import { CAMERA_DEFAULT_POSITION } from '../config/location';
 import { CameraMode, CameraPreset } from '../types';
 import {
+  MARATHAHALLI_SKYWALK_DECK_WAY_IDS,
   MARATHAHALLI_SKYWALK_DECK_POINTS,
   MARATHAHALLI_SKYWALK_DECK_TOP_Y,
   MARATHAHALLI_SKYWALK_GROUND_TOP_Y,
+  MARATHAHALLI_SKYWALK_STAIR_WAY_IDS,
   MARATHAHALLI_SKYWALK_STAIR_POINTS,
+  VARTHUR_VIADUCT_FOOTWAY_WAY_IDS,
+  VARTHUR_VIADUCT_WAY_IDS,
   VARTHUR_VIADUCT_DECK_TOP_Y,
   OSMPolylineFeature,
   isMarathahalliSkywalkDeck,
-  isMarathahalliSkywalkStair,
-  isVarthurViaductFootway
+  isMarathahalliSkywalkStair
 } from './marathahalliDemo';
 import {
   SOURCE_ELEVATED_WALK_ROUTES,
@@ -35,6 +38,152 @@ export const WALK_EYE_HEIGHT = 1.7;
 export const WALK_LOOK_DISTANCE = 8;
 
 type LocalXZ = [number, number];
+
+export type SourceStructureKind =
+  | 'ground'
+  | 'skywalk-deck'
+  | 'skywalk-stairs'
+  | 'varthur-viaduct'
+  | 'varthur-footway'
+  | 'unverified-bridge'
+  | 'unverified-steps';
+
+export interface SourceStructureElevation {
+  kind: SourceStructureKind;
+  /** Display height for a source ribbon or filled surface. */
+  renderY: number;
+  /** Display height for a source line/outline. */
+  lineY: number;
+  /** Height used by person-mode navigation when the feature is walkable. */
+  walkY: number;
+  walkable: boolean;
+  /** True only when the vertical interpretation is tied to a known local contract. */
+  elevationVerified: boolean;
+  /** True when the feature needs a variable profile (for example, stairs). */
+  variableElevation?: boolean;
+  label: string;
+}
+
+interface SourceStructureElevationRegistryEntry extends SourceStructureElevation {
+  sourceWayIds: readonly string[];
+}
+
+/**
+ * A single vertical contract shared by person navigation and the source OSM
+ * renderer. OSM `layer`/`bridge` tags describe ordering, not metres, so only
+ * the two known Skywalk flights/deck and the two known Varthur footways get
+ * explicit heights. Unknown bridges and steps are intentionally not guessed.
+ */
+export const SOURCE_STRUCTURE_ELEVATION_REGISTRY: readonly SourceStructureElevationRegistryEntry[] = [
+  {
+    sourceWayIds: MARATHAHALLI_SKYWALK_DECK_WAY_IDS,
+    kind: 'skywalk-deck',
+    renderY: MARATHAHALLI_SKYWALK_DECK_TOP_Y,
+    lineY: MARATHAHALLI_SKYWALK_DECK_TOP_Y,
+    walkY: MARATHAHALLI_SKYWALK_DECK_TOP_Y,
+    walkable: true,
+    elevationVerified: true,
+    label: 'SOURCE · MARATHAHALLI SKYWALK DECK · VERIFIED DATUM'
+  },
+  {
+    sourceWayIds: MARATHAHALLI_SKYWALK_STAIR_WAY_IDS,
+    kind: 'skywalk-stairs',
+    // The renderer uses the authored tread model for these ways. These values
+    // are only a safe route datum; resolveWalkSurfaceY interpolates the actual
+    // ground→deck profile from MARATHAHALLI_SKYWALK_STAIR_POINTS.
+    renderY: MARATHAHALLI_SKYWALK_GROUND_TOP_Y,
+    lineY: MARATHAHALLI_SKYWALK_GROUND_TOP_Y + 0.08,
+    walkY: MARATHAHALLI_SKYWALK_GROUND_TOP_Y,
+    walkable: true,
+    elevationVerified: true,
+    variableElevation: true,
+    label: 'SOURCE · MARATHAHALLI SKYWALK STAIRS · VERIFIED PROFILE'
+  },
+  {
+    sourceWayIds: VARTHUR_VIADUCT_WAY_IDS,
+    kind: 'varthur-viaduct',
+    renderY: VARTHUR_VIADUCT_DECK_TOP_Y + 0.02,
+    lineY: VARTHUR_VIADUCT_DECK_TOP_Y + 0.12,
+    walkY: VARTHUR_VIADUCT_DECK_TOP_Y,
+    walkable: false,
+    elevationVerified: true,
+    label: 'SOURCE · VARTHUR ROAD VIADUCT · VERIFIED DATUM'
+  },
+  {
+    sourceWayIds: VARTHUR_VIADUCT_FOOTWAY_WAY_IDS,
+    kind: 'varthur-footway',
+    renderY: VARTHUR_VIADUCT_DECK_TOP_Y + 0.16,
+    lineY: VARTHUR_VIADUCT_DECK_TOP_Y + 0.16,
+    walkY: VARTHUR_VIADUCT_DECK_TOP_Y + 0.16,
+    walkable: true,
+    elevationVerified: true,
+    label: 'SOURCE · VARTHUR VIADUCT FOOTWAY · VERIFIED DATUM'
+  }
+] as const;
+
+/**
+ * Explicit fallback for source structures whose tags provide no metre-level
+ * elevation. It is rendered at the local ground datum only as a provenance
+ * marker, never as a walkable surface; the label is surfaced by the OSM layer.
+ */
+export const SOURCE_UNVERIFIED_STRUCTURE_ELEVATION: SourceStructureElevation = {
+  kind: 'unverified-bridge',
+  renderY: 0.14,
+  lineY: 0.24,
+  walkY: 0,
+  walkable: false,
+  elevationVerified: false,
+  label: 'UNVERIFIED ELEVATION · SHOWN AT GRADE · NOT WALKABLE'
+};
+
+const SOURCE_GROUND_STRUCTURE_ELEVATION: SourceStructureElevation = {
+  kind: 'ground',
+  renderY: 0.14,
+  lineY: 0.12,
+  walkY: 0,
+  walkable: true,
+  elevationVerified: true,
+  label: 'SOURCE · GROUND DATUM'
+};
+
+function isBridgeTagged(feature: OSMPolylineFeature) {
+  const bridgeTag = feature.tags.bridge;
+  return (Boolean(bridgeTag) && bridgeTag !== 'no') || feature.tags.man_made === 'bridge';
+}
+
+/** Resolve one source feature without borrowing another structure's height. */
+export function resolveSourceStructureElevation(feature: OSMPolylineFeature): SourceStructureElevation {
+  const registered = SOURCE_STRUCTURE_ELEVATION_REGISTRY.find((entry) => entry.sourceWayIds.includes(feature.id));
+  if (registered) return registered;
+
+  if (feature.tags.highway === 'steps' || feature.tags.footway === 'steps') {
+    return {
+      ...SOURCE_UNVERIFIED_STRUCTURE_ELEVATION,
+      kind: 'unverified-steps',
+      label: 'UNVERIFIED STEPS · ELEVATION UNKNOWN · NOT WALKABLE'
+    };
+  }
+
+  if (isBridgeTagged(feature)) {
+    return SOURCE_UNVERIFIED_STRUCTURE_ELEVATION;
+  }
+
+  return SOURCE_GROUND_STRUCTURE_ELEVATION;
+}
+
+/**
+ * Generic source steps and unknown bridge footways are retained as source
+ * evidence only. This predicate is shared with rendering so person mode never
+ * receives a route that the scene presents as a walkable flat surface.
+ */
+export function isSourceNavigableFootway(feature: OSMPolylineFeature) {
+  const elevation = resolveSourceStructureElevation(feature);
+  return elevation.walkable && !elevation.variableElevation;
+}
+
+export function isSourceUnverifiedStructure(feature: OSMPolylineFeature) {
+  return !resolveSourceStructureElevation(feature).elevationVerified;
+}
 
 /**
  * Source-backed local anchors from public/data/marathahalli-demo.json.
@@ -475,26 +624,21 @@ function parseSourceWidth(feature: OSMPolylineFeature) {
 }
 
 function getSourceWalkElevation(feature: OSMPolylineFeature) {
-  // The source layer and audit renderer use the same modeled footway datum:
-  // Varthur viaduct deck top plus a 0.16 m walkable slab. OSM layer=1 is only
-  // relative ordering, so this remains an explicit modeled value.
-  if (isVarthurViaductFootway(feature)) return VARTHUR_VIADUCT_DECK_TOP_Y + 0.16;
-  if (isMarathahalliSkywalkDeck(feature) || feature.tags.bridge === 'yes' || feature.tags.bridge === 'viaduct') {
-    return MARATHAHALLI_SKYWALK_DECK_TOP_Y;
-  }
-  return 0;
+  return resolveSourceStructureElevation(feature).walkY;
 }
 
 /**
- * Replace the fallback pedestrian catalog with every footway in the compiled
- * snapshot. The explicitly mapped skywalk flights stay in the registry as a
- * special elevation case because their stair geometry is intentionally kept
- * out of the flat source ribbon layer.
+ * Replace the fallback pedestrian catalog with source footways whose vertical
+ * contract is navigable. The explicitly mapped Skywalk flights stay in the
+ * registry as a special elevation case because their stair geometry is
+ * intentionally kept out of the flat source ribbon layer; unknown bridge and
+ * steps ways remain source evidence only until their elevation is verified.
  */
 export function registerSnapshotWalkRoutes(footways: readonly OSMPolylineFeature[]) {
   const snapshotRoutes = footways
     .filter((feature) => feature.geometry.length >= 2)
     .filter((feature) => !isMarathahalliSkywalkStair(feature) && !isMarathahalliSkywalkDeck(feature))
+    .filter(isSourceNavigableFootway)
     .map<SourceWalkRoute>((feature) => {
       const elevation = getSourceWalkElevation(feature);
       return {

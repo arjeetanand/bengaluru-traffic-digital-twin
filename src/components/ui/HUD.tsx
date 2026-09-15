@@ -70,6 +70,18 @@ export const HUD: React.FC<HUDProps> = ({
       : metrics.networkHealth > 40
       ? 'health-amber'
       : 'health-red';
+  const isPersonView = mode.cameraMode === 'walk';
+  const inspectionContext = isPersonView
+    ? 'PERSON INSPECTION · 1.7M EYE · ROAD + FOOTPATH'
+    : 'BIRD INSPECTION · ORBIT · JUNCTION + METRO';
+  const trafficCountProvenance = flowData.isDemo
+    ? 'OSM SNAPSHOT · MODELLED FLEET · 30 HZ'
+    : 'TOMTOM FLOW INPUT · MODELLED FLEET';
+  const activeTrafficAnnouncement = `Active traffic count: ${metrics.activeVehicleCount.toLocaleString()} modelled vehicles. ${trafficCountProvenance}. Simulation clock ${mode.simSpeed} times.`;
+  const footpathAuditState = mode.footpathAuditMode
+    ? '3D AUDIT OVERLAY ACTIVE · FIELD VERIFY'
+    : 'AUDIT READY · FIELD VERIFY';
+  const footpathAuditAnnouncement = `Footpath audit: ${FOOTPATH_AUDIT_SUMMARY.pavedWalkablePct}% paved and walkable, ${FOOTPATH_AUDIT_SUMMARY.missingUnpavedPct}% missing or unpaved, and ${FOOTPATH_AUDIT_SUMMARY.blockedEncroachedPct}% blocked or encroached across ${FOOTPATH_AUDIT_SUMMARY.segmentCount} segments. ${footpathAuditState}.`;
   const crossoverJunctionAgents = Math.max(12, Math.round(mode.vehicleCount * 0.02));
   const fleetSummary = mode.cameraPreset === 'crossover'
     ? `${mode.vehicleCount} FLEET · ${crossoverJunctionAgents} JUNCTION DETAIL · ${Math.max(0, mode.vehicleCount - crossoverJunctionAgents)} CORRIDOR`
@@ -93,10 +105,12 @@ export const HUD: React.FC<HUDProps> = ({
               <span>LAT: 12.956840  LNG: 77.701176</span>
               <span className="meta-dot">•</span>
               <span className="source-tag">
-                {!flowData.isDemo ? 'TOMTOM LIVE FEED' : 'OSM SNAPSHOT • MODELLED TRAFFIC'}
+                {!flowData.isDemo ? 'TOMTOM FLOW INPUT • MODELLED FLEET' : 'OSM SNAPSHOT • MODELLED TRAFFIC'}
               </span>
               <span className="meta-dot">•</span>
               <span>{fleetSummary}</span>
+              <span className="meta-dot">•</span>
+              <span>{inspectionContext}</span>
             </div>
           </div>
         </div>
@@ -105,11 +119,12 @@ export const HUD: React.FC<HUDProps> = ({
         <div className="hud-header-right">
           <div
             className={`traffic-source-chip ${flowData.isDemo ? 'is-modelled' : 'is-live'}`}
-            aria-label={flowData.isDemo ? 'Modelled traffic using the OSM snapshot' : 'Live TomTom traffic feed'}
+            aria-label={`Traffic provenance: ${trafficCountProvenance}`}
+            title={activeTrafficAnnouncement}
           >
             <span className="traffic-source-dot" aria-hidden="true" />
-            <span>{flowData.isDemo ? 'MODELLED' : 'LIVE'}</span>
-            <small>{flowData.isDemo ? 'OSM SNAPSHOT' : 'TOMTOM'}</small>
+            <span>{flowData.isDemo ? 'MODELLED' : 'LIVE INPUT'}</span>
+            <small>{flowData.isDemo ? 'OSM SNAPSHOT' : 'TOMTOM FLOW'}</small>
           </div>
           <div className="signal-pill">
             <span className="signal-label">SIGNAL:</span>
@@ -181,7 +196,14 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
 
         {/* Active fleet telemetry: the count is explicit and keeps live-feed provenance honest. */}
-        <div className="telemetry-widget" aria-live="polite">
+        <div
+          className="telemetry-widget"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label={activeTrafficAnnouncement}
+          title={activeTrafficAnnouncement}
+        >
           <div className="widget-header">
             <span className="widget-title">ACTIVE TRAFFIC</span>
             <CarFront size={13} className="widget-icon" />
@@ -193,8 +215,9 @@ export const HUD: React.FC<HUDProps> = ({
             <span className="metric-unit">vehicles</span>
           </div>
           <div className="widget-sub">
-            {flowData.isDemo ? '30 HZ MODELLED FLEET' : 'TOMTOM FLOW INPUT · FLEET MODELLED'} · {mode.simSpeed}× CLOCK
+            {trafficCountProvenance} · {mode.simSpeed}× CLOCK
           </div>
+          <div className="widget-caption-tag">COUNT PROVENANCE · {flowData.isDemo ? 'SIMULATION ONLY' : 'FLOW INPUT, NOT VEHICLE SENSOR DATA'}</div>
         </div>
 
         {/* Average Delay Per Vehicle */}
@@ -236,7 +259,8 @@ export const HUD: React.FC<HUDProps> = ({
           type="button"
           className={`telemetry-widget ${mode.footpathAuditMode ? 'audit-active-card' : ''}`}
           onClick={() => onUpdateMode({ footpathAuditMode: !mode.footpathAuditMode })}
-          title="Toggle the modelled footpath audit overlay"
+          aria-label={footpathAuditAnnouncement}
+          title="Toggle the footpath audit overlay; field verification is still required"
         >
           <div className="widget-header">
             <span className="widget-title">FOOTPATH STATUS</span>
@@ -253,7 +277,7 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
           <div className="widget-sub">OSM FOOTWAYS + MODELLED AUDIT · {(FOOTPATH_AUDIT_SUMMARY.totalMeters / 1000).toFixed(2)} km · {FOOTPATH_AUDIT_SUMMARY.segmentCount} audit segments</div>
           <div className="widget-caption-tag" style={{ marginTop: 4, color: mode.footpathAuditMode ? '#4ade80' : undefined }}>
-            {mode.footpathAuditMode ? '3D AUDIT OVERLAY ACTIVE' : 'CLICK TO AUDIT • FIELD VERIFY'}
+            {footpathAuditState}
           </div>
         </button>
 
@@ -262,9 +286,12 @@ export const HUD: React.FC<HUDProps> = ({
       </aside>
 
       {/* ── 3D Camera Controls Movement Guide Pill ── */}
-      <div className="camera-hint-pill">
+      <div
+        className="camera-hint-pill"
+        aria-label={`Inspection context: ${inspectionContext}. ${isPersonView ? 'Walk the mapped road and footpath at eye level.' : 'Orbit the complete junction, metro, and surrounding corridor.'}`}
+      >
         <span className="hint-tag">CONTROLS</span>
-        <span className="camera-mode-label">{mode.cameraMode === 'walk' ? 'PERSON · 1.7M EYE' : 'BIRD · ORBIT'}</span>
+        <span className="camera-mode-label">{isPersonView ? 'PERSON · 1.7M EYE · ROAD + FOOTPATH' : 'BIRD · ORBIT · JUNCTION + METRO'}</span>
         <span className="hint-divider">•</span>
         <span><b>WASD:</b> {mode.cameraMode === 'walk' ? 'Walk' : 'Glide'}</span>
         <span className="hint-divider">•</span>

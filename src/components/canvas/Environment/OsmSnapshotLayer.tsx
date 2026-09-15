@@ -5,17 +5,17 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   MarathahalliDemoSnapshot,
   OSMPolylineFeature,
-  VARTHUR_VIADUCT_DECK_TOP_Y,
   isSourceElevatedRoad,
   isNammaMetroSourceWay,
-  isMarathahalliSkywalkDeck,
-  isMarathahalliSkywalkStair,
   isNammaMetroMainlineWay,
-  isNammaMetroPierSupport,
-  isVarthurViaductFootway,
-  isVarthurViaductWay
+  isNammaMetroPierSupport
 } from '../../../data/marathahalliDemo';
 import { getOrrUnderpassElevation } from '../../../data/RealRoadData';
+import {
+  isSourceNavigableFootway,
+  isSourceUnverifiedStructure,
+  resolveSourceStructureElevation
+} from '../../../data/marathahalliNavigation';
 import { loadMarathahalliSnapshot } from '../../../services/marathahalliSnapshot';
 
 interface OsmSnapshotLayerProps {
@@ -149,6 +149,13 @@ function getRoadRibbonWidth(feature: OSMPolylineFeature) {
   return 5.4;
 }
 
+function isSourceBridgeFeature(feature: OSMPolylineFeature) {
+  const bridgeTag = feature.tags.bridge;
+  return isSourceElevatedRoad(feature) ||
+    (Boolean(bridgeTag) && bridgeTag !== 'no') ||
+    feature.tags.man_made === 'bridge';
+}
+
 function isSourceUnderpass(feature: OSMPolylineFeature) {
   const name = feature.name || feature.tags.name || '';
   return /underpass/i.test(name) || feature.tags.tunnel === 'yes';
@@ -160,9 +167,9 @@ function isSourceTunnel(feature: OSMPolylineFeature) {
 
 function getInfrastructureDisplayY(feature: OSMPolylineFeature) {
   // OSM layer=-1/1 describes relative ordering only. These display datums
-  // align named structures with the authored scene without claiming a
-  // survey-grade elevation from the source extract.
-  return isSourceTunnel(feature) ? -6.2 : 5.2;
+  // align the known tunnel with the authored scene. Unknown bridges use the
+  // shared unverified fallback instead of borrowing a Skywalk/viaduct height.
+  return isSourceTunnel(feature) ? -6.2 : resolveSourceStructureElevation(feature).lineY;
 }
 
 function getRoadSurfaceY(feature: OSMPolylineFeature, point: [number, number]) {
@@ -336,7 +343,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   const roadGeometry = useMemo(
     () => (snapshot
       ? createPolylineGeometry(
-        snapshot.roads.filter((feature) => !isSourceElevatedRoad(feature) && !isVarthurViaductWay(feature)),
+        snapshot.roads.filter((feature) => !isSourceBridgeFeature(feature)),
         getRoadSurfaceY
       )
       : null),
@@ -345,7 +352,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   const roadSurfaceGeometry = useMemo(
     () => (snapshot
       ? createRibbonGeometry(
-        snapshot.roads.filter((feature) => !isSourceElevatedRoad(feature) && !isVarthurViaductWay(feature)),
+        snapshot.roads.filter((feature) => !isSourceBridgeFeature(feature)),
         getRoadRibbonWidth,
         getRoadSurfaceY
       )
@@ -353,7 +360,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [snapshot]
   );
   const sourceBridgeFeatures = useMemo(
-    () => snapshot?.roads.filter(isSourceElevatedRoad) || [],
+    () => snapshot?.roads.filter(isSourceBridgeFeature) || [],
     [snapshot]
   );
   const sourceBridgeSupportFeatures = useMemo(
@@ -370,7 +377,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       ? createRibbonGeometry(
         sourceBridgeFeatures,
         getRoadRibbonWidth,
-        (feature) => isVarthurViaductWay(feature) ? VARTHUR_VIADUCT_DECK_TOP_Y + 0.02 : 5.2
+        (feature) => resolveSourceStructureElevation(feature).renderY
       )
       : null),
     [snapshot, sourceBridgeFeatures]
@@ -379,32 +386,55 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     () => (snapshot
       ? createPolylineGeometry(
         sourceBridgeFeatures,
-        (feature) => isVarthurViaductWay(feature) ? VARTHUR_VIADUCT_DECK_TOP_Y + 0.12 : 5.34
+        (feature) => resolveSourceStructureElevation(feature).lineY
       )
       : null),
     [snapshot, sourceBridgeFeatures]
   );
+  const sourceWalkableFootwayFeatures = useMemo(
+    () => snapshot?.footways.filter(isSourceNavigableFootway) || [],
+    [snapshot]
+  );
+  const sourceUnverifiedFootwayFeatures = useMemo(
+    () => snapshot?.footways.filter(isSourceUnverifiedStructure) || [],
+    [snapshot]
+  );
+  const sourceUnverifiedStructureLabelFeatures = useMemo(
+    () => (snapshot && !isLongRange
+      ? [
+        ...sourceBridgeFeatures.filter(isSourceUnverifiedStructure),
+        ...sourceUnverifiedFootwayFeatures
+      ].slice(0, 28)
+      : []),
+    [isLongRange, snapshot, sourceBridgeFeatures, sourceUnverifiedFootwayFeatures]
+  );
   const footwayGeometry = useMemo(
     () => (snapshot
-      ? createPolylineGeometry(snapshot.footways.filter((feature) => !isMarathahalliSkywalkStair(feature)), (feature) => {
-        if (isVarthurViaductFootway(feature)) {
-          return VARTHUR_VIADUCT_DECK_TOP_Y + 0.16;
-        }
-        return isMarathahalliSkywalkDeck(feature) || feature.tags.bridge ? 7.55 : 0.12;
-      })
+      ? createPolylineGeometry(
+        sourceWalkableFootwayFeatures,
+        (feature) => resolveSourceStructureElevation(feature).lineY
+      )
       : null),
-    [snapshot]
+    [snapshot, sourceWalkableFootwayFeatures]
   );
   const footwaySurfaceGeometry = useMemo(
     () => (snapshot
-      ? createRibbonGeometry(snapshot.footways.filter((feature) => !isMarathahalliSkywalkStair(feature)), 1.8, (feature) => {
-        if (isVarthurViaductFootway(feature)) {
-          return VARTHUR_VIADUCT_DECK_TOP_Y + 0.16;
-        }
-        return isMarathahalliSkywalkDeck(feature) || feature.tags.bridge ? 7.55 : 0.14;
-      })
+      ? createRibbonGeometry(
+        sourceWalkableFootwayFeatures,
+        1.8,
+        (feature) => resolveSourceStructureElevation(feature).renderY
+      )
       : null),
-    [snapshot]
+    [snapshot, sourceWalkableFootwayFeatures]
+  );
+  const unverifiedFootwayGeometry = useMemo(
+    () => (snapshot
+      ? createPolylineGeometry(
+        sourceUnverifiedFootwayFeatures,
+        (feature) => resolveSourceStructureElevation(feature).lineY
+      )
+      : null),
+    [snapshot, sourceUnverifiedFootwayFeatures]
   );
   const railwayGeometry = useMemo(
     () => (snapshot ? createPolylineGeometry(snapshot.railways.filter((feature) => !isNammaMetroSourceWay(feature))) : null),
@@ -520,13 +550,14 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     sourceBridgeSurfaceGeometry?.dispose();
     footwayGeometry?.dispose();
     footwaySurfaceGeometry?.dispose();
+    unverifiedFootwayGeometry?.dispose();
     railwayGeometry?.dispose();
     sourceInfrastructureGeometry?.dispose();
     buildingGeometry?.dispose();
     buildingOutlineGeometry?.dispose();
     namedAreaGeometry?.dispose();
     noUTurnGeometry?.dispose();
-  }, [buildingGeometry, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, noUTurnGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry, sourceInfrastructureGeometry]);
+  }, [buildingGeometry, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, noUTurnGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry, sourceInfrastructureGeometry, unverifiedFootwayGeometry]);
 
   if (!snapshot) return null;
 
@@ -591,12 +622,16 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
         </mesh>
       )}
 
-      {/* Source-mapped bridge/viaduct ways are lifted above the base road
-          layer. Supports are intentionally not invented here: the source
-          geometry is authoritative for plan position, while the central
-          metro structure remains an explicitly modelled transport layer. */}
+      {/* Source-mapped bridge/viaduct ways use the shared structure registry.
+          Only the known Varthur viaduct keeps its verified elevated datum;
+          other bridge tags are rendered at the explicit unverified fallback
+          and labelled below rather than borrowing the Skywalk height. */}
       {sourceBridgeSurfaceGeometry && (
-        <mesh geometry={sourceBridgeSurfaceGeometry} renderOrder={1}>
+        <mesh
+          geometry={sourceBridgeSurfaceGeometry}
+          renderOrder={1}
+          userData={{ source: 'OSM', elevationContract: 'shared-structure-registry' }}
+        >
           <meshStandardMaterial
             color={isNight ? '#475569' : '#a8b4bf'}
             roughness={0.82}
@@ -607,7 +642,11 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
         </mesh>
       )}
       {sourceBridgeGeometry && (
-        <lineSegments geometry={sourceBridgeGeometry} renderOrder={2}>
+        <lineSegments
+          geometry={sourceBridgeGeometry}
+          renderOrder={2}
+          userData={{ source: 'OSM', elevationContract: 'shared-structure-registry' }}
+        >
           <lineBasicMaterial color={isNight ? '#cbd5e1' : '#64748b'} transparent opacity={0.82} />
         </lineSegments>
       )}
@@ -650,8 +689,30 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       )}
 
       {footwayGeometry && (
-        <lineSegments geometry={footwayGeometry} renderOrder={3}>
+        <lineSegments
+          geometry={footwayGeometry}
+          renderOrder={3}
+          userData={{ source: 'OSM', walkable: true, elevationContract: 'shared-structure-registry' }}
+        >
           <lineBasicMaterial color={isNight ? '#fbbf24' : '#b45309'} transparent opacity={0.85} />
+        </lineSegments>
+      )}
+
+      {/* Generic highway=steps and bridge-tagged footways remain visible as
+          source evidence, but never become a flat navigable ribbon. Their
+          line is placed at the shared unverified datum and labelled as such. */}
+      {unverifiedFootwayGeometry && (
+        <lineSegments
+          geometry={unverifiedFootwayGeometry}
+          renderOrder={4}
+          userData={{ source: 'OSM', walkable: false, elevation: 'unverified' }}
+        >
+          <lineBasicMaterial
+            color={isNight ? '#fbbf24' : '#f97316'}
+            transparent
+            opacity={0.9}
+            depthWrite={false}
+          />
         </lineSegments>
       )}
 
@@ -860,6 +921,8 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           const displayName = feature.tags.full_name || feature.name || feature.tags.name;
           if (!displayName) return null;
           const isTunnel = isSourceTunnel(feature);
+          const structureElevation = resolveSourceStructureElevation(feature);
+          const elevationLabel = isTunnel ? 'SOURCE · TUNNEL DATUM' : structureElevation.label;
           return (
             <Html
               key={`source-infrastructure-label-${feature.id}`}
@@ -882,7 +945,41 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
                   boxShadow: '0 2px 10px rgba(2, 6, 23, 0.45)'
                 }}
               >
-                OSM INFRA · {displayName.toUpperCase()} · LAYER {feature.tags.layer || '—'}
+                OSM INFRA · {displayName.toUpperCase()} · {elevationLabel} · LAYER {feature.tags.layer || '—'}
+              </div>
+            </Html>
+          );
+        })}
+
+        {sourceUnverifiedStructureLabelFeatures.map((feature) => {
+          const structureElevation = resolveSourceStructureElevation(feature);
+          const sourceName = feature.name || feature.tags.name;
+          const structureTitle = structureElevation.kind === 'unverified-steps'
+            ? 'OSM STEPS'
+            : 'OSM BRIDGE';
+          return (
+            <Html
+              key={`source-unverified-structure-label-${feature.id}`}
+              position={[feature.centroid[0], structureElevation.lineY + 1.15, feature.centroid[1]]}
+              center
+              distanceFactor={Math.max(isFirstPersonLabelScale ? 8 : 45, labelDistanceFactor * 0.8)}
+              zIndexRange={[23, 0]}
+            >
+              <div
+                style={{
+                  background: 'rgba(124, 45, 18, 0.9)',
+                  border: '1px solid rgba(251, 146, 60, 0.85)',
+                  borderRadius: '4px',
+                  color: '#ffedd5',
+                  fontFamily: 'monospace',
+                  fontSize: '7px',
+                  letterSpacing: '0.12px',
+                  padding: '3px 5px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 10px rgba(2, 6, 23, 0.45)'
+                }}
+              >
+                {structureTitle} · {sourceName ? `${sourceName.toUpperCase()} · ` : ''}{structureElevation.label}
               </div>
             </Html>
           );

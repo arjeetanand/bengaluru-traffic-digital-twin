@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export type LanePoint = [number, number, number];
 
 export interface UTurnConnector {
@@ -35,6 +37,29 @@ const SOURCE_UTURN_REPLAY_POINTS: readonly LanePoint[] = [
 const SOURCE_UTURN_REPLAY_REVERSE_POINTS: readonly LanePoint[] = [
   ...[...SOURCE_UTURN_REPLAY_POINTS].reverse()
 ];
+
+/**
+ * Build the source-linked replay as a piecewise-linear path. OSM gives us
+ * vertices and joined way members, not a surveyed turning-radius spline; a
+ * CurvePath keeps every vehicle and audit ribbon on those exact segments.
+ * Smoothing is still available to authored fallback roads, but must not make
+ * the source scenario cut across a mapped carriageway or footway.
+ */
+export function createSourceReplayCurve(
+  points: readonly LanePoint[],
+  yOffset = 0
+): THREE.CurvePath<THREE.Vector3> {
+  const curve = new THREE.CurvePath<THREE.Vector3>();
+  for (let index = 1; index < points.length; index += 1) {
+    const [fromX, fromY, fromZ] = points[index - 1];
+    const [toX, toY, toZ] = points[index];
+    curve.add(new THREE.LineCurve3(
+      new THREE.Vector3(fromX, fromY + yOffset, fromZ),
+      new THREE.Vector3(toX, toY + yOffset, toZ)
+    ));
+  }
+  return curve;
+}
 
 // Surface U-turn connectors are shared by the traffic simulation and the
 // crossover audit layer so a vehicle route cannot drift away from the source

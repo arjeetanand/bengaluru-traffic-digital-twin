@@ -41,8 +41,14 @@ export const CorridorJourneyBar: React.FC<CorridorJourneyBarProps> = ({
 }) => {
   const activeStopIndex = getActiveStopIndex(mode.cameraPreset);
   const isLive = !flowData.isDemo;
-  const sourceLabel = isLive ? 'LIVE TOMTOM · FLEET MODELLED' : 'MODELLED OSM TWIN';
+  const sourceLabel = isLive ? 'LIVE TOMTOM FLOW INPUT · FLEET MODELLED' : 'MODELLED OSM TWIN';
   const confidenceLabel = `${Math.round(flowData.confidence * 100)}% CONFIDENCE`;
+  const trafficCountProvenance = isLive
+    ? 'TOMTOM FLOW INPUT · VEHICLES MODELLED'
+    : 'OSM SNAPSHOT · VEHICLES MODELLED';
+  const footpathAuditState = mode.footpathAuditMode
+    ? '3D OVERLAY ACTIVE · FIELD VERIFY'
+    : 'AUDIT READY · FIELD VERIFY';
 
   return (
     <section className="journey-bar" aria-label="Oracle Tech Hub to Spice Garden source journey">
@@ -56,8 +62,8 @@ export const CorridorJourneyBar: React.FC<CorridorJourneyBarProps> = ({
         </div>
         <div className="journey-provenance" aria-label={`Traffic source: ${sourceLabel}`}>
           <span className={`journey-source-dot ${isLive ? 'is-live' : 'is-modelled'}`} aria-hidden="true" />
-          <span>{isLive ? 'LIVE' : 'MODELLED'}</span>
-          <small>{isLive ? 'TOMTOM' : 'OSM SNAPSHOT'}</small>
+          <span>{isLive ? 'LIVE INPUT' : 'MODELLED'}</span>
+          <small>{isLive ? 'TOMTOM → FLEET' : 'OSM → FLEET'}</small>
         </div>
       </div>
 
@@ -88,28 +94,43 @@ export const CorridorJourneyBar: React.FC<CorridorJourneyBarProps> = ({
         })}
       </nav>
 
-      <div className="journey-bar-stats" aria-live="polite">
+      <div className="journey-bar-stats">
         <span className="journey-stat">
           <Activity size={12} aria-hidden="true" />
           <b>{Math.round(flowData.currentSpeed)} km/h</b>
           <small>{confidenceLabel}</small>
         </span>
-        <span className="journey-stat">
+        <span
+          className="journey-stat"
+          title={`Active traffic: ${metrics.activeVehicleCount.toLocaleString()} modelled vehicles. ${trafficCountProvenance}.`}
+        >
           <span className="journey-stat-pulse" aria-hidden="true" />
-          <b>{metrics.avgFlowPerHour.toLocaleString()} veh/hr</b>
-          <small>{metrics.activeVehicleCount.toLocaleString()} fleet</small>
+          <b>{metrics.activeVehicleCount.toLocaleString()} active</b>
+          <small>{metrics.avgFlowPerHour.toLocaleString()} veh/hr · {trafficCountProvenance}</small>
         </span>
         <button
           type="button"
           className={`journey-stat journey-footpath-stat ${mode.footpathAuditMode ? 'is-audit-active' : ''}`}
           onClick={() => onUpdateMode({ footpathAuditMode: !mode.footpathAuditMode })}
           aria-pressed={mode.footpathAuditMode}
-          title="Toggle the footpath audit overlay"
+          aria-label={`Footpath audit: ${FOOTPATH_AUDIT_SUMMARY.pavedWalkablePct}% paved and walkable, ${FOOTPATH_AUDIT_SUMMARY.missingUnpavedPct}% missing or unpaved, ${FOOTPATH_AUDIT_SUMMARY.blockedEncroachedPct}% blocked or encroached across ${FOOTPATH_AUDIT_SUMMARY.segmentCount} segments. ${footpathAuditState}.`}
+          title="Toggle the footpath audit overlay; field verification is still required"
         >
           <Footprints size={12} aria-hidden="true" />
           <b>{FOOTPATH_AUDIT_SUMMARY.pavedWalkablePct}% walkable</b>
-          <small>{FOOTPATH_AUDIT_SUMMARY.segmentCount} audit segments</small>
+          <small>{FOOTPATH_AUDIT_SUMMARY.segmentCount} segments · {mode.footpathAuditMode ? '3D ACTIVE' : 'AUDIT READY'}</small>
         </button>
+        {mode.cameraPreset === 'crossover' && (
+          <span
+            className="journey-stat"
+            aria-label="Crossover U-turn guide: approach, yield, sweep, then exit. Vehicle replay is modelled on the source-linked turn sequence."
+            title="Source-linked modelled U-turn guide: approach → yield → sweep → exit"
+          >
+            <Route size={12} aria-hidden="true" />
+            <b>U-TURN GUIDE</b>
+            <small>APPROACH → YIELD → SWEEP → EXIT</small>
+          </span>
+        )}
       </div>
     </section>
   );

@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
+import { createSourceReplayCurve, U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
 import { createCurveLineGeometry, createRoadRibbonGeometry } from '../../../data/RealRoadData';
 import { createCarGeometry } from '../traffic/VehicleModels';
 
@@ -12,11 +12,8 @@ interface CrossoverFocusOverlayProps {
   cameraMode?: 'walk' | 'overview';
 }
 
-const createConnectorCurve = (points: readonly [number, number, number][]) => new THREE.CatmullRomCurve3(
-  points.map(([x, y, z]) => new THREE.Vector3(x, y + 0.18, z)),
-  false,
-  'centripetal',
-  0.25
+const createConnectorCurve = (points: readonly [number, number, number][]) => (
+  createSourceReplayCurve(points, 0.18)
 );
 
 const REPLAY_SPEED_METERS_PER_SECOND = 6.4;
@@ -56,11 +53,11 @@ function createConnectorSurfaceGeometry(
     3.8,
     () => 0.19,
     64,
-    'centripetal'
+    'linear'
   );
 }
 
-function createConnectorDashGeometry(curve: THREE.CatmullRomCurve3) {
+function createConnectorDashGeometry(curve: THREE.Curve<THREE.Vector3>) {
   const pieces: THREE.BufferGeometry[] = [];
   const points = curve.getSpacedPoints(120);
   const yAxis = new THREE.Vector3(0, 1, 0);
@@ -121,7 +118,7 @@ const FocusLabel: React.FC<{
 
 const CrossoverReplayVehicle: React.FC<{
   id: string;
-  curve: THREE.CatmullRomCurve3;
+  curve: THREE.Curve<THREE.Vector3>;
   startProgress: number;
   stopProgress: number;
   laneOffset: number;
@@ -244,7 +241,7 @@ const CROSSOVER_PHASES = [
 ] as const;
 
 function getCurveFrame(
-  curve: THREE.CatmullRomCurve3,
+  curve: THREE.Curve<THREE.Vector3>,
   progress: number,
   lateralOffset = 0,
   y = 0.42
@@ -269,7 +266,7 @@ function getCurveFrame(
  */
 const CrossoverTurnGuide: React.FC<{
   id: string;
-  curve: THREE.CatmullRomCurve3;
+  curve: THREE.Curve<THREE.Vector3>;
   isNight: boolean;
   cameraMode: 'walk' | 'overview';
 }> = ({ id, curve, isNight, cameraMode }) => {
@@ -383,7 +380,7 @@ const CrossoverTurnGuide: React.FC<{
 
 const DirectionMarkers: React.FC<{
   id: string;
-  curve: THREE.CatmullRomCurve3;
+  curve: THREE.Curve<THREE.Vector3>;
   color: string;
 }> = ({ id, curve, color }) => {
   const markers = useMemo(() => [0.34, 0.48, 0.62, 0.76].map((t) => {
@@ -449,7 +446,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
       () => 0.29,
       0.1,
       64,
-      'centripetal'
+      'linear'
     )),
     []
   );
@@ -460,7 +457,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
       () => 0.29,
       0.1,
       64,
-      'centripetal'
+      'linear'
     )),
     []
   );

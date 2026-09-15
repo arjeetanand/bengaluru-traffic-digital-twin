@@ -51,6 +51,19 @@ interface SceneProps {
   onInspectJunction: () => void;
 }
 
+// These objects are deliberately module-stable. Scene re-renders frequently
+// as traffic telemetry changes; recreating Canvas camera props can make the
+// renderer re-apply its initial camera while CameraController is lerping to a
+// new preset. The controller remains mounted and owns all camera transitions.
+const CANVAS_DPR: [number, number] = [1, 1.5];
+const CANVAS_SHADOWS = { type: THREE.PCFSoftShadowMap };
+const CANVAS_CAMERA = {
+  position: CAMERA_DEFAULT_POSITION,
+  fov: 50,
+  near: 0.5,
+  far: 6000
+};
+
 export const Scene: React.FC<SceneProps> = ({
   isNight,
   isRaining,
@@ -68,6 +81,13 @@ export const Scene: React.FC<SceneProps> = ({
   onInspectJunction
 }) => {
   const [googleTilesFailed, setGoogleTilesFailed] = React.useState(false);
+
+  const canvasGl = React.useMemo(() => ({
+    antialias: true,
+    toneMapping: THREE.ACESFilmicToneMapping,
+    toneMappingExposure: isNight ? 1.25 : (isRaining ? 0.95 : 1.08),
+    outputColorSpace: THREE.SRGBColorSpace
+  }), [isNight, isRaining]);
 
   React.useEffect(() => {
     setGoogleTilesFailed(false);
@@ -130,15 +150,10 @@ export const Scene: React.FC<SceneProps> = ({
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, overflow: 'hidden' }}>
       <Canvas
-        dpr={[1, 1.5]}
-        shadows={{ type: THREE.PCFSoftShadowMap }}
-        camera={{ position: CAMERA_DEFAULT_POSITION, fov: 50, near: 0.5, far: 6000 }}
-        gl={{
-          antialias: true,
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: isNight ? 1.25 : (isRaining ? 0.95 : 1.08),
-          outputColorSpace: THREE.SRGBColorSpace
-        }}
+        dpr={CANVAS_DPR}
+        shadows={CANVAS_SHADOWS}
+        camera={CANVAS_CAMERA}
+        gl={canvasGl}
       >
         {/* Background & Subtle Fog */}
         <color attach="background" args={[fogColor]} />
@@ -165,7 +180,8 @@ export const Scene: React.FC<SceneProps> = ({
           />
         )}
 
-        {/* Camera Rig & OrbitControls */}
+        {/* Camera Rig & OrbitControls. Keep this node unkeyed and mounted
+            across preset/mode changes so its target refs can lerp. */}
         <CameraController
           isCinematic={isCinematic}
           cameraPreset={cameraPreset}

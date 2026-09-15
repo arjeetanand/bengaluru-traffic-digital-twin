@@ -35,8 +35,10 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const { camera, gl } = useThree();
 
-  // Smooth camera position transitions between presets
-  const initialView = getCameraView(cameraPreset, cameraMode);
+  // Keep the initial camera seed stable for the lifetime of this controller.
+  // Preset/mode changes update the target refs below; they must not recreate
+  // the rig and snap the camera back to a fresh initial view.
+  const [initialView] = React.useState(() => getCameraView(cameraPreset, cameraMode));
   const targetCamPos = useRef(new THREE.Vector3(...initialView.position));
   const targetLookAt = useRef(new THREE.Vector3(...initialView.target));
   const isTransitioning = useRef(false);
@@ -303,24 +305,45 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       event.preventDefault();
     };
 
+    const clearPointerGesture = () => {
+      const activePointerId = pointerId.current;
+      pointerId.current = null;
+      lastPointer.x = 0;
+      lastPointer.y = 0;
+
+      if (activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
+        canvas.releasePointerCapture(activePointerId);
+      }
+    };
+
     const releasePointer = (event: PointerEvent) => {
       if (pointerId.current !== event.pointerId) return;
-      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-      pointerId.current = null;
+      clearPointerGesture();
+    };
+
+    const handleLostPointerCapture = (event: PointerEvent) => {
+      // The browser can revoke capture without dispatching pointerup. Clear
+      // the drag state so the next person-mode gesture can start cleanly.
+      if (pointerId.current === event.pointerId) {
+        pointerId.current = null;
+        lastPointer.x = 0;
+        lastPointer.y = 0;
+      }
     };
 
     canvas.addEventListener('pointerdown', handlePointerDown, { passive: false });
     canvas.addEventListener('pointermove', handlePointerMove, { passive: false });
     canvas.addEventListener('pointerup', releasePointer);
     canvas.addEventListener('pointercancel', releasePointer);
-    canvas.addEventListener('lostpointercapture', releasePointer);
+    canvas.addEventListener('lostpointercapture', handleLostPointerCapture);
 
     return () => {
+      clearPointerGesture();
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerup', releasePointer);
       canvas.removeEventListener('pointercancel', releasePointer);
-      canvas.removeEventListener('lostpointercapture', releasePointer);
+      canvas.removeEventListener('lostpointercapture', handleLostPointerCapture);
     };
   }, [gl]);
 
@@ -333,6 +356,13 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     targetLookAt.current.set(...view.target);
     isTransitioning.current = true;
     transitionProgress.current = 0;
+
+    // OrbitControls' auto-rotation is imperative state. Turn it off at the
+    // mode boundary as well as in the frame loop so a person-mode switch can
+    // never inherit a cinematic orbit for a frame.
+    if (cameraMode !== 'overview' && controlsRef.current) {
+      controlsRef.current.autoRotate = false;
+    }
 
     // OrbitControls owns the camera after mount. Seed its spherical state from
     // the selected preset so the first frame is aimed at the junction instead
@@ -507,7 +537,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
     // Ensure orbit controls updates every frame for smooth damping.
     controlsRef.current.update();
-    if (cameraMode === 'walk') {
+    if (cameraMode === 'walk' && !isTransitioning.current) {
       camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
     } else if (camera.position.y < 0.75) {
       camera.position.y = 0.75;

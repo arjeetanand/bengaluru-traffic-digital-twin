@@ -9,7 +9,7 @@ import {
   createBusGeometry,
   createTwoWheelerGeometry
 } from './VehicleModels';
-import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
+import { createSourceReplayCurve, U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
 import { getOrrOffsetPointAtZ, getOrrUnderpassElevation } from '../../../data/RealRoadData';
 
 interface TrafficSystemProps {
@@ -23,7 +23,7 @@ interface TrafficSystemProps {
 
 interface LaneDefinition {
   id: string;
-  spline: THREE.CatmullRomCurve3;
+  spline: THREE.Curve<THREE.Vector3>;
   length: number;
   controlledBy: 'NS' | 'EW' | 'FREE';
   stopT: number; // progress t at stop line
@@ -168,14 +168,12 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     ) => {
       const vPoints = points.map((p) => new THREE.Vector3(...p));
       const isScenarioUTurn = id === U_TURN_CONNECTORS.north.id || id === U_TURN_CONNECTORS.south.id;
-      // Keep the scenario connector identical to the painted road and focus
-      // overlay: all three layers use the same centripetal curve and tension.
-      const spline = new THREE.CatmullRomCurve3(
-        vPoints,
-        false,
-        isScenarioUTurn ? 'centripetal' : 'catmullrom',
-        0.25
-      );
+      // Keep the scenario connector identical to the source replay and focus
+      // overlay. Source-linked U-turns use exact piecewise-linear OSM
+      // segments; authored fallback lanes retain Catmull-Rom smoothing.
+      const spline = isScenarioUTurn
+        ? createSourceReplayCurve(points)
+        : new THREE.CatmullRomCurve3(vPoints, false, 'catmullrom', 0.25);
       list.push({
         id,
         spline,
