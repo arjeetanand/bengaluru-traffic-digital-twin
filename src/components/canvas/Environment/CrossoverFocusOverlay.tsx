@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
-import { createRoadRibbonGeometry } from '../../../data/RealRoadData';
+import { createCurveLineGeometry, createRoadRibbonGeometry } from '../../../data/RealRoadData';
 import { createCarGeometry } from '../traffic/VehicleModels';
 
 interface CrossoverFocusOverlayProps {
@@ -90,8 +90,9 @@ const FocusLabel: React.FC<{
   position: [number, number, number];
   title: string;
   detail: string;
-}> = ({ position, title, detail }) => (
-  <Html position={position} center distanceFactor={88} zIndexRange={[45, 0]}>
+  distanceFactor?: number;
+}> = ({ position, title, detail, distanceFactor = 88 }) => (
+  <Html position={position} center distanceFactor={distanceFactor} zIndexRange={[45, 0]}>
     <div
       role="note"
       aria-label={`${title}. ${detail}`}
@@ -182,9 +183,11 @@ const CrossoverReplayVehicle: React.FC<{
       0.12,
       point.z + normal.z * laneOffset
     );
-    // VehicleModels faces +Z; rotate it into the direction of the source
-    // replay tangent while keeping the wheels on the mapped road datum.
-    vehicle.rotation.y = Math.atan2(tangent.x, tangent.z) + Math.PI;
+    // VehicleModels faces +Z; rotate it directly into the source replay
+    // tangent. The regular instanced fleet uses Object3D.lookAt (which needs
+    // a PI correction for its -Z convention), but this hero group receives a
+    // raw Euler angle and must not be inverted.
+    vehicle.rotation.y = Math.atan2(tangent.x, tangent.z);
 
     // Make the turn leg read as a maneuver: both indicators blink only during
     // the modeled sweep, while the rear lamps brighten as the vehicle rolls
@@ -199,6 +202,7 @@ const CrossoverReplayVehicle: React.FC<{
     <group
       ref={vehicleRef}
       name={`CrossoverReplayVehicle-${id}`}
+      scale={cameraMode === 'walk' ? 0.54 : 0.72}
       userData={{
         source: 'OSM relation/18922642',
         status: 'modelled visual replay',
@@ -207,7 +211,7 @@ const CrossoverReplayVehicle: React.FC<{
         countedInFleet: false
       }}
     >
-      <mesh geometry={geometry} material={material} scale={cameraMode === 'walk' ? 0.54 : 0.72} castShadow />
+      <mesh geometry={geometry} material={material} castShadow />
       <mesh position={[-0.6, 0.55, 2.13]} material={turnSignalMaterial}>
         <boxGeometry args={[0.35, 0.15, 0.1]} />
       </mesh>
@@ -228,6 +232,151 @@ const CrossoverReplayVehicle: React.FC<{
         <boxGeometry args={[0.8, 0.04, 0.07]} />
         <meshBasicMaterial color="#f97316" transparent opacity={0.9} toneMapped={false} />
       </mesh>
+    </group>
+  );
+};
+
+const CROSSOVER_PHASES = [
+  { id: 'approach', label: 'APPROACH', progress: 0.2, color: '#38bdf8' },
+  { id: 'yield', label: 'YIELD', progress: 0.46, color: '#fbbf24' },
+  { id: 'sweep', label: 'SWEEP', progress: 0.61, color: '#fb923c' },
+  { id: 'exit', label: 'EXIT', progress: 0.84, color: '#4ade80' }
+] as const;
+
+function getCurveFrame(
+  curve: THREE.CatmullRomCurve3,
+  progress: number,
+  lateralOffset = 0,
+  y = 0.42
+) {
+  const point = curve.getPointAt(progress);
+  const tangent = curve.getTangentAt(progress).setY(0).normalize();
+  const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
+  return {
+    position: [
+      point.x + normal.x * lateralOffset,
+      y,
+      point.z + normal.z * lateralOffset
+    ] as [number, number, number],
+    angle: Math.atan2(tangent.x, tangent.z)
+  };
+}
+
+/**
+ * Add a small physical signal gate and a moving route pulse to each
+ * source-linked connector. This makes the maneuver legible in 3D while
+ * keeping its no_u_turn legality boundary explicit in userData.
+ */
+const CrossoverTurnGuide: React.FC<{
+  id: string;
+  curve: THREE.CatmullRomCurve3;
+  isNight: boolean;
+  cameraMode: 'walk' | 'overview';
+}> = ({ id, curve, isNight, cameraMode }) => {
+  const pulseRef = useRef<THREE.Mesh>(null);
+  const pulseProgressRef = useRef(id === 'north' ? 0.08 : 0.56);
+  const pulsePoint = useMemo(() => new THREE.Vector3(), []);
+  const phaseFrames = useMemo(
+    () => CROSSOVER_PHASES.map((phase) => ({
+      ...phase,
+      frame: getCurveFrame(curve, phase.progress, 0, 0.38)
+    })),
+    [curve]
+  );
+  const signalFrame = useMemo(
+    () => getCurveFrame(curve, id === 'north' ? 0.46 : 0.42, id === 'north' ? 4.2 : -4.2, 0.12),
+    [curve, id]
+  );
+
+  useFrame((_, delta) => {
+    const pulse = pulseRef.current;
+    if (!pulse) return;
+    pulseProgressRef.current = (pulseProgressRef.current + Math.min(delta, 0.05) * 0.16) % 1;
+    curve.getPointAt(pulseProgressRef.current, pulsePoint);
+    pulse.position.set(pulsePoint.x, 0.52, pulsePoint.z);
+    const breathe = 0.85 + Math.sin(pulseProgressRef.current * Math.PI * 2) * 0.15;
+    pulse.scale.setScalar(breathe);
+  });
+
+  return (
+    <group name={`CrossoverTurnGuide-${id}`} userData={{
+      source: 'OSM relation/18922642',
+      status: 'modelled maneuver guide',
+      phaseOrder: 'approach → yield → sweep → exit'
+    }}>
+      <mesh ref={pulseRef} renderOrder={12}>
+        <sphereGeometry args={[0.34, 12, 8]} />
+        <meshBasicMaterial
+          color={isNight ? '#fef08a' : '#fbbf24'}
+          transparent
+          opacity={0.95}
+          toneMapped={false}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {cameraMode === 'overview' && phaseFrames.map((phase) => (
+        <group key={`${id}-phase-${phase.id}`} position={phase.frame.position} rotation={[0, phase.frame.angle, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
+            <ringGeometry args={[0.65, 0.8, 18]} />
+            <meshBasicMaterial color={phase.color} transparent opacity={isNight ? 0.92 : 0.72} depthWrite={false} />
+          </mesh>
+          <mesh position={[0, 0.16, 0]} renderOrder={11}>
+            <cylinderGeometry args={[0.08, 0.08, 0.32, 8]} />
+            <meshStandardMaterial color={phase.color} emissive={phase.color} emissiveIntensity={isNight ? 2.2 : 0.35} />
+          </mesh>
+          <Html position={[0, 1.45, 0]} center distanceFactor={92} zIndexRange={[46, 0]}>
+            <div
+              role="note"
+              aria-label={`${phase.label} phase marker`}
+              style={{
+                pointerEvents: 'none',
+                padding: '2px 4px',
+                border: `1px solid ${phase.color}99`,
+                borderRadius: 3,
+                background: 'rgba(2, 8, 23, 0.78)',
+                color: phase.color,
+                fontFamily: 'monospace',
+                fontSize: 7,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {phase.label}
+            </div>
+          </Html>
+        </group>
+      ))}
+
+      <group
+        position={signalFrame.position}
+        rotation={[0, signalFrame.angle, 0]}
+        name={`ModelledYieldSignal-${id}`}
+        userData={{ signalStatus: 'modelled yield gate', countedInFleet: false }}
+      >
+        <mesh position={[0, 1.35, 0]} castShadow>
+          <cylinderGeometry args={[0.075, 0.11, 2.7, 8]} />
+          <meshStandardMaterial color="#334155" metalness={0.65} roughness={0.45} />
+        </mesh>
+        <mesh position={[0, 2.76, 0]} castShadow>
+          <boxGeometry args={[0.58, 1.65, 0.36]} />
+          <meshStandardMaterial color="#111827" metalness={0.35} roughness={0.62} />
+        </mesh>
+        <mesh position={[0, 3.2, 0.2]}>
+          <sphereGeometry args={[0.115, 10, 8]} />
+          <meshStandardMaterial color="#ef4444" roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 2.78, 0.2]}>
+          <sphereGeometry args={[0.13, 10, 8]} />
+          <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={isNight ? 4.5 : 1.1} />
+        </mesh>
+        <mesh position={[0, 2.36, 0.2]}>
+          <sphereGeometry args={[0.115, 10, 8]} />
+          <meshStandardMaterial color="#14532d" roughness={0.3} />
+        </mesh>
+        {isNight && <pointLight position={[0, 2.78, 0.5]} intensity={3.2} distance={8} color="#fbbf24" />}
+      </group>
     </group>
   );
 };
@@ -293,6 +442,28 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   );
   const northDashGeometry = useMemo(() => createConnectorDashGeometry(northCurve), [northCurve]);
   const southDashGeometry = useMemo(() => createConnectorDashGeometry(southCurve), [southCurve]);
+  const northEdgeGeometries = useMemo(
+    () => [-1.72, 1.72].map((offset) => createCurveLineGeometry(
+      U_TURN_CONNECTORS.north.points.map(([x, _y, z]) => [x, z]),
+      offset,
+      () => 0.29,
+      0.1,
+      64,
+      'centripetal'
+    )),
+    []
+  );
+  const southEdgeGeometries = useMemo(
+    () => [-1.72, 1.72].map((offset) => createCurveLineGeometry(
+      U_TURN_CONNECTORS.south.points.map(([x, _y, z]) => [x, z]),
+      offset,
+      () => 0.29,
+      0.1,
+      64,
+      'centripetal'
+    )),
+    []
+  );
   const northLabelPosition = useMemo(() => {
     const point = northCurve.getPointAt(0.58);
     const tangent = northCurve.getTangentAt(0.58).setY(0).normalize();
@@ -323,7 +494,9 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
     southSurfaceGeometry.dispose();
     northDashGeometry.dispose();
     southDashGeometry.dispose();
-  }, [northDashGeometry, northSurfaceGeometry, southDashGeometry, southSurfaceGeometry]);
+    northEdgeGeometries.forEach((geometry) => geometry.dispose());
+    southEdgeGeometries.forEach((geometry) => geometry.dispose());
+  }, [northDashGeometry, northEdgeGeometries, northSurfaceGeometry, southDashGeometry, southEdgeGeometries, southSurfaceGeometry]);
 
   return (
     <group name="MarathahalliCrossoverSourceAlignmentOverlay">
@@ -363,6 +536,16 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         <mesh geometry={southDashGeometry} renderOrder={9}>
           <meshBasicMaterial color="#f8fafc" transparent opacity={0.86} depthWrite={false} />
         </mesh>
+        {northEdgeGeometries.map((geometry, index) => (
+          <mesh key={`north-turn-edge-${index}`} geometry={geometry} renderOrder={9}>
+            <meshBasicMaterial color="#fbbf24" transparent opacity={0.92} depthWrite={false} />
+          </mesh>
+        ))}
+        {southEdgeGeometries.map((geometry, index) => (
+          <mesh key={`south-turn-edge-${index}`} geometry={geometry} renderOrder={9}>
+            <meshBasicMaterial color="#fbbf24" transparent opacity={0.92} depthWrite={false} />
+          </mesh>
+        ))}
 
         {/* A narrow amber center trace and direction chevrons make the
             modelled vehicle flow readable while staying visibly separate from
@@ -414,6 +597,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           title="TURN REPLAY"
           detail="YIELD → SWEEP → EXIT · MODELLED · NOT COUNTED"
         />
+        <CrossoverTurnGuide id="north" curve={northCurve} isNight={isNight} cameraMode={cameraMode} />
+        <CrossoverTurnGuide id="south" curve={southCurve} isNight={isNight} cameraMode={cameraMode} />
         </group>
       )}
 
@@ -431,6 +616,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         isNight={isNight}
         cameraMode={cameraMode}
       />
+
       <CrossoverReplayVehicle
         id="south"
         curve={southCurve}
@@ -452,6 +638,18 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           <mesh geometry={southDashGeometry} renderOrder={9}>
             <meshBasicMaterial color={accent} transparent opacity={0.42} depthWrite={false} />
           </mesh>
+          {northEdgeGeometries.map((geometry, index) => (
+            <mesh key={`north-person-edge-${index}`} geometry={geometry} renderOrder={9}>
+              <meshBasicMaterial color={accent} transparent opacity={0.3} depthWrite={false} />
+            </mesh>
+          ))}
+          {southEdgeGeometries.map((geometry, index) => (
+            <mesh key={`south-person-edge-${index}`} geometry={geometry} renderOrder={9}>
+              <meshBasicMaterial color={accent} transparent opacity={0.3} depthWrite={false} />
+            </mesh>
+          ))}
+          <CrossoverTurnGuide id="north" curve={northCurve} isNight={isNight} cameraMode={cameraMode} />
+          <CrossoverTurnGuide id="south" curve={southCurve} isNight={isNight} cameraMode={cameraMode} />
         </>
       )}
     </group>

@@ -30,8 +30,19 @@ const METRO_SAMPLE_SPACING = 8;
 const METRO_TRAIN_SPEED_FALLBACK = 22;
 const METRO_SLEEPER_SPACING = 4;
 const METRO_GAUGE_FALLBACK_METERS = 1.435;
+// The two source centreline ways are the authority for the rendered
+// alignment. 5.03 m is the target centre-to-centre spacing used for the
+// structural fallback when a future extract cannot be paired at a sample.
+const METRO_TARGET_TRACK_CENTRE_SPACING = 5.03;
 const METRO_THIRD_RAIL_CLEARANCE = 0.34;
 const METRO_MIN_SOFFIT_Y = 5.5;
+const METRO_UNDERDECK_CENTER_DROP = 0.68;
+const METRO_UNDERDECK_HEIGHT = 0.46;
+const METRO_PIER_CAP_HEIGHT = 0.72;
+const METRO_PIER_CAP_DEPTH = 1.65;
+const METRO_PIER_SHAFT_RADIUS = 0.62;
+const METRO_PIER_BASE_RADIUS = 0.96;
+const METRO_BEARING_PAD_HEIGHT = 0.14;
 // The source ways carry a relative OSM layer (layer=2), not survey elevations.
 // These are display elevations for the modeled viaduct detail only.
 const METRO_JUNCTION_CLEAR_HALF_LENGTH = 42;
@@ -227,7 +238,7 @@ function buildMetroTrackData(snapshot: MarathahalliDemoSnapshot): MetroTrackData
   const trainCurve = toPolylineCurve(firstTrack);
   const trackSeparation = median(firstTrack.map((point, index) => (
     distanceBetween(point, secondTrack[index])
-  )));
+  ))) || METRO_TARGET_TRACK_CENTRE_SPACING;
   const sourceGaugeMillimeters = Number.parseFloat(ways[0].tags.gauge || '');
   const gaugeSourceBacked = Number.isFinite(sourceGaugeMillimeters)
     && sourceGaugeMillimeters > 0
@@ -263,7 +274,7 @@ function buildMetroTrackData(snapshot: MarathahalliDemoSnapshot): MetroTrackData
     trainCurve,
     trainLength: trainCurve.getLength(),
     initialProgress: nearestIndex / Math.max(1, firstTrack.length - 1),
-    trackSeparation: trackSeparation || METRO_DECK_WIDTH - METRO_TRACK_WIDTH - 0.5,
+    trackSeparation,
     gaugeMeters,
     gaugeSourceBacked,
     trainSpeed,
@@ -365,33 +376,6 @@ function sourcePierFrames(
   // rejection rule because an elevated metro pier may legitimately occupy a
   // carriageway median and OSM has no surveyed pier setback data here.
   return frames.filter(({ point }) => !isInsideSourceBuilding(point, sourceBuildings));
-}
-
-function createTransverseBeamGeometry(
-  frames: MetroPierFrame[],
-  width: number,
-  height: number,
-  y: number,
-  depth: number
-) {
-  const pieces: THREE.BufferGeometry[] = [];
-  const yAxis = new THREE.Vector3(0, 1, 0);
-
-  frames.forEach(({ point, angle }) => {
-    const piece = new THREE.BoxGeometry(width, height, depth);
-    piece.applyMatrix4(
-      new THREE.Matrix4().compose(
-        new THREE.Vector3(point[0], y, point[1]),
-        new THREE.Quaternion().setFromAxisAngle(yAxis, angle),
-        new THREE.Vector3(1, 1, 1)
-      )
-    );
-    pieces.push(piece);
-  });
-
-  const geometry = mergeGeometries(pieces, false) || new THREE.BufferGeometry();
-  pieces.forEach((piece) => piece.dispose());
-  return geometry;
 }
 
 function createSleeperGeometry(
@@ -513,7 +497,15 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     [trackData]
   );
   const underdeckGeometry = useMemo(
-    () => (trackData ? createBeamGeometry([trackData.centerline], METRO_DECK_WIDTH, 0.46, METRO_DECK_CENTER_Y - 0.68, 0.4) : null),
+    () => (trackData
+      ? createBeamGeometry(
+        [trackData.centerline],
+        METRO_DECK_WIDTH,
+        METRO_UNDERDECK_HEIGHT,
+        METRO_DECK_CENTER_Y - METRO_UNDERDECK_CENTER_DROP,
+        0.4
+      )
+      : null),
     [trackData]
   );
   const underdeckRibGeometry = useMemo(
@@ -538,19 +530,6 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     () => (thirdRailPaths.length ? createBeamGeometry(thirdRailPaths, 0.1, 0.1, METRO_RAIL_Y + 0.08) : null),
     [thirdRailPaths]
   );
-  const pierJointGeometry = useMemo(
-    () => (pierFrames.length
-      ? createTransverseBeamGeometry(
-        pierFrames,
-        Math.max(METRO_DECK_WIDTH, trackData?.trackSeparation || METRO_DECK_WIDTH),
-        0.06,
-        METRO_DECK_CENTER_Y + 0.54,
-        0.14
-      )
-      : null),
-    [pierFrames, trackData]
-  );
-
   useEffect(() => {
     if (trackData) trainProgressRef.current = trackData.initialProgress;
   }, [trackData]);
@@ -564,8 +543,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     railGeometry?.dispose();
     thirdRailGeometry?.dispose();
     sleeperGeometry?.dispose();
-    pierJointGeometry?.dispose();
-  }, [blueStripeGeometry, deckGeometry, parapetGeometry, pierJointGeometry, railGeometry, sleeperGeometry, thirdRailGeometry, underdeckGeometry, underdeckRibGeometry]);
+  }, [blueStripeGeometry, deckGeometry, parapetGeometry, railGeometry, sleeperGeometry, thirdRailGeometry, underdeckGeometry, underdeckRibGeometry]);
 
   useFrame((_, delta) => {
     if (!metroTrainRef.current || !trackData) return;
@@ -584,10 +562,19 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   const shadowMaterial = isNight ? '#718096' : '#aebdca';
   const soffitEmissive = isNight ? '#111827' : '#334155';
   const soffitEmissiveIntensity = isNight ? 0.24 : 0.2;
+  // The cap spans the paired source track beams with a restrained overhang;
+  // it is not a road barrier. Bearing pads remain tied to the source-derived
+  // centre separation so the deck stays aligned even when OSM is refreshed.
   const pierCapWidth = Math.max(
-    METRO_DECK_WIDTH + 0.65,
-    trackData.trackSeparation + METRO_TRACK_WIDTH + 0.9
+    METRO_DECK_WIDTH + 0.28,
+    trackData.trackSeparation + METRO_TRACK_WIDTH + 0.45
   );
+  const underdeckBottom = METRO_DECK_CENTER_Y
+    - METRO_UNDERDECK_CENTER_DROP
+    - METRO_UNDERDECK_HEIGHT / 2;
+  // Keep the modelled bearings just below the modeled underdeck. OSM supplies
+  // the plan alignment, not a surveyed vertical section or pier elevation.
+  const pierCapTop = Math.max(METRO_MIN_SOFFIT_Y, underdeckBottom - 0.02);
   const bearingOffset = trackData.trackSeparation / 2;
 
   return (
@@ -596,21 +583,23 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
       userData={{
         alignment: 'OSM mainline ways 1551136768 and 1551136770',
         elevation: 'modelled display elevation; OSM layer=2 is relative only',
-        structure: 'single circular RCC pier; modelled 28 m span stationing',
+        structure: 'single circular RCC pier with precast crosshead and two bearing pads; modelled 28 m span stationing',
         minimumSoffit: '5.5 m Phase 2A road-clearance baseline; display datum is higher to clear mapped flyover',
         supports: sourceMetroSupportFeatures.length
           ? 'OSM explicit Namma Metro pier supports'
           : 'modelled regular pier grid; extract has no explicit Namma Metro pier supports',
         gauge: trackData.gaugeSourceBacked ? 'OSM gauge=1435' : 'modelled fallback gauge',
+        trackCentreSpacing: `OSM paired-way median ${trackData.trackSeparation.toFixed(2)} m; target about ${METRO_TARGET_TRACK_CENTRE_SPACING.toFixed(2)} m`,
+        bearings: 'modelled paired bearing pads below underdeck at source-derived track centres',
         thirdRail: trackData.thirdRailSourceBacked
           ? 'OSM voltage=750 frequency=0'
           : 'not rendered without source electrical evidence'
       }}
     >
       {pierFrames.map(({ point, angle, sourceBacked }, index) => {
-        const columnTop = Math.max(METRO_MIN_SOFFIT_Y, METRO_DECK_CENTER_Y - 0.75);
-        const columnBase = 0.08;
-        const columnHeight = columnTop - columnBase;
+        const pierCapBottom = pierCapTop - METRO_PIER_CAP_HEIGHT;
+        const columnBase = 0.42;
+        const columnHeight = pierCapBottom - columnBase + 0.08;
         return (
           <group
             key={`metro-source-pier-${index}`}
@@ -622,55 +611,45 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
                 : 'modelled support on source-aligned centerline'
             }}
           >
-            <mesh position={[0, columnBase + 0.08, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[1.48, 1.62, 0.16, 16]} />
+            {/* A shallow circular RCC plinth keeps the support legible without
+                creating a cage or a visual roadblock at the junction. */}
+            <mesh position={[0, 0.24, 0]} castShadow receiveShadow>
+              <cylinderGeometry args={[METRO_PIER_BASE_RADIUS, METRO_PIER_BASE_RADIUS + 0.12, 0.32, 24]} />
               <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
             </mesh>
-            {/* Phase 2A design references a single circular RCC pier on this
-                corridor. The low perimeter is a modelled 1.2 m crash barrier
-                so the column does not appear to sit directly in live lanes. */}
-            <group position={[0, columnBase + 0.68, 0]}>
-              <mesh position={[0, 0, -1.38]} castShadow receiveShadow>
-                <boxGeometry args={[3.2, 1.2, 0.18]} />
-                <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
-              </mesh>
-              <mesh position={[0, 0, 1.38]} castShadow receiveShadow>
-                <boxGeometry args={[3.2, 1.2, 0.18]} />
-                <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
-              </mesh>
-              <mesh position={[-1.51, 0, 0]} castShadow receiveShadow>
-                <boxGeometry args={[0.18, 1.2, 2.58]} />
-                <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
-              </mesh>
-              <mesh position={[1.51, 0, 0]} castShadow receiveShadow>
-                <boxGeometry args={[0.18, 1.2, 2.58]} />
-                <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
-              </mesh>
-            </group>
             <mesh position={[0, columnBase + columnHeight / 2, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[0.72, 0.82, columnHeight, 16]} />
+              <cylinderGeometry args={[METRO_PIER_SHAFT_RADIUS, METRO_PIER_SHAFT_RADIUS + 0.1, columnHeight, 24]} />
               <meshStandardMaterial color={concreteMaterial} roughness={0.86} metalness={0.04} />
             </mesh>
-            <mesh position={[0, columnTop - 0.36, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[0.98, 0.72, 0.58, 16]} />
+            {/* A small tapered head is a transition into the precast cap, not
+                a second column. */}
+            <mesh position={[0, pierCapBottom + 0.04, 0]} castShadow receiveShadow>
+              <cylinderGeometry args={[METRO_PIER_SHAFT_RADIUS + 0.1, METRO_PIER_SHAFT_RADIUS, 0.24, 24]} />
               <meshStandardMaterial color={concreteMaterial} roughness={0.86} metalness={0.04} />
             </mesh>
-            <mesh position={[0, columnBase + 0.34, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[1.05, 0.82, 0.68, 16]} />
-              <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
-            </mesh>
-            <mesh position={[0, columnTop - 0.22, 0]} castShadow receiveShadow>
-              <boxGeometry args={[pierCapWidth, 0.88, 2.3]} />
+            {/* Modelled precast pier cap: its long axis is perpendicular to
+                the source ways because the parent group carries the source
+                tangent rotation. */}
+            <mesh position={[0, pierCapTop - METRO_PIER_CAP_HEIGHT / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[pierCapWidth, METRO_PIER_CAP_HEIGHT, METRO_PIER_CAP_DEPTH]} />
               <meshStandardMaterial color={concreteMaterial} roughness={0.86} metalness={0.04} />
             </mesh>
-            <mesh position={[-bearingOffset, columnTop + 0.26, 0]} castShadow receiveShadow>
-              <boxGeometry args={[0.95, 0.18, 1.1]} />
-              <meshStandardMaterial color="#475569" roughness={0.72} metalness={0.12} />
+            <mesh position={[0, pierCapTop - 0.07, 0]} castShadow receiveShadow>
+              <boxGeometry args={[pierCapWidth + 0.12, 0.14, METRO_PIER_CAP_DEPTH + 0.1]} />
+              <meshStandardMaterial color={shadowMaterial} roughness={0.84} metalness={0.04} />
             </mesh>
-            <mesh position={[bearingOffset, columnTop + 0.26, 0]} castShadow receiveShadow>
-              <boxGeometry args={[0.95, 0.18, 1.1]} />
-              <meshStandardMaterial color="#475569" roughness={0.72} metalness={0.12} />
-            </mesh>
+            {[-bearingOffset, bearingOffset].map((offset) => (
+              <group key={`metro-bearing-${offset}`} position={[offset, pierCapTop, 0]}>
+                <mesh position={[0, 0.035, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[1.08, 0.07, 0.98]} />
+                  <meshStandardMaterial color="#334155" roughness={0.72} metalness={0.16} />
+                </mesh>
+                <mesh position={[0, 0.07 + METRO_BEARING_PAD_HEIGHT / 2, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.86, METRO_BEARING_PAD_HEIGHT, 0.78]} />
+                  <meshStandardMaterial color="#1e293b" roughness={0.58} metalness={0.24} />
+                </mesh>
+              </group>
+            ))}
           </group>
         );
       })}
@@ -727,11 +706,6 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
       {sleeperGeometry && (
         <mesh geometry={sleeperGeometry}>
           <meshStandardMaterial color="#475569" roughness={0.82} metalness={0.16} />
-        </mesh>
-      )}
-      {pierJointGeometry && (
-        <mesh geometry={pierJointGeometry}>
-          <meshStandardMaterial color="#64748b" roughness={0.8} metalness={0.08} />
         </mesh>
       )}
       {railGeometry && (
