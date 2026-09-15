@@ -1,9 +1,15 @@
 import React, { useMemo, useLayoutEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { getOrrOffsetPointAtZ } from '../../../data/RealRoadData';
+import { useFrame, useThree } from '@react-three/fiber';
+import {
+  getOrrOffsetPointAtZ,
+  HAL_TO_SPICEGARDEN_PTS,
+  getSpiceGardenOffsetPointAtDistance
+} from '../../../data/RealRoadData';
 
 interface GreeneryProps {
   isRaining: boolean;
+  isPersonView?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,7 +34,7 @@ interface SkipZone {
 
 interface TreeCorridor {
   id: string;
-  axis: 'X' | 'Z';      // axis along which the corridor runs
+  axis: 'X' | 'Z' | 'SOURCE_SPICE'; // axis or source path along which it runs
   sideOffset: number;    // signed road-frame offset (x/z sign at the sidewalk)
   start: number;         // corridor start along the axis
   end: number;           // corridor end along the axis
@@ -46,7 +52,7 @@ interface TreeCorridor {
 // Coordinate reference (from JunctionRoads / Footpaths.tsx):
 //   ORR (Outer Ring Road)  → Z-axis, service-road edge ≈ lateral ±20.25,
 //                            modeled footpath center x ±23.5
-//   HAL / Varthur Road     → X-axis, modeled footpath center z ±13
+//   HAL / Varthur Road     → source-derived curved frame, modeled footpath side
 //
 // Trees are placed on the outside of the modeled footpath, rather than on its
 // curb edge. The source OSM tree nodes remain rendered by OsmSnapshotLayer;
@@ -186,6 +192,32 @@ const TREE_CORRIDORS: TreeCorridor[] = [
   },
 
   // ══════════════════════════════════════════════════════════════════════════
+  // F2: SPICE GARDEN ROAD – source-aligned modelled planting edge
+  //     Source way/648496925 bends north-east through the actual frontage.
+  //     The OSM extract contains no nearby tree nodes, so this is an explicit
+  //     modelled streetscape layer rather than a claim about surveyed trees.
+  //     Skip the restaurant/service-road cluster and the narrow driveway area.
+  // ══════════════════════════════════════════════════════════════════════════
+  {
+    id: 'spice-garden-source-east-edge',
+    axis: 'SOURCE_SPICE',
+    // The east shoulder is the open side of the source frontage; the west
+    // shoulder is occupied by mapped retail footprints through this bend.
+    sideOffset: -20,
+    start: 42,
+    end: 296,
+    spacing: 14,
+    xzJitter: 0.55,
+    skipZones: [
+      { start: 42, end: 72, reason: 'Spice Garden restaurant / frontage access' },
+      { start: 142, end: 170, reason: 'Residential driveway cluster' },
+      { start: 238, end: 266, reason: 'Narrow bend / turning clearance' }
+    ],
+    trunkRadius: 0.2, trunkHeight: 2.8, canopyRadius: 2.0,
+    canopyColor: ['#176b35', '#1d7a3d', '#145c2d', '#238548', '#176334'],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
   // G: ORR CENTRAL MEDIAN NORTH of junction (x ≈ 0)
   //    Compact Ficus-style divider planting, spacing 12 m
   // ══════════════════════════════════════════════════════════════════════════
@@ -229,6 +261,51 @@ const TREE_CORRIDORS: TreeCorridor[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 type TreeEntry = [number, number, number, number, number, number];
 
+const PERSON_CANOPY_CLEAR_RADIUS = 34;
+
+// The HAL/Varthur corridor bends around the junction and its source geometry
+// is not representable by one fixed z offset. Reuse the same source-derived
+// road points used by the authored road/traffic layers, then project each tree
+// onto the road normal so the planting line follows the mapped carriageway.
+const HAL_ROAD_CURVE = new THREE.CatmullRomCurve3(
+  HAL_TO_SPICEGARDEN_PTS.map(([x, z]) => new THREE.Vector3(x, 0, z)),
+  false,
+  'catmullrom',
+  0.25
+);
+const HAL_ROAD_FRAME_SAMPLES = HAL_ROAD_CURVE.getPoints(640);
+
+function getHalRoadFrameAtX(xCoord: number) {
+  let nearestIndex = 0;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  HAL_ROAD_FRAME_SAMPLES.forEach((sample, index) => {
+    const distance = Math.abs(sample.x - xCoord);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = index;
+    }
+  });
+
+  const current = HAL_ROAD_FRAME_SAMPLES[nearestIndex];
+  const previous = HAL_ROAD_FRAME_SAMPLES[Math.max(0, nearestIndex - 1)];
+  const next = HAL_ROAD_FRAME_SAMPLES[Math.min(HAL_ROAD_FRAME_SAMPLES.length - 1, nearestIndex + 1)];
+  const tangent = new THREE.Vector2(next.x - previous.x, next.z - previous.z).normalize();
+  return {
+    x: current.x,
+    z: current.z,
+    tangentX: tangent.x,
+    tangentZ: tangent.y
+  };
+}
+
+function getHalOffsetPointAtX(xCoord: number, lateralOffset: number): [number, number] {
+  const frame = getHalRoadFrameAtX(xCoord);
+  return [
+    frame.x - frame.tangentZ * lateralOffset,
+    frame.z + frame.tangentX * lateralOffset
+  ];
+}
+
 function buildTreePositions(corridors: TreeCorridor[]): TreeEntry[] {
   const entries: TreeEntry[] = [];
 
@@ -252,6 +329,10 @@ function buildTreePositions(corridors: TreeCorridor[]): TreeEntry[] {
       if (axis === 'Z' && corridor.id.startsWith('orr-')) {
         const lateralOffset = sideOffset >= 0 ? -Math.abs(sideOffset) : Math.abs(sideOffset);
         [x, z] = getOrrOffsetPointAtZ(pos, lateralOffset + jitter);
+      } else if (axis === 'X') {
+        [x, z] = getHalOffsetPointAtX(pos, sideOffset + jitter);
+      } else if (axis === 'SOURCE_SPICE') {
+        [x, z] = getSpiceGardenOffsetPointAtDistance(pos, sideOffset + jitter);
       }
 
       // Deterministic scale ±15% per tree
@@ -266,9 +347,13 @@ function buildTreePositions(corridors: TreeCorridor[]): TreeEntry[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-export const Greenery: React.FC<GreeneryProps> = ({ isRaining }) => {
+export const Greenery: React.FC<GreeneryProps> = ({ isRaining, isPersonView = false }) => {
   const trunkRef = useRef<THREE.InstancedMesh>(null);
   const canopyRef = useRef<THREE.InstancedMesh>(null);
+  const baseCanopyMatrices = useRef<THREE.Matrix4[]>([]);
+  const lastCullCameraPosition = useRef(new THREE.Vector3(Number.POSITIVE_INFINITY, 0, Number.POSITIVE_INFINITY));
+  const cullDummy = useMemo(() => new THREE.Object3D(), []);
+  const { camera } = useThree();
 
   const trees = useMemo(() => buildTreePositions(TREE_CORRIDORS), []);
 
@@ -285,7 +370,7 @@ export const Greenery: React.FC<GreeneryProps> = ({ isRaining }) => {
       const corridorId = TREE_CORRIDORS[cIdx].id;
       const species = corridorId.includes('varthur') ? 1     // palm – tall slim
                     : corridorId.includes('orr-west') ? 2    // rain_tree – wide spreading
-                    : corridorId.includes('hal') ? 2          // rain_tree – wide spreading
+                    : corridorId.includes('hal') || corridorId.includes('spice-garden') ? 2 // rain_tree – wide spreading
                     : 0;                                       // tropical_round (median, orr-east)
 
       // ── Trunk ──
@@ -308,16 +393,22 @@ export const Greenery: React.FC<GreeneryProps> = ({ isRaining }) => {
 
       // ── Canopy ──
       const trunkH = species === 1 ? 6.5 * scale * 0.55 : trunkHeight * scale;
-      const canopyW = species === 1 ? scale * 0.8
-                    : species === 2 ? scale * 2.4
-                    : (canopyRadius / 1.8) * scale;
-      const canopyHt = species === 1 ? scale * 0.7
-                     : species === 2 ? scale * 0.65
-                     : (canopyRadius / 1.8) * scale * (0.9 + Math.sin(seed * 0.6) * 0.12);
-      dummy.position.set(x, y + trunkH, z);
+      // At eye level, keep the same planted canopy but lift and tighten it so
+      // a person standing beneath a tree can still read the road, footpath,
+      // vehicles and buildings instead of looking through an opaque sphere.
+      const personCanopyScale = isPersonView ? 0.76 : 1;
+      const personCanopyLift = isPersonView ? 0.72 : 0;
+      const canopyW = species === 1 ? scale * 0.8 * personCanopyScale
+                    : species === 2 ? scale * 2.4 * personCanopyScale
+                    : (canopyRadius / 1.8) * scale * personCanopyScale;
+      const canopyHt = species === 1 ? scale * 0.7 * personCanopyScale
+                     : species === 2 ? scale * 0.65 * personCanopyScale
+                     : (canopyRadius / 1.8) * scale * (0.9 + Math.sin(seed * 0.6) * 0.12) * personCanopyScale;
+      dummy.position.set(x, y + trunkH + personCanopyLift, z);
       dummy.scale.set(canopyW, canopyHt, canopyW);
       dummy.rotation.set(0, idx * 0.75 + 0.3, 0);
       dummy.updateMatrix();
+      baseCanopyMatrices.current[idx] = dummy.matrix.clone();
       canopyRef.current?.setMatrixAt(idx, dummy.matrix);
 
       // ── Species color – rain makes foliage darker / wetter ──
@@ -329,7 +420,32 @@ export const Greenery: React.FC<GreeneryProps> = ({ isRaining }) => {
     trunkRef.current.instanceMatrix.needsUpdate = true;
     canopyRef.current.instanceMatrix.needsUpdate = true;
     if (canopyRef.current.instanceColor) canopyRef.current.instanceColor.needsUpdate = true;
-  }, [trees, isRaining]);
+    lastCullCameraPosition.current.set(Number.POSITIVE_INFINITY, 0, Number.POSITIVE_INFINITY);
+  }, [trees, isPersonView, isRaining]);
+
+  useFrame(() => {
+    if (!isPersonView || !canopyRef.current) return;
+    if (lastCullCameraPosition.current.distanceToSquared(camera.position) < 0.01) return;
+
+    // A first-person camera can begin inside a broad rain-tree canopy. Hide
+    // only the immediate canopy instances, leaving their trunks and the
+    // surrounding planted corridor in place so the street still reads as green.
+    trees.forEach(([x, _y, z], index) => {
+      const isInsidePlayerBubble = Math.hypot(camera.position.x - x, camera.position.z - z) < PERSON_CANOPY_CLEAR_RADIUS;
+      if (isInsidePlayerBubble) {
+        cullDummy.position.set(0, -1000, 0);
+        cullDummy.scale.setScalar(0.001);
+        cullDummy.rotation.set(0, 0, 0);
+        cullDummy.updateMatrix();
+        canopyRef.current?.setMatrixAt(index, cullDummy.matrix);
+      } else {
+        const baseMatrix = baseCanopyMatrices.current[index];
+        if (baseMatrix) canopyRef.current?.setMatrixAt(index, baseMatrix);
+      }
+    });
+    canopyRef.current.instanceMatrix.needsUpdate = true;
+    lastCullCameraPosition.current.copy(camera.position);
+  });
 
   return (
     <group name="PlannedRoadsideGreenery">

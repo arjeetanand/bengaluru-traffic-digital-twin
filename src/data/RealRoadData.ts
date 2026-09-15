@@ -268,6 +268,57 @@ export const HAL_TO_SPICEGARDEN_PTS: [number, number][] = [
   [470.0, -15.0]
 ];
 
+// Source way/648496925 — Spice Garden Road — from the widened OSM snapshot.
+// This is kept separate from the authored HAL/Varthur arterial spline because
+// the local road turns north-east through the actual Spice Garden frontage.
+// It is used for source-aligned planting and inspection composition only; it
+// does not replace the compiled OSM road geometry or claim a surveyed tree row.
+export const SPICE_GARDEN_ROAD_SOURCE_PTS: readonly [number, number][] = [
+  [850.6, -25.7],
+  [849.3, -19.6],
+  [839.8, 24.9],
+  [832.8, 57.5],
+  [825.7, 99.9],
+  [813.5, 158.5],
+  [801.2, 217.0],
+  [796.2, 233.4],
+  [793.0, 247.3],
+  [788.4, 268.8],
+  [780.4, 311.7],
+  [778.3, 323.5]
+];
+
+const SPICE_GARDEN_ROAD_CURVE = new THREE.CatmullRomCurve3(
+  SPICE_GARDEN_ROAD_SOURCE_PTS.map(([x, z]) => new THREE.Vector3(x, 0, z)),
+  false,
+  'centripetal',
+  0.25
+);
+const SPICE_GARDEN_ROAD_LENGTH = SPICE_GARDEN_ROAD_CURVE.getLength();
+
+export function getSpiceGardenRoadFrameAtDistance(distance: number): RoadFrame {
+  const progress = Math.max(0, Math.min(1, distance / SPICE_GARDEN_ROAD_LENGTH));
+  const point = SPICE_GARDEN_ROAD_CURVE.getPointAt(progress);
+  const tangent = SPICE_GARDEN_ROAD_CURVE.getTangentAt(progress).setY(0).normalize();
+  return {
+    x: point.x,
+    z: point.z,
+    tangentX: tangent.x,
+    tangentZ: tangent.z
+  };
+}
+
+export function getSpiceGardenOffsetPointAtDistance(
+  distance: number,
+  lateralOffset: number
+): [number, number] {
+  const frame = getSpiceGardenRoadFrameAtDistance(distance);
+  return [
+    frame.x - frame.tangentZ * lateralOffset,
+    frame.z + frame.tangentX * lateralOffset
+  ];
+}
+
 /**
  * Procedural ribbon mesh builder that extrudes an asphalt road strip along any 2D/3D spline.
  * Creates smooth quads with normals and UV coordinates for realistic asphalt textures and markings.

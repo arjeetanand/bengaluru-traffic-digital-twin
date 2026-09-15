@@ -236,7 +236,12 @@ const WALK_STARTS: Record<CameraPreset, CameraView> = {
   // the vehicle carriageway. The eye still sees the road, but begins on a
   // surface that the snapshot actually maps as pedestrian-accessible.
   overview: { position: [-30.6, WALK_EYE_HEIGHT, -5.4], target: [-17.5, WALK_EYE_HEIGHT, -6.1] },
-  underpass: { position: [-32.3, WALK_EYE_HEIGHT, -25.9], target: [-52.2, WALK_EYE_HEIGHT, 2.5] },
+  underpass: {
+    // Start on the mapped frontage footway, just outside the tunnel portal,
+    // and look into the source underpass rather than along the full route.
+    position: [-30.6, WALK_EYE_HEIGHT, -5.4],
+    target: [-10.6, WALK_EYE_HEIGHT, 13.2]
+  },
   surface: { position: [-30.6, WALK_EYE_HEIGHT, -5.4], target: [-17.5, WALK_EYE_HEIGHT, -6.1] },
   aerial: { position: [-30.6, WALK_EYE_HEIGHT, -5.4], target: [-17.5, WALK_EYE_HEIGHT, -6.1] },
   cinematic: { position: [-30.6, WALK_EYE_HEIGHT, -5.4], target: [-17.5, WALK_EYE_HEIGHT, -6.1] },
@@ -281,22 +286,23 @@ const WALK_STARTS: Record<CameraPreset, CameraView> = {
     target: [63.9, WALK_EYE_HEIGHT, -4.6]
   },
   // Start on the mapped Spice Garden inner-road footway instead of on the
-  // nearby Varthur Road carriageway.
+  // nearby Varthur Road carriageway. The southern bend gives the person view
+  // enough stand-off to read the shop, frontage road and continuing footway.
   spicegarden: {
     position: [
-      835.9,
+      837.2,
       WALK_EYE_HEIGHT,
-      78.8
+      -21.5
     ],
-    target: [
-      832.9,
-      WALK_EYE_HEIGHT,
-      97
-    ]
+    // Aim through the source road bend rather than directly at the POI
+    // marker. The mapped restaurant remains in the right-hand frontage while
+    // the road, footway and modelled planting edge share the frame.
+    target: [850.5, WALK_EYE_HEIGHT, 34]
   },
-  // The crossover walk view starts on the source frontage route and looks
-  // toward the mapped crossing links.
-  crossover: { position: [-30.6, WALK_EYE_HEIGHT, -5.4], target: [-52.2, WALK_EYE_HEIGHT, 2.5] },
+  // The crossover walk view starts on the source-marked signal crossing and
+  // looks along its mapped northbound footway link, keeping the road, traffic
+  // and crossing marker in the first-person frame.
+  crossover: { position: [-32.7, WALK_EYE_HEIGHT, 2.6], target: [-29.7, WALK_EYE_HEIGHT, 23.9] },
   corridor: { position: [-95.8, WALK_EYE_HEIGHT, -247.4], target: [-106.7, WALK_EYE_HEIGHT, -288.8] },
   bellandur: { position: [-2965, WALK_EYE_HEIGHT, -3585], target: [-2945, WALK_EYE_HEIGHT, -3585] },
   oraclehub: {

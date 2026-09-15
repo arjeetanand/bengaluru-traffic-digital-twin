@@ -100,7 +100,8 @@ const CrossoverReplayVehicle: React.FC<{
   laneOffset: number;
   color: string;
   isNight: boolean;
-}> = ({ id, curve, startProgress, laneOffset, color, isNight }) => {
+  cameraMode: 'walk' | 'overview';
+}> = ({ id, curve, startProgress, laneOffset, color, isNight, cameraMode }) => {
   const vehicleRef = useRef<THREE.Group>(null);
   const progressRef = useRef(startProgress);
   const geometry = useMemo(() => createCarGeometry(), []);
@@ -149,7 +150,7 @@ const CrossoverReplayVehicle: React.FC<{
         countedInFleet: false
       }}
     >
-      <mesh geometry={geometry} material={material} scale={0.72} castShadow />
+      <mesh geometry={geometry} material={material} scale={cameraMode === 'walk' ? 0.54 : 0.72} castShadow />
       <mesh position={[0, 0.64, 1.58]}>
         <boxGeometry args={[0.22, 0.12, 0.06]} />
         <meshBasicMaterial color={isNight ? '#fef08a' : '#fde68a'} toneMapped={false} />
@@ -358,6 +359,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         laneOffset={-0.72}
         color="#0ea5e9"
         isNight={isNight}
+        cameraMode={cameraMode}
       />
       <CrossoverReplayVehicle
         id="south"
@@ -366,6 +368,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         laneOffset={0.72}
         color="#f97316"
         isNight={isNight}
+        cameraMode={cameraMode}
       />
 
       {/* At eye level, retain only a thin, low-contrast audit trace. The

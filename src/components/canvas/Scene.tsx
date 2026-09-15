@@ -118,7 +118,7 @@ export const Scene: React.FC<SceneProps> = ({
   const fogColor = isNight ? '#030712' : (isRaining ? '#334155' : '#a9b8c8');
   const sourceLabelDistanceFactor = cameraMode === 'overview'
     ? ((cameraPreset === 'corridor' || cameraPreset === 'bellandur') ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65)))
-    : 65;
+    : (cameraPreset === 'spicegarden' ? 24 : 3);
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, overflow: 'hidden' }}>
@@ -248,7 +248,7 @@ export const Scene: React.FC<SceneProps> = ({
               not a surveyed inventory of every tree. Keep the instanced layer
               in person mode too: street-level inspection should not lose the
               roadside shade that is visible from the bird view. */}
-          <Greenery isRaining={isRaining} />
+          <Greenery isRaining={isRaining} isPersonView={cameraMode === 'walk'} />
 
           {/* ── Realistic West Corridor Landmarks (Innovative Multiplex, Krishna Summit, Krishna Grand, Novel MSR) ── */}
           {!isSourceGeometryFocusView && (

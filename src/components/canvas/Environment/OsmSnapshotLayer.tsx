@@ -466,6 +466,17 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     const landmarkShopPattern = /spice garden|pizza hut|village hypermart|holly flames|sweet chariot|kalamandir|nalli|tanishq|kalyan|brand factory/i;
     return snapshot.shops.filter((shop) => landmarkShopPattern.test(shop.name || shop.tags.name || '')).slice(0, 24);
   }, [labelDistanceFactor, snapshot]);
+  // Person presets use a compact but non-zero source label factor (currently
+  // 24) so the landmark name remains legible at eye level. Treat that range
+  // as street scale too; the bird presets start at 65 and keep their larger
+  // corridor labels.
+  const isFirstPersonLabelScale = labelDistanceFactor < 40;
+  // Nearby POIs can otherwise expand into a billboard when a person starts
+  // beside a shop node. Keep the source label readable while capping its
+  // world-space scale; bird/overview labels retain their corridor scale.
+  const sourceShopLabelDistanceFactor = isFirstPersonLabelScale
+    ? Math.min(15, Math.max(8, labelDistanceFactor * 0.55))
+    : Math.max(45, labelDistanceFactor * 0.82);
   const sourceRoadLabelFeatures = useMemo(() => {
     if (!snapshot || isLongRange) return [];
     const priority = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'service']);
@@ -755,7 +766,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             key={`source-shop-label-${shop.id}`}
             position={[shop.position[0], 2.4, shop.position[1]]}
             center
-            distanceFactor={Math.max(45, labelDistanceFactor * 0.82)}
+            distanceFactor={sourceShopLabelDistanceFactor}
             zIndexRange={[18, 0]}
           >
             <div
@@ -782,7 +793,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             key={`source-road-label-${road.id}`}
             position={[road.centroid[0], 1.8, road.centroid[1]]}
             center
-            distanceFactor={Math.max(42, labelDistanceFactor * 0.78)}
+            distanceFactor={Math.max(isFirstPersonLabelScale ? 4 : 42, labelDistanceFactor * 0.78)}
             zIndexRange={[17, 0]}
           >
             <div
@@ -854,7 +865,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
               key={`source-infrastructure-label-${feature.id}`}
               position={[feature.centroid[0], isTunnel ? 6.0 : (isLongRange ? 30.0 : 8.0), feature.centroid[1]]}
               center
-              distanceFactor={Math.max(55, labelDistanceFactor * 0.9)}
+              distanceFactor={Math.max(isFirstPersonLabelScale ? 5 : 55, labelDistanceFactor * 0.9)}
               zIndexRange={[22, 0]}
             >
               <div
@@ -881,7 +892,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           <Html
             position={noUTurnLabelPosition}
             center
-            distanceFactor={Math.max(45, labelDistanceFactor * 0.9)}
+            distanceFactor={Math.max(isFirstPersonLabelScale ? 12 : 45, labelDistanceFactor * 0.9)}
             zIndexRange={[26, 0]}
           >
             <div
