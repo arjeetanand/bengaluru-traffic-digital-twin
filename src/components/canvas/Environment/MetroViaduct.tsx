@@ -428,8 +428,7 @@ function sourcePierFrames(
         return {
           ...frame,
           sourceBacked: true,
-          sourceSupportId: support.id,
-          sourceSupportOffset: frame.sourceSupportOffset
+          sourceSupportId: support.id
         };
       })
       .filter(({ point }) => (
@@ -662,33 +661,54 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   const underdeckBottom = METRO_DECK_CENTER_Y
     - METRO_UNDERDECK_CENTER_DROP
     - METRO_UNDERDECK_HEIGHT / 2;
-  // Keep the modelled bearings just below the modeled underdeck. OSM supplies
-  // the plan alignment, not a surveyed vertical section or pier elevation.
-  const pierCapTop = Math.max(METRO_MIN_SOFFIT_Y, underdeckBottom - 0.02);
+  const bearingStackHeight = METRO_BEARING_BASE_HEIGHT + METRO_BEARING_PAD_HEIGHT;
+  // Keep the full modeled bearing stack below the modeled underdeck. OSM
+  // supplies the plan alignment, not a surveyed vertical section or pier
+  // elevation. The validator checks this ordering and the road-clearance
+  // comparison as a renderer contract only.
+  const pierCapTop = underdeckBottom
+    - bearingStackHeight
+    - METRO_BEARING_TO_DECK_CLEARANCE;
   const bearingOffset = trackData.trackSeparation / 2;
+  const modelledGradeClearance = underdeckBottom;
+  const modelledRoadDeckClearance = underdeckBottom - METRO_REFERENCE_ROAD_DECK_TOP_Y;
+  const roadClearanceContract = modelledRoadDeckClearance >= METRO_REFERENCE_ROAD_CLEARANCE_BUFFER
+    ? `passes ${METRO_REFERENCE_ROAD_CLEARANCE_BUFFER.toFixed(2)} m model buffer`
+    : `below ${METRO_REFERENCE_ROAD_CLEARANCE_BUFFER.toFixed(2)} m model buffer`;
 
   return (
     <group
-      name="NammaMetroPhase2A_SourceAlignment_ModelledElevation"
+      name="NammaMetroPhase2A_SourcePlan_ModelledStructure"
       userData={{
-        alignment: 'OSM mainline ways 1551136768 and 1551136770',
-        elevation: 'modelled display elevation; OSM layer=2 is relative only',
-        structure: 'single circular RCC pier with precast crosshead and two bearing pads; modelled 28 m span stationing',
-        minimumSoffit: '5.5 m Phase 2A road-clearance baseline; display datum is higher to clear mapped flyover',
-        supports: sourceMetroSupportFeatures.length
-          ? 'OSM explicit Namma Metro pier supports'
-          : 'modelled regular pier grid; extract has no explicit Namma Metro pier supports',
+        modelStatus: 'source-backed plan alignment; modelled vertical and structural detail',
+        sourceProvider: 'OpenStreetMap local extract; source geometry is node-linked',
+        sourceSnapshot: 'public/data/marathahalli-demo.json',
+        sourceWayIds: trackData.sourceWayIds.join(', '),
+        sourceWayNodeCounts: trackData.sourceNodeCounts.join(', '),
+        sourceTags: Object.entries(trackData.sourceTrackTags)
+          .map(([key, value]) => `${key}=${value}`)
+          .join('; '),
+        sourceElevationEvidence: 'none; OSM layer=2 is relative topology, not metre elevation or clearance',
+        alignment: 'OSM mainline ways way/1551136768 and way/1551136770; siding way/1551136769 excluded',
+        elevation: 'modelled display elevation; not survey-derived',
+        structure: 'modelled single circular RCC pier, tapered transition, precast crosshead, and paired bearings; 28 m candidate stationing',
+        minimumSoffit: `${METRO_MIN_SOFFIT_Y.toFixed(2)} m model baseline; not surveyed clearance`,
+        roadClearance: `${modelledGradeClearance.toFixed(2)} m above local grade and ${modelledRoadDeckClearance.toFixed(2)} m above the modeled road-viaduct comparison datum; ${roadClearanceContract}; modelled only`,
+        supportEvidence: sourceMetroSupportFeatures.length
+          ? 'OSM explicit Namma Metro pier supports, projected onto the source centerline'
+          : 'none in extract; modelled regular pier grid, with generic ORR bridge piers excluded',
+        supportPlacement: `modelled source-footprint exclusion radius ${(METRO_PIER_BASE_RADIUS + METRO_PIER_BUILDING_BUFFER).toFixed(2)} m; junction clear box ±${METRO_JUNCTION_CLEAR_HALF_WIDTH} m x ±${METRO_JUNCTION_CLEAR_HALF_LENGTH} m`,
         gauge: trackData.gaugeSourceBacked ? 'OSM gauge=1435' : 'modelled fallback gauge',
         trackCentreSpacing: `OSM paired-way median ${trackData.trackSeparation.toFixed(2)} m; target about ${METRO_TARGET_TRACK_CENTRE_SPACING.toFixed(2)} m`,
-        bearings: 'modelled paired bearing pads below underdeck at source-derived track centres',
+        bearings: `modelled paired bearing stacks ${bearingStackHeight.toFixed(2)} m high below underdeck at source-derived track centres`,
         thirdRail: trackData.thirdRailSourceBacked
           ? 'OSM voltage=750 frequency=0'
           : 'not rendered without source electrical evidence'
       }}
     >
-      {pierFrames.map(({ point, angle, sourceBacked }, index) => {
+      {pierFrames.map(({ point, angle, sourceBacked, sourceSupportId, sourceSupportOffset }, index) => {
         const pierCapBottom = pierCapTop - METRO_PIER_CAP_HEIGHT;
-        const columnBase = 0.42;
+        const columnBase = METRO_PIER_BASE_TOP_Y;
         const columnHeight = pierCapBottom - columnBase + 0.08;
         return (
           <group
@@ -696,15 +716,23 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
             position={[point[0], 0, point[1]]}
             rotation={[0, angle, 0]}
             userData={{
+              modelStatus: sourceBacked
+                ? 'source support evidence; centerline-projected placement'
+                : 'modelled support station on source-aligned centerline',
               supportProvenance: sourceBacked
                 ? 'OSM explicit Namma Metro support'
-                : 'modelled support on source-aligned centerline'
+                : 'modelled support on source-aligned centerline; no ORR support reuse',
+              sourceSupportId: sourceSupportId || 'none',
+              sourceSupportOffset: sourceSupportOffset === undefined
+                ? 'n/a'
+                : `${sourceSupportOffset.toFixed(2)} m from source support node to centerline projection`,
+              buildingClearance: `${(METRO_PIER_BASE_RADIUS + METRO_PIER_BUILDING_BUFFER).toFixed(2)} m source-footprint exclusion; not a structural survey`
             }}
           >
             {/* A shallow circular RCC plinth keeps the support legible without
                 creating a cage or a visual roadblock at the junction. */}
             <mesh position={[0, 0.24, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[METRO_PIER_BASE_RADIUS, METRO_PIER_BASE_RADIUS + 0.12, 0.32, 24]} />
+              <cylinderGeometry args={[METRO_PIER_BASE_RADIUS, METRO_PIER_BASE_RADIUS + 0.12, 0.36, 24]} />
               <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
             </mesh>
             <mesh position={[0, columnBase + columnHeight / 2, 0]} castShadow receiveShadow>
@@ -730,12 +758,12 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
             </mesh>
             {[-bearingOffset, bearingOffset].map((offset) => (
               <group key={`metro-bearing-${offset}`} position={[offset, pierCapTop, 0]}>
-                <mesh position={[0, 0.035, 0]} castShadow receiveShadow>
-                  <boxGeometry args={[1.08, 0.07, 0.98]} />
+                <mesh position={[0, METRO_BEARING_BASE_HEIGHT / 2, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[1.16, METRO_BEARING_BASE_HEIGHT, 1.04]} />
                   <meshStandardMaterial color="#334155" roughness={0.72} metalness={0.16} />
                 </mesh>
-                <mesh position={[0, 0.07 + METRO_BEARING_PAD_HEIGHT / 2, 0]} castShadow receiveShadow>
-                  <boxGeometry args={[0.86, METRO_BEARING_PAD_HEIGHT, 0.78]} />
+                <mesh position={[0, METRO_BEARING_BASE_HEIGHT + METRO_BEARING_PAD_HEIGHT / 2, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.94, METRO_BEARING_PAD_HEIGHT, 0.84]} />
                   <meshStandardMaterial color="#1e293b" roughness={0.58} metalness={0.24} />
                 </mesh>
               </group>

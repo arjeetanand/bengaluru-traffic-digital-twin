@@ -122,6 +122,38 @@ console.log(`Snapshot: ${path.relative(projectDirectory, snapshotPath)}`);
 console.log(`Source XML: ${path.relative(projectDirectory, sourceXmlPath)}`);
 console.log(`Mainline ways: ${metroWayIds.join(', ')}`);
 
+if (rendererSource) {
+  const hasBothMainlineIds = metroWayIds.every((id) => rendererSource.includes(id));
+  const selectsCommittedMainline = rendererSource.includes('NAMMA_METRO_MAINLINE_WAY_IDS') &&
+    rendererSource.includes('map((id) => snapshot.railways.find');
+  if (hasBothMainlineIds && selectsCommittedMainline) {
+    pass('renderer source-way contract', 'renderer selects the two committed through ways explicitly; the siding is not part of the running deck');
+  } else {
+    fail('renderer source-way contract', 'renderer source selection is not explicitly bound to both committed mainline way IDs');
+  }
+
+  if (rendererSource.includes('isNammaMetroPierSupport') &&
+      rendererSource.includes('generic ORR bridge piers excluded')) {
+    pass('renderer support isolation', 'only explicitly tagged Namma Metro supports can enter the source-support path; nearby generic ORR piers remain excluded');
+  } else {
+    fail('renderer support isolation', 'renderer support path does not expose the explicit-metro evidence guard');
+  }
+
+  const metadataMarkers = [
+    'modelStatus:',
+    'sourceWayIds:',
+    'sourceElevationEvidence:',
+    'supportEvidence:',
+    'roadClearance:'
+  ];
+  const missingMetadata = metadataMarkers.filter((marker) => !rendererSource.includes(marker));
+  if (missingMetadata.length) {
+    fail('renderer provenance metadata', `missing ${missingMetadata.join(', ')}`);
+  } else {
+    pass('renderer provenance metadata', 'source plan, vertical evidence gap, support evidence, and clearance status are exposed on the scene group');
+  }
+}
+
 const sourceHash = `sha256:${crypto.createHash('sha256').update(sourceXml).digest('hex')}`;
 if (sourceHash === snapshot.source?.inputSha256) {
   pass('source identity', `${sourceHash} matches snapshot.source.inputSha256`);
@@ -246,6 +278,33 @@ function pointToGeometryDistance(point, geometry) {
   return nearest;
 }
 
+function isPointInsidePolygon(point, polygon) {
+  let inside = false;
+  for (let index = 0, previousIndex = polygon.length - 1; index < polygon.length; previousIndex = index++) {
+    const [currentX, currentZ] = polygon[index];
+    const [previousX, previousZ] = polygon[previousIndex];
+    const crossesRay = (currentZ > point[1]) !== (previousZ > point[1]);
+    if (!crossesRay) continue;
+    const intersectionX = (previousX - currentX) * (point[1] - currentZ) /
+      (previousZ - currentZ) + currentX;
+    if (point[0] < intersectionX) inside = !inside;
+  }
+  return inside;
+}
+
+function pointToPolygonDistance(point, polygon) {
+  if (!Array.isArray(polygon) || polygon.length < 2) return Number.POSITIVE_INFINITY;
+  if (polygon.length >= 3 && isPointInsidePolygon(point, polygon)) return 0;
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < polygon.length; index += 1) {
+    nearest = Math.min(
+      nearest,
+      pointToSegmentDistance(point, polygon[index], polygon[(index + 1) % polygon.length])
+    );
+  }
+  return nearest;
+}
+
 function geometryIntersectsBox(geometry, halfWidth, halfLength) {
   if (!isFiniteGeometry(geometry)) return false;
   const box = [
@@ -301,15 +360,20 @@ for (const id of metroWayIds) {
     continue;
   }
 
-  const requiredTags = ['network', 'railway', 'bridge', 'layer'];
+  const requiredTags = ['network', 'railway', 'bridge', 'layer', 'gauge'];
   const sourceTagsPresent = requiredTags.every((key) => Boolean(sourceWay.tags[key]));
   const snapshotTagsMatch = Object.entries(sourceWay.tags).every(([key, value]) => (
     snapshotWay.tags?.[key] === value
   ));
-  if (sourceTagsPresent && snapshotTagsMatch && sourceWay.tags.network === 'Namma Metro' && sourceWay.tags.railway === 'subway') {
-    pass(`${id} source tags`, `Namma Metro subway, bridge=${sourceWay.tags.bridge}, layer=${sourceWay.tags.layer}`);
+  const sourceTagContract = sourceWay.tags.network === 'Namma Metro' &&
+    sourceWay.tags.railway === 'subway' &&
+    sourceWay.tags.bridge === 'viaduct' &&
+    sourceWay.tags.layer === '2' &&
+    sourceWay.tags.gauge === '1435';
+  if (sourceTagsPresent && snapshotTagsMatch && sourceTagContract) {
+    pass(`${id} source tags`, `Namma Metro subway viaduct, layer=${sourceWay.tags.layer}, gauge=${sourceWay.tags.gauge}`);
   } else {
-    fail(`${id} source tags`, 'source tags are incomplete or snapshot tags drifted');
+    fail(`${id} source tags`, 'source tags are incomplete, unexpected, or snapshot tags drifted');
   }
 
   const sourceRefs = sourceWay.nodeRefs;
@@ -510,29 +574,160 @@ if (firstWay && secondWayOriginal && isFiniteGeometry(firstWay.geometry) && isFi
 
   if (rendererSource) {
     const readRendererConstant = (name) => {
-      const value = rendererSource.match(new RegExp(`const\\s+${name}\\s*=\\s*([0-9]+(?:\\.[0-9]+)?)\\s*;`))?.[1];
+      const value = rendererSource.match(new RegExp(`const\\s+${name}\\s*=\\s*(-?[0-9]+(?:\\.[0-9]+)?)\\s*;`))?.[1];
       return value === undefined ? null : Number(value);
     };
     const rendererContract = {
       deckCenterY: readRendererConstant('METRO_DECK_CENTER_Y'),
+      deckWidth: readRendererConstant('METRO_DECK_WIDTH'),
+      trackWidth: readRendererConstant('METRO_TRACK_WIDTH'),
       pierSpacing: readRendererConstant('METRO_PIER_SPACING'),
       minSoffitY: readRendererConstant('METRO_MIN_SOFFIT_Y'),
+      underdeckCenterDrop: readRendererConstant('METRO_UNDERDECK_CENTER_DROP'),
+      underdeckHeight: readRendererConstant('METRO_UNDERDECK_HEIGHT'),
+      pierCapHeight: readRendererConstant('METRO_PIER_CAP_HEIGHT'),
+      pierCapDepth: readRendererConstant('METRO_PIER_CAP_DEPTH'),
+      pierShaftRadius: readRendererConstant('METRO_PIER_SHAFT_RADIUS'),
+      pierBaseRadius: readRendererConstant('METRO_PIER_BASE_RADIUS'),
+      pierBaseTopY: readRendererConstant('METRO_PIER_BASE_TOP_Y'),
+      pierBuildingBuffer: readRendererConstant('METRO_PIER_BUILDING_BUFFER'),
+      minSourcePierSpacing: readRendererConstant('METRO_MIN_SOURCE_PIER_SPACING'),
+      bearingBaseHeight: readRendererConstant('METRO_BEARING_BASE_HEIGHT'),
+      bearingPadHeight: readRendererConstant('METRO_BEARING_PAD_HEIGHT'),
+      bearingToDeckClearance: readRendererConstant('METRO_BEARING_TO_DECK_CLEARANCE'),
+      referenceRoadDeckTopY: readRendererConstant('METRO_REFERENCE_ROAD_DECK_TOP_Y'),
+      referenceRoadClearanceBuffer: readRendererConstant('METRO_REFERENCE_ROAD_CLEARANCE_BUFFER'),
       clearHalfLength: readRendererConstant('METRO_JUNCTION_CLEAR_HALF_LENGTH'),
       clearHalfWidth: readRendererConstant('METRO_JUNCTION_CLEAR_HALF_WIDTH')
     };
-    if (Object.values(rendererContract).every((value) => value !== null)) {
-      const modelledUnderdeckBottom = rendererContract.deckCenterY - 0.68 - 0.46 / 2;
-      const modelledPierColumnTop = Math.max(
-        rendererContract.minSoffitY,
-        rendererContract.deckCenterY - 0.75
-      );
+    const missingRendererConstants = Object.entries(rendererContract)
+      .filter(([, value]) => value === null)
+      .map(([name]) => name);
+    if (!missingRendererConstants.length) {
+      const modelledUnderdeckBottom = rendererContract.deckCenterY -
+        rendererContract.underdeckCenterDrop - rendererContract.underdeckHeight / 2;
+      const modelledBearingStackHeight = rendererContract.bearingBaseHeight +
+        rendererContract.bearingPadHeight;
+      const modelledPierCapTop = modelledUnderdeckBottom - modelledBearingStackHeight -
+        rendererContract.bearingToDeckClearance;
+      const modelledPierCapBottom = modelledPierCapTop - rendererContract.pierCapHeight;
+      const modelledPierColumnTop = modelledPierCapBottom + 0.08;
+      const modelledRoadDeckClearance = modelledUnderdeckBottom - rendererContract.referenceRoadDeckTopY;
+      const sourceSeparation = separationMedian;
+      const deckEnvelope = sourceSeparation + rendererContract.trackWidth;
+
       console.log(`Renderer model contract (not survey evidence): deck center Y=${rendererContract.deckCenterY.toFixed(2)}m, pier spacing=${rendererContract.pierSpacing.toFixed(1)}m, crossover clear box=±${rendererContract.clearHalfWidth.toFixed(1)}m x ±${rendererContract.clearHalfLength.toFixed(1)}m`);
-      console.log(`Renderer model clearance: underdeck bottom ≈${modelledUnderdeckBottom.toFixed(2)}m, pier column top=${modelledPierColumnTop.toFixed(2)}m, declared minimum soffit=${rendererContract.minSoffitY.toFixed(2)}m`);
-      if (modelledUnderdeckBottom > rendererContract.minSoffitY + 0.01) {
-        warn('renderer/source elevation gap', `rendered underdeck is ${formatDistance(modelledUnderdeckBottom)} above ground while the source only supplies relative layer tags; do not present ${rendererContract.minSoffitY.toFixed(1)}m as measured clearance`);
+      console.log(`Renderer model clearance (not survey evidence): underdeck bottom ≈${modelledUnderdeckBottom.toFixed(2)}m, ${modelledRoadDeckClearance.toFixed(2)}m above modeled road-viaduct datum, bearing stack=${modelledBearingStackHeight.toFixed(2)}m`);
+
+      if (modelledUnderdeckBottom >= rendererContract.minSoffitY &&
+          modelledRoadDeckClearance >= rendererContract.referenceRoadClearanceBuffer) {
+        pass('renderer road-clearance contract', `underdeck ≈${modelledUnderdeckBottom.toFixed(2)}m clears the ${rendererContract.minSoffitY.toFixed(2)}m grade baseline and the ${rendererContract.referenceRoadClearanceBuffer.toFixed(2)}m modeled crossing buffer`);
+      } else {
+        fail('renderer road-clearance contract', `underdeck ≈${modelledUnderdeckBottom.toFixed(2)}m does not satisfy the modeled grade/road clearance contract`);
+      }
+      warn('renderer/source elevation gap', `vertical values remain renderer assumptions: source supplies layer=2 only, with no metre elevation or clearance evidence; ${formatDistance(modelledRoadDeckClearance)} is a modeled comparison, not a survey`);
+
+      if (rendererContract.deckWidth >= deckEnvelope &&
+          rendererContract.pierCapDepth >= 1.2 &&
+          rendererContract.pierShaftRadius < rendererContract.pierBaseRadius &&
+          rendererContract.pierCapHeight > 0 &&
+          rendererContract.pierSpacing > 0 &&
+          rendererContract.minSourcePierSpacing > 0) {
+        pass('renderer structural proportions', `paired source tracks fit within ${rendererContract.deckWidth.toFixed(2)}m deck (source separation median ${sourceSeparation.toFixed(2)}m); tapered shaft/base, ${rendererContract.pierCapDepth.toFixed(2)}m crosshead depth, and positive stationing are coherent model dimensions`);
+      } else {
+        fail('renderer structural proportions', 'deck envelope, pier taper, crosshead depth, or stationing constants are incoherent');
+      }
+
+      const bearingTop = modelledPierCapTop + modelledBearingStackHeight;
+      if (modelledPierColumnTop > rendererContract.pierBaseTopY &&
+          bearingTop <= modelledUnderdeckBottom - rendererContract.bearingToDeckClearance + 0.001) {
+        pass('renderer bearing ordering', `modeled shaft reaches cap, and bearing stack ends ${formatDistance(modelledUnderdeckBottom - bearingTop)} below the underdeck`);
+      } else {
+        fail('renderer bearing ordering', 'modeled shaft/crosshead/bearing/underdeck vertical order is invalid');
+      }
+
+      const centerlineLength = lineLength(centerline);
+      const buildingFootprints = buildings
+        .filter((building) => isFiniteGeometry(building.geometry) && building.geometry.length >= 3)
+        .map((building) => {
+          const xs = building.geometry.map(([x]) => x);
+          const zs = building.geometry.map(([, z]) => z);
+          return {
+            id: building.id,
+            geometry: building.geometry,
+            minX: Math.min(...xs),
+            maxX: Math.max(...xs),
+            minZ: Math.min(...zs),
+            maxZ: Math.max(...zs)
+          };
+        });
+      const buildingCollisionRadius = rendererContract.pierBaseRadius + rendererContract.pierBuildingBuffer;
+      const collidesWithSourceBuilding = (point) => buildingFootprints.some((building) => {
+        if (
+          point[0] < building.minX - buildingCollisionRadius ||
+          point[0] > building.maxX + buildingCollisionRadius ||
+          point[1] < building.minZ - buildingCollisionRadius ||
+          point[1] > building.maxZ + buildingCollisionRadius
+        ) return false;
+        return pointToPolygonDistance(point, building.geometry) <= buildingCollisionRadius;
+      });
+      const fallbackStations = [];
+      let skippedJunctionStations = 0;
+      for (let distance = 14; distance < centerlineLength - 14; distance += rendererContract.pierSpacing) {
+        const point = pointAt(centerline, distance / centerlineLength);
+        if (Math.abs(point[1]) < rendererContract.clearHalfLength &&
+            Math.abs(point[0]) < rendererContract.clearHalfWidth) {
+          skippedJunctionStations += 1;
+          continue;
+        }
+        fallbackStations.push(point);
+      }
+      const fallbackBuildingCollisions = fallbackStations.filter(collidesWithSourceBuilding);
+      const safeFallbackStations = fallbackStations.filter((point) => !collidesWithSourceBuilding(point));
+
+      if (explicitMetroSupports.length === 0) {
+        if (safeFallbackStations.length > 2 && !rendererSource.includes('!isInsideSourceBuilding')) {
+          fail('modelled pier placement', 'renderer does not visibly reject modelled stations against source building footprints');
+        } else if (safeFallbackStations.length > 2) {
+          pass('modelled pier placement', `${safeFallbackStations.length} rendered stations remain clear of the ${buildingCollisionRadius.toFixed(2)}m source-footprint buffer; ${fallbackBuildingCollisions.length} candidate(s) are intentionally rejected and ${skippedJunctionStations} station(s) are removed from the crossover clear box`);
+        } else {
+          fail('modelled pier placement', `${safeFallbackStations.length} safe stations remain after source-building and junction clearance filtering`);
+        }
+      } else {
+        const projectedSupportPoints = explicitMetroSupports.map((support) => {
+          let nearestPoint = centerline[0];
+          let nearestDistance = Number.POSITIVE_INFINITY;
+          for (let index = 1; index < centerline.length; index += 1) {
+            const start = centerline[index - 1];
+            const end = centerline[index];
+            const dx = end[0] - start[0];
+            const dz = end[1] - start[1];
+            const lengthSquared = dx * dx + dz * dz;
+            const progress = lengthSquared > 0
+              ? Math.max(0, Math.min(1, ((support.position[0] - start[0]) * dx + (support.position[1] - start[1]) * dz) / lengthSquared))
+              : 0;
+            const candidate = [start[0] + progress * dx, start[1] + progress * dz];
+            const distance = distanceBetween(support.position, candidate);
+            if (distance < nearestDistance) {
+              nearestPoint = candidate;
+              nearestDistance = distance;
+            }
+          }
+          return { id: support.id, point: nearestPoint, offset: nearestDistance };
+        });
+        const invalidProjectedSupports = projectedSupportPoints.filter(({ point, offset }) => (
+          offset > supportProximityWindow ||
+          (Math.abs(point[1]) < rendererContract.clearHalfLength && Math.abs(point[0]) < rendererContract.clearHalfWidth) ||
+          collidesWithSourceBuilding(point)
+        ));
+        if (invalidProjectedSupports.length === 0) {
+          pass('source pier placement', `${projectedSupportPoints.length} explicit metro support(s) are centerline-projected and avoid the junction/building clearance contracts`);
+        } else {
+          fail('source pier placement', `${invalidProjectedSupports.length} explicit metro support projection(s) violate offset, junction, or source-building clearance`);
+        }
       }
     } else {
-      warn('renderer contract', 'could not read all placement constants from MetroViaduct.tsx');
+      fail('renderer contract', `could not read constants: ${missingRendererConstants.join(', ')}`);
     }
   }
 }

@@ -19,16 +19,76 @@ interface BuildingsProps {
   includeSurroundingBuildings?: boolean;
 }
 
-export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundingBuildings = false }) => {
-  // ── 1. Batch-merge surrounding OSM buildings by category for render performance ──
-  const { commercialBatch, retailBatch, apartmentsBatch } = useMemo(() => {
-    if (!includeSurroundingBuildings) {
-      return { commercialBatch: null, retailBatch: null, apartmentsBatch: null };
-    }
+type SurroundingBatchStyle = SurroundingBuilding['facadeStyle'];
 
-    const commercialGeoms: THREE.BufferGeometry[] = [];
-    const retailGeoms: THREE.BufferGeometry[] = [];
-    const residentialGeoms: THREE.BufferGeometry[] = [];
+interface SurroundingGeometryBatch {
+  style: SurroundingBatchStyle;
+  count: number;
+  geometry: THREE.BufferGeometry;
+}
+
+const SURROUNDING_BATCH_STYLES: SurroundingBatchStyle[] = [
+  'glass_curtain',
+  'commercial_grid',
+  'retail_banner',
+  'residential_balcony'
+];
+const SURROUNDING_BUILDING_LIMIT = 420;
+
+function isInsideHandcraftedCorridor(cx: number, cz: number) {
+  // Brand Factory Mall zone (East side, x: 25 to 75, z: 35 to 85)
+  if (cx >= 25 && cx <= 75 && cz >= 35 && cz <= 85) return true;
+  // Kalamandir & Nalli Silks zone (East side north, x: 25 to 75, z: 300 to 375)
+  if (cx >= 25 && cx <= 75 && cz >= 300 && cz <= 375) return true;
+  // Innovative Multiplex zone (source-aligned west corridor footprint)
+  if (cx >= -314 && cx <= -258 && cz >= -565 && cz <= -505) return true;
+  // Outlet Row (Nike, Adidas, Puma, Reebok) (East side south, x: 25 to 75, z: -170 to -55)
+  if (cx >= 25 && cx <= 75 && cz >= -170 && cz <= -55) return true;
+  return false;
+}
+
+function selectSurroundingBuildings(features: readonly SurroundingBuilding[], limit: number) {
+  const eligible = features.filter((building) => !isInsideHandcraftedCorridor(building.cx, building.cz));
+  if (eligible.length <= limit) return eligible;
+
+  const byDistance = [...eligible].sort((left, right) => (
+    (left.cx ** 2 + left.cz ** 2) - (right.cx ** 2 + right.cz ** 2)
+  ));
+  const minX = Math.min(...eligible.map((building) => building.cx));
+  const maxX = Math.max(...eligible.map((building) => building.cx));
+  const minZ = Math.min(...eligible.map((building) => building.cz));
+  const maxZ = Math.max(...eligible.map((building) => building.cz));
+  const representatives: SurroundingBuilding[] = [];
+  const cells = new Set<string>();
+
+  // Preserve a low-cost spatial sample first, then fill the remaining budget
+  // by distance so both the crossover and the far corridor retain context.
+  for (const building of byDistance) {
+    const cellX = Math.min(15, Math.max(0, Math.floor(((building.cx - minX) / Math.max(1, maxX - minX)) * 16)));
+    const cellZ = Math.min(15, Math.max(0, Math.floor(((building.cz - minZ) / Math.max(1, maxZ - minZ)) * 16)));
+    const key = `${cellX}:${cellZ}`;
+    if (cells.has(key)) continue;
+    cells.add(key);
+    representatives.push(building);
+  }
+
+  const selected: SurroundingBuilding[] = [];
+  const selectedIds = new Set<string>();
+  for (const building of [...representatives, ...byDistance]) {
+    if (selected.length >= limit || selectedIds.has(building.id)) continue;
+    selected.push(building);
+    selectedIds.add(building.id);
+  }
+  return selected;
+}
+
+export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundingBuildings = false }) => {
+  // ── 1. Batch-merge surrounding OSM-derived context by facade style ──
+  const surroundingBatches = useMemo<SurroundingGeometryBatch[]>(() => {
+    if (!includeSurroundingBuildings) return [];
+
+    const geometriesByStyle = new Map<SurroundingBatchStyle, THREE.BufferGeometry[]>();
+    for (const style of SURROUNDING_BATCH_STYLES) geometriesByStyle.set(style, []);
 
     // Helper to generate an extruded building geometry from 2D relative points
     const makeExtrudedGeom = (b: SurroundingBuilding): THREE.BufferGeometry | null => {
@@ -53,54 +113,45 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundin
         geom.rotateX(-Math.PI / 2);
         // Translate to building's world centroid
         geom.translate(b.cx, 0, b.cz);
+        // Preserve the curated dataset's source color without creating one
+        // material/draw call per building after the geometries are merged.
+        const sourceColor = new THREE.Color(b.color);
+        const colors = new Float32Array(geom.attributes.position.count * 3);
+        for (let index = 0; index < geom.attributes.position.count; index += 1) {
+          sourceColor.toArray(colors, index * 3);
+        }
+        geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         return geom;
       } catch (err) {
         return null;
       }
     };
 
-    const isInsideHandcraftedCorridor = (cx: number, cz: number) => {
-      // Brand Factory Mall zone (East side, x: 25 to 75, z: 35 to 85)
-      if (cx >= 25 && cx <= 75 && cz >= 35 && cz <= 85) return true;
-      // Kalamandir & Nalli Silks zone (East side north, x: 25 to 75, z: 300 to 375)
-      if (cx >= 25 && cx <= 75 && cz >= 300 && cz <= 375) return true;
-      // Innovative Multiplex zone (source-aligned west corridor footprint)
-      if (cx >= -314 && cx <= -258 && cz >= -565 && cz <= -505) return true;
-      // Outlet Row (Nike, Adidas, Puma, Reebok) (East side south, x: 25 to 75, z: -170 to -55)
-      if (cx >= 25 && cx <= 75 && cz >= -170 && cz <= -55) return true;
-      return false;
-    };
-
-    for (const b of SURROUNDING_OSM_BUILDINGS) {
-      if (isInsideHandcraftedCorridor(b.cx, b.cz)) continue;
+    for (const b of selectSurroundingBuildings(SURROUNDING_OSM_BUILDINGS, SURROUNDING_BUILDING_LIMIT)) {
 
       const g = makeExtrudedGeom(b);
       if (!g) continue;
-
-      if (b.type === 'commercial') {
-        commercialGeoms.push(g);
-      } else if (b.type === 'retail') {
-        retailGeoms.push(g);
-      } else {
-        residentialGeoms.push(g);
-      }
+      geometriesByStyle.get(b.facadeStyle)?.push(g);
     }
 
     const safeMerge = (arr: THREE.BufferGeometry[]): THREE.BufferGeometry | null => {
       if (arr.length === 0) return null;
       try {
-        return mergeGeometries(arr, false);
+        const merged = mergeGeometries(arr, false);
+        arr.forEach((geometry) => geometry.dispose());
+        return merged;
       } catch (e) {
         console.warn('Failed to merge building batch:', e);
+        arr.forEach((geometry) => geometry.dispose());
         return null;
       }
     };
 
-    return {
-      commercialBatch: safeMerge(commercialGeoms),
-      retailBatch: safeMerge(retailGeoms),
-      apartmentsBatch: safeMerge(residentialGeoms)
-    };
+    return SURROUNDING_BATCH_STYLES.flatMap((style) => {
+      const styleGeometries = geometriesByStyle.get(style) || [];
+      const geometry = safeMerge(styleGeometries);
+      return geometry ? [{ style, count: styleGeometries.length, geometry }] : [];
+    });
   }, [includeSurroundingBuildings]);
 
   // Textures for surrounding buildings
@@ -116,42 +167,40 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundin
 
   return (
     <group name="MarathahalliRealOsmBuildings">
-      {/* ── Optional legacy merged surroundings; the OSM snapshot is the default source layer. ── */}
-      {includeSurroundingBuildings && commercialBatch && (
-        <mesh geometry={commercialBatch} castShadow receiveShadow>
+      {/* Optional legacy context stays capped at four merged draw calls. The
+          current source OSM layer remains the canonical provider; this set is
+          a curated fallback with modelled heights, not survey-grade massing. */}
+      {surroundingBatches.map((batch) => (
+        <mesh
+          key={`surrounding-building-batch-${batch.style}`}
+          geometry={batch.geometry}
+          castShadow
+          receiveShadow
+          userData={{
+            source: 'curated OSM-derived context',
+            rendering: 'merged',
+            facadeStyle: batch.style,
+            featureCount: batch.count,
+            heightProvenance: 'modelled'
+          }}
+        >
           <meshStandardMaterial
-            map={curtainTexture}
-            roughness={0.35}
-            metalness={0.65}
-            emissive={isNight ? '#38bdf8' : '#000000'}
-            emissiveIntensity={isNight ? 0.35 : 0}
+            color="#ffffff"
+            vertexColors
+            map={batch.style === 'glass_curtain'
+              ? curtainTexture
+              : batch.style === 'residential_balcony'
+                ? apartmentTexture
+                : commercialTexture}
+            roughness={batch.style === 'glass_curtain' ? 0.35 : 0.65}
+            metalness={batch.style === 'glass_curtain' ? 0.65 : 0.2}
+            emissive={isNight
+              ? (batch.style === 'glass_curtain' ? '#38bdf8' : '#fde047')
+              : '#000000'}
+            emissiveIntensity={isNight ? 0.32 : 0}
           />
         </mesh>
-      )}
-
-      {includeSurroundingBuildings && retailBatch && (
-        <mesh geometry={retailBatch} castShadow receiveShadow>
-          <meshStandardMaterial
-            map={commercialTexture}
-            roughness={0.65}
-            metalness={0.25}
-            emissive={isNight ? '#fde047' : '#000000'}
-            emissiveIntensity={isNight ? 0.4 : 0}
-          />
-        </mesh>
-      )}
-
-      {includeSurroundingBuildings && apartmentsBatch && (
-        <mesh geometry={apartmentsBatch} castShadow receiveShadow>
-          <meshStandardMaterial
-            map={apartmentTexture}
-            roughness={0.75}
-            metalness={0.15}
-            emissive={isNight ? '#fef3c7' : '#000000'}
-            emissiveIntensity={isNight ? 0.3 : 0}
-          />
-        </mesh>
-      )}
+      ))}
 
       {/* ── Real Landmark Buildings with High-Res Storefront Signage (Excluding Handcrafted Corridor Twins) ── */}
       {remainingLandmarks.map((lm) => (
@@ -251,7 +300,15 @@ const LandmarkBuildingBlock: React.FC<{
   }, [cx, cz, minX, maxX, minZ, maxZ, spanX, spanZ, height]);
 
   return (
-    <group position={[cx, 0, cz]}>
+    <group
+      position={[cx, 0, cz]}
+      userData={{
+        source: 'curated source-anchor registry',
+        name: landmark.name,
+        geometry: 'modelled facade approximation',
+        heightProvenance: 'modelled'
+      }}
+    >
       {/* ── Extruded Building Geometry ── */}
       <mesh geometry={buildingGeometry} castShadow receiveShadow>
         <meshStandardMaterial

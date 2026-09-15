@@ -338,44 +338,87 @@ function selectBuildingFeatures(features: OSMPolylineFeature[], limit: number) {
   return selected;
 }
 
-function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
-  const selected = selectBuildingFeatures(features, limit);
-  const geometries: THREE.BufferGeometry[] = [];
-
-  for (const feature of selected) {
-    if (feature.geometry.length < 3) continue;
-    try {
-      const shape = new THREE.Shape();
-      // ExtrudeGeometry grows along +Z. Negating source northing before the
-      // -90° X rotation keeps both northing and building height positive.
-      shape.moveTo(feature.geometry[0][0], -feature.geometry[0][1]);
-      for (let index = 1; index < feature.geometry.length; index += 1) {
-        shape.lineTo(feature.geometry[index][0], -feature.geometry[index][1]);
-      }
-      shape.closePath();
-
-      const geometry = new THREE.ExtrudeGeometry(shape, {
-        depth: Math.min(32, Math.max(3.5, feature.height || 4)),
-        bevelEnabled: false,
-        curveSegments: 1
-      });
-      geometry.rotateX(-Math.PI / 2);
-      geometries.push(geometry);
-    } catch {
-      // A malformed self-intersecting OSM polygon should not block the rest
-      // of the snapshot from rendering.
-    }
-  }
-
-  if (!geometries.length) return null;
-  const merged = mergeGeometries(geometries, false);
-  geometries.forEach((geometry) => geometry.dispose());
-  return merged;
+function getBuildingHeightSource(feature: OSMPolylineFeature): OSMHeightSource {
+  if (feature.heightSource) return feature.heightSource;
+  const explicitHeight = Number(feature.tags.height);
+  const explicitLevels = Number(feature.tags['building:levels']);
+  if (Number.isFinite(explicitHeight) && explicitHeight > 0) return 'osm:height';
+  if (Number.isFinite(explicitLevels) && explicitLevels > 0) return 'osm:building:levels';
+  return 'modelled:fallback';
 }
 
-function createBuildingOutlineGeometry(features: OSMPolylineFeature[], limit: number) {
+function createBuildingExtrusion(feature: OSMPolylineFeature) {
+  if (feature.geometry.length < 3) return null;
+  try {
+    const shape = new THREE.Shape();
+    // ExtrudeGeometry grows along +Z. Negating source northing before the
+    // -90° X rotation keeps both northing and building height positive.
+    shape.moveTo(feature.geometry[0][0], -feature.geometry[0][1]);
+    for (let index = 1; index < feature.geometry.length; index += 1) {
+      shape.lineTo(feature.geometry[index][0], -feature.geometry[index][1]);
+    }
+    shape.closePath();
+
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: Math.min(32, Math.max(3.5, feature.height || 4)),
+      bevelEnabled: false,
+      curveSegments: 1
+    });
+    geometry.rotateX(-Math.PI / 2);
+    return geometry;
+  } catch {
+    // A malformed self-intersecting OSM polygon should not block the rest
+    // of the snapshot from rendering.
+    return null;
+  }
+}
+
+function mergeBuildingGeometries(features: OSMPolylineFeature[]) {
+  const geometries = features
+    .map(createBuildingExtrusion)
+    .filter((geometry): geometry is THREE.ExtrudeGeometry => Boolean(geometry));
+  if (!geometries.length) return null;
+
+  try {
+    const merged = mergeGeometries(geometries, false);
+    geometries.forEach((geometry) => geometry.dispose());
+    return merged;
+  } catch {
+    geometries.forEach((geometry) => geometry.dispose());
+    return null;
+  }
+}
+
+interface SourceBuildingGeometryBatch {
+  source: OSMHeightSource;
+  count: number;
+  geometry: THREE.BufferGeometry;
+}
+
+function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
+  return mergeBuildingGeometries(selectBuildingFeatures(features, limit));
+}
+
+function createBuildingGeometryBatches(features: OSMPolylineFeature[]): SourceBuildingGeometryBatch[] {
+  const byProvenance = new Map<OSMHeightSource, OSMPolylineFeature[]>();
+  for (const source of ['osm:height', 'osm:building:levels', 'modelled:fallback'] as OSMHeightSource[]) {
+    byProvenance.set(source, []);
+  }
+  for (const feature of features) {
+    byProvenance.get(getBuildingHeightSource(feature))?.push(feature);
+  }
+
+  return (['osm:height', 'osm:building:levels', 'modelled:fallback'] as OSMHeightSource[])
+    .flatMap((source) => {
+      const sourceFeatures = byProvenance.get(source) || [];
+      const geometry = mergeBuildingGeometries(sourceFeatures);
+      return geometry ? [{ source, count: sourceFeatures.length, geometry }] : [];
+    });
+}
+
+function createBuildingOutlineGeometry(features: OSMPolylineFeature[]) {
   const positions: number[] = [];
-  for (const feature of selectBuildingFeatures(features, limit)) {
+  for (const feature of features) {
     if (feature.geometry.length < 2) continue;
     for (let index = 1; index <= feature.geometry.length; index += 1) {
       const previous = feature.geometry[index - 1];
@@ -405,15 +448,7 @@ function createNamedAreaGeometry(features: OSMPolylineFeature[]) {
 
 function getHeightProvenanceLabel(feature: OSMPolylineFeature) {
   const height = Number.isFinite(feature.height) ? `${feature.height?.toFixed(1)}M` : '—';
-  const explicitHeight = Number(feature.tags.height);
-  const explicitLevels = Number(feature.tags['building:levels']);
-  const source = feature.heightSource || (
-    Number.isFinite(explicitHeight) && explicitHeight > 0
-      ? 'osm:height'
-      : Number.isFinite(explicitLevels) && explicitLevels > 0
-        ? 'osm:building:levels'
-        : 'modelled:fallback'
-  );
+  const source = getBuildingHeightSource(feature);
 
   if (source === 'osm:height') return `HEIGHT OSM TAG · ${height}`;
   if (source === 'osm:building:levels') {
@@ -421,6 +456,120 @@ function getHeightProvenanceLabel(feature: OSMPolylineFeature) {
   }
   return `HEIGHT UNKNOWN · ${height} FALLBACK`;
 }
+
+interface SourceMarkerInstancesProps {
+  positions: readonly [number, number][];
+  featureType: string;
+  color: string;
+  emissive: string;
+  emissiveIntensity: number;
+}
+
+const SourceMarkerInstances: React.FC<SourceMarkerInstancesProps> = ({
+  positions,
+  featureType,
+  color,
+  emissive,
+  emissiveIntensity
+}) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    positions.forEach(([x, z], index) => {
+      dummy.position.set(x, 0.55, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      meshRef.current?.setMatrixAt(index, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+    meshRef.current.computeBoundingSphere();
+  }, [dummy, positions]);
+
+  if (!positions.length) return null;
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, positions.length]}
+      userData={{ source: 'OSM', featureType, rendering: 'instanced' }}
+    >
+      <cylinderGeometry args={[0.45, 0.45, 1.1, 8]} />
+      <meshStandardMaterial
+        color={color}
+        emissive={emissive}
+        emissiveIntensity={emissiveIntensity}
+        roughness={0.72}
+      />
+    </instancedMesh>
+  );
+};
+
+interface SourceTreeInstancesProps {
+  positions: readonly [number, number][];
+  isNight: boolean;
+}
+
+const SourceTreeInstances: React.FC<SourceTreeInstancesProps> = ({ positions, isNight }) => {
+  const trunkRef = useRef<THREE.InstancedMesh>(null);
+  const canopyRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const color = useMemo(() => new THREE.Color(), []);
+
+  useLayoutEffect(() => {
+    if (!trunkRef.current || !canopyRef.current) return;
+    positions.forEach(([x, z], index) => {
+      const scale = 0.86 + (Math.sin(index * 12.7) + 1) * 0.08;
+      const lean = Math.sin(index * 2.17) * 0.035;
+
+      dummy.position.set(x, 1.35 * scale, z);
+      dummy.rotation.set(lean, index * 0.37, lean * 0.72);
+      dummy.scale.setScalar(scale);
+      dummy.updateMatrix();
+      trunkRef.current?.setMatrixAt(index, dummy.matrix);
+
+      dummy.position.set(x, 3.0 * scale, z);
+      dummy.rotation.set(0, index * 0.52, 0);
+      dummy.scale.set(0.82 * scale, 0.68 * scale, 0.82 * scale);
+      dummy.updateMatrix();
+      canopyRef.current?.setMatrixAt(index, dummy.matrix);
+
+      color.set(isNight
+        ? (index % 3 === 0 ? '#14532d' : '#166534')
+        : (index % 3 === 0 ? '#15803d' : '#166534'));
+      canopyRef.current?.setColorAt(index, color);
+    });
+    trunkRef.current.instanceMatrix.needsUpdate = true;
+    canopyRef.current.instanceMatrix.needsUpdate = true;
+    if (canopyRef.current.instanceColor) canopyRef.current.instanceColor.needsUpdate = true;
+    trunkRef.current.computeBoundingSphere();
+    canopyRef.current.computeBoundingSphere();
+  }, [color, dummy, isNight, positions]);
+
+  if (!positions.length) return null;
+  return (
+    <group name="OSMSourceTreeInstances" userData={{ source: 'OSM', featureType: 'tree/tree_row', rendering: 'instanced', count: positions.length }}>
+      <instancedMesh
+        ref={trunkRef}
+        args={[undefined, undefined, positions.length]}
+        castShadow
+      >
+        <cylinderGeometry args={[0.25, 0.38, 3.0, 7]} />
+        <meshStandardMaterial color="#78350f" roughness={1} />
+      </instancedMesh>
+      <instancedMesh
+        ref={canopyRef}
+        args={[undefined, undefined, positions.length]}
+        castShadow
+        receiveShadow
+      >
+        <sphereGeometry args={[1.9, 7, 5]} />
+        <meshStandardMaterial roughness={0.92} metalness={0.02} />
+      </instancedMesh>
+    </group>
+  );
+};
 
 export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   isNight = false,
@@ -446,24 +595,36 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     return () => { active = false; };
   }, []);
 
-  const roadGeometry = useMemo(
-    () => (snapshot
-      ? createPolylineGeometry(
-        snapshot.roads.filter((feature) => !isSourceBridgeFeature(feature)),
-        getRoadSurfaceY
-      )
-      : null),
+  const sourceGroundRoadFeatures = useMemo(
+    () => snapshot?.roads.filter((feature) => !isSourceBridgeFeature(feature)) || [],
     [snapshot]
+  );
+  const roadGeometry = useMemo(
+    () => (snapshot ? createPolylineGeometry(sourceGroundRoadFeatures, getRoadSurfaceY) : null),
+    [snapshot, sourceGroundRoadFeatures]
   );
   const roadSurfaceGeometry = useMemo(
     () => (snapshot
-      ? createRibbonGeometry(
-        snapshot.roads.filter((feature) => !isSourceBridgeFeature(feature)),
-        getRoadRibbonWidth,
-        getRoadSurfaceY
-      )
+      ? createRibbonGeometry(sourceGroundRoadFeatures, getRoadRibbonWidth, getRoadSurfaceY)
       : null),
-    [snapshot]
+    [snapshot, sourceGroundRoadFeatures]
+  );
+  const sourceRoadDetailFeatures = useMemo(
+    () => sourceGroundRoadFeatures
+      .filter((feature) => SOURCE_ROAD_DETAIL_HIGHWAYS.has(feature.tags.highway || '') && feature.geometry.length >= 2)
+      .sort((left, right) => {
+        const leftLanes = Number(left.tags.lanes);
+        const rightLanes = Number(right.tags.lanes);
+        const laneDelta = (Number.isFinite(rightLanes) ? rightLanes : 0) - (Number.isFinite(leftLanes) ? leftLanes : 0);
+        if (laneDelta !== 0) return laneDelta;
+        return right.geometry.length - left.geometry.length;
+      })
+      .slice(0, SOURCE_ROAD_DETAIL_LIMIT),
+    [sourceGroundRoadFeatures]
+  );
+  const sourceRoadDetailGeometry = useMemo(
+    () => (snapshot ? createRoadDetailGeometries(sourceRoadDetailFeatures) : null),
+    [snapshot, sourceRoadDetailFeatures]
   );
   const sourceBridgeFeatures = useMemo(
     () => snapshot?.roads.filter(isSourceBridgeFeature) || [],
@@ -552,21 +713,23 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       : null),
     [snapshot]
   );
-  const buildingGeometry = useMemo(
-    () => (snapshot && showBuildings ? createBuildingGeometry(snapshot.buildings, buildingLimit) : null),
+  const selectedBuildingFeatures = useMemo(
+    () => (snapshot && showBuildings ? selectBuildingFeatures(snapshot.buildings, buildingLimit) : []),
     [buildingLimit, showBuildings, snapshot]
   );
-  const buildingOutlineGeometry = useMemo(
+  const buildingGeometryBatches = useMemo(
+    () => (showBuildings ? createBuildingGeometryBatches(selectedBuildingFeatures) : []),
+    [selectedBuildingFeatures, showBuildings]
+  );
+  const buildingOutlineFeatures = useMemo(
     () => (snapshot && showBuildings
-      ? createBuildingOutlineGeometry(
-        snapshot.buildings,
-        // The corridor overview needs every source footprint to read as a
-        // continuous city fabric. Keep solid extrusions capped for frame time,
-        // but use inexpensive line geometry for all 7,533 source outlines.
-        buildingLimit >= 2500 ? Number.POSITIVE_INFINITY : buildingLimit
-      )
-      : null),
-    [buildingLimit, showBuildings, snapshot]
+      ? (buildingLimit >= 2500 ? snapshot.buildings : selectedBuildingFeatures)
+      : []),
+    [buildingLimit, selectedBuildingFeatures, showBuildings, snapshot]
+  );
+  const buildingOutlineGeometry = useMemo(
+    () => (showBuildings ? createBuildingOutlineGeometry(buildingOutlineFeatures) : null),
+    [buildingOutlineFeatures, showBuildings]
   );
   const namedAreaGeometry = useMemo(
     () => (snapshot && showBuildings ? createNamedAreaGeometry(snapshot.places) : null),
@@ -580,27 +743,80 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     const unnamed = snapshot.shops.filter((shop) => !shop.name && !shop.tags.name);
     return [...named, ...unnamed].slice(0, 420);
   }, [snapshot]);
-  const sourceTreeRowPoints = useMemo(() => {
-    if (!snapshot?.treeRows?.length) return [] as [number, number][];
-    const points: [number, number][] = [];
-    for (const row of snapshot.treeRows) {
-      for (const point of row.geometry) {
-        // A tree-row way is a source line, not an inventory of individual
-        // trees. Place deterministic display markers at separated vertices
-        // without implying a surveyed count between those vertices.
-        if (points.some(([x, z]) => Math.hypot(point[0] - x, point[1] - z) < 4)) continue;
-        points.push(point);
+  const sourceShopMarkerPositions = useMemo(
+    () => sourceShopFeatures.map((shop) => shop.position),
+    [sourceShopFeatures]
+  );
+  const sourceTreePositions = useMemo(() => {
+    if (!snapshot) return [] as [number, number][];
+    const points: [number, number][] = snapshot.trees.map((tree) => tree.position);
+    const addIfSeparated = (point: [number, number]) => {
+      if (points.some(([x, z]) => Math.hypot(point[0] - x, point[1] - z) < 4)) return;
+      points.push(point);
+    };
+
+    for (const row of snapshot.treeRows || []) {
+      for (let index = 1; index < row.geometry.length; index += 1) {
+        const start = row.geometry[index - 1];
+        const end = row.geometry[index];
+        const length = Math.hypot(end[0] - start[0], end[1] - start[1]);
+        const samples = Math.max(1, Math.ceil(length / 8));
+        for (let sample = 0; sample <= samples; sample += 1) {
+          const progress = sample / samples;
+          addIfSeparated([
+            start[0] + (end[0] - start[0]) * progress,
+            start[1] + (end[1] - start[1]) * progress
+          ]);
+        }
       }
     }
     return points;
   }, [snapshot]);
   const sourceShopLabelFeatures = useMemo(() => {
-    // Keep the wide corridor survey readable: individual shop anchors remain
-    // available in the store drawer and as orange POI points, while only the
-    // four fixed source landmarks are labelled at long-range scale.
+    // Keep the wide corridor survey readable: all named source shops remain
+    // available as instanced POIs, while a ranked, spatially distributed label
+    // set makes the actual frontage legible without turning the corridor into
+    // a wall of HTML billboards.
     if (!snapshot || labelDistanceFactor > 1000) return [];
-    const landmarkShopPattern = /spice garden|pizza hut|village hypermart|holly flames|sweet chariot|kalamandir|nalli|tanishq|kalyan|brand factory/i;
-    return snapshot.shops.filter((shop) => landmarkShopPattern.test(shop.name || shop.tags.name || '')).slice(0, 24);
+    const labelLimit = labelDistanceFactor < 40 ? 20 : 48;
+    const landmarkShopPattern = /spice garden|pizza hut|village hypermart|holly flames|sweet chariot|kalamandir|nalli|tanishq|kalyan|brand factory|multiplex/i;
+    const named = snapshot.shops.filter((shop) => shop.name || shop.tags.name);
+    const priority = named
+      .filter((shop) => landmarkShopPattern.test(shop.name || shop.tags.name || ''))
+      .sort((left, right) => (left.position[0] ** 2 + left.position[1] ** 2) - (right.position[0] ** 2 + right.position[1] ** 2));
+    const selected: typeof named = [];
+    const selectedIds = new Set<string>();
+    for (const shop of priority) {
+      if (selected.length >= labelLimit || selectedIds.has(shop.id)) continue;
+      selected.push(shop);
+      selectedIds.add(shop.id);
+    }
+
+    // Farthest-point sampling keeps the remaining labels distributed from
+    // Oracle through the junction to Kalamandir/Spice Garden instead of
+    // clustering around the local origin. All candidates remain source POIs;
+    // this only limits which names are placed in the 3D view.
+    while (selected.length < labelLimit) {
+      let bestShop: typeof named[number] | undefined;
+      let bestDistance = -1;
+      for (const candidate of named) {
+        if (selectedIds.has(candidate.id)) continue;
+        const nearestDistance = selected.length === 0
+          ? candidate.position[0] ** 2 + candidate.position[1] ** 2
+          : Math.min(...selected.map((shop) => (
+            (candidate.position[0] - shop.position[0]) ** 2
+            + (candidate.position[1] - shop.position[1]) ** 2
+          )));
+        if (nearestDistance > bestDistance) {
+          bestDistance = nearestDistance;
+          bestShop = candidate;
+        }
+      }
+      if (!bestShop) break;
+      selected.push(bestShop);
+      selectedIds.add(bestShop.id);
+    }
+    return selected;
   }, [labelDistanceFactor, snapshot]);
   // Person presets use a compact but non-zero source label factor (currently
   // 24) so the landmark name remains legible at eye level. Treat that range
@@ -652,6 +868,8 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   useEffect(() => () => {
     roadGeometry?.dispose();
     roadSurfaceGeometry?.dispose();
+    sourceRoadDetailGeometry?.edge.dispose();
+    sourceRoadDetailGeometry?.lane.dispose();
     sourceBridgeGeometry?.dispose();
     sourceBridgeSurfaceGeometry?.dispose();
     footwayGeometry?.dispose();
@@ -659,29 +877,47 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     unverifiedFootwayGeometry?.dispose();
     railwayGeometry?.dispose();
     sourceInfrastructureGeometry?.dispose();
-    buildingGeometry?.dispose();
+    buildingGeometryBatches.forEach((batch) => batch.geometry.dispose());
     buildingOutlineGeometry?.dispose();
     namedAreaGeometry?.dispose();
     noUTurnGeometry?.dispose();
-  }, [buildingGeometry, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, noUTurnGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry, sourceInfrastructureGeometry, unverifiedFootwayGeometry]);
+  }, [buildingGeometryBatches, buildingOutlineGeometry, footwayGeometry, footwaySurfaceGeometry, namedAreaGeometry, noUTurnGeometry, railwayGeometry, roadGeometry, roadSurfaceGeometry, sourceBridgeGeometry, sourceBridgeSurfaceGeometry, sourceInfrastructureGeometry, sourceRoadDetailGeometry, unverifiedFootwayGeometry]);
 
   if (!snapshot) return null;
 
   return (
     <group name="MarathahalliOSMSnapshotLayer">
-      {buildingGeometry && (
-        <mesh geometry={buildingGeometry} position={[0, 0, 0]}>
+      {buildingGeometryBatches.map((batch) => (
+        <mesh
+          key={`osm-building-batch-${batch.source}`}
+          geometry={batch.geometry}
+          position={[0, 0, 0]}
+          userData={{
+            source: 'OSM',
+            heightProvenance: batch.source,
+            featureCount: batch.count,
+            rendering: 'merged'
+          }}
+        >
           <meshStandardMaterial
-            color={isNight ? '#243b53' : (isLongRange ? '#9ab0be' : '#71879a')}
-            emissive={isNight ? '#08111c' : (isLongRange ? '#294454' : '#000000')}
-            emissiveIntensity={isNight ? 0.16 : (isLongRange ? 0.22 : 0)}
+            color={batch.source === 'osm:height'
+              ? (isNight ? '#155e75' : '#4d8b9e')
+              : batch.source === 'osm:building:levels'
+                ? (isNight ? '#1e3a5f' : '#71879a')
+                : (isNight ? '#243447' : '#8799a8')}
+            emissive={batch.source === 'osm:height'
+              ? (isNight ? '#083344' : '#0f3d4c')
+              : (isNight ? '#08111c' : '#000000')}
+            emissiveIntensity={batch.source === 'osm:height'
+              ? (isNight ? 0.22 : (isLongRange ? 0.18 : 0.06))
+              : (isNight ? 0.16 : (isLongRange ? 0.22 : 0))}
             roughness={0.92}
             metalness={0.05}
             transparent
-            opacity={buildingOpacity}
+            opacity={batch.source === 'modelled:fallback' ? buildingOpacity * 0.72 : buildingOpacity}
           />
         </mesh>
-      )}
+      ))}
 
       {buildingOutlineGeometry && (
         <lineSegments geometry={buildingOutlineGeometry} renderOrder={1}>
@@ -716,6 +952,39 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             opacity={0.82}
           />
         </mesh>
+      )}
+
+      {/* Lane and edge hints are derived from OSM highway/lanes tags. They are
+          intentionally a limited, merged overlay: useful for reading the
+          crossover and corridor structure, but not presented as surveyed
+          paint, curb, or lane-width measurements. */}
+      {sourceRoadDetailGeometry?.edge && (
+        <lineSegments
+          geometry={sourceRoadDetailGeometry.edge}
+          renderOrder={2}
+          userData={{ source: 'OSM', detail: 'road-edge-hints', tags: 'highway/lanes', rendering: 'merged' }}
+        >
+          <lineBasicMaterial
+            color={isNight ? '#e2e8f0' : '#94a3b8'}
+            transparent
+            opacity={isNight ? 0.74 : 0.62}
+            depthWrite={false}
+          />
+        </lineSegments>
+      )}
+      {sourceRoadDetailGeometry?.lane && (
+        <lineSegments
+          geometry={sourceRoadDetailGeometry.lane}
+          renderOrder={3}
+          userData={{ source: 'OSM', detail: 'lane-separator-hints', tags: 'lanes', rendering: 'merged' }}
+        >
+          <lineBasicMaterial
+            color={isNight ? '#fde68a' : '#facc15'}
+            transparent
+            opacity={isNight ? 0.82 : 0.68}
+            depthWrite={false}
+          />
+        </lineSegments>
       )}
 
       {/* The source no_u_turn relation is evidence, not a legal movement
@@ -841,12 +1110,13 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       )}
 
       <group name="OSMSnapshotPointFeatures">
-        {sourceShopFeatures.map((shop) => (
-          <mesh key={`shop-${shop.id}`} position={[shop.position[0], 0.55, shop.position[1]]}>
-            <cylinderGeometry args={[0.45, 0.45, 1.1, 8]} />
-            <meshStandardMaterial color="#f59e0b" emissive="#b45309" emissiveIntensity={isNight ? 0.9 : 0.15} />
-          </mesh>
-        ))}
+        <SourceMarkerInstances
+          positions={sourceShopMarkerPositions}
+          featureType="shop"
+          color="#f59e0b"
+          emissive="#b45309"
+          emissiveIntensity={isNight ? 0.9 : 0.15}
+        />
 
         {snapshot.signals.map((signal) => (
           <group
@@ -888,31 +1158,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           </mesh>
         ))}
 
-        {snapshot.trees.map((tree) => (
-          <group key={`tree-${tree.id}`} position={[tree.position[0], 0, tree.position[1]]}>
-            <mesh position={[0, 1.0, 0]}>
-              <cylinderGeometry args={[0.12, 0.18, 2.0, 6]} />
-              <meshStandardMaterial color="#78350f" roughness={1} />
-            </mesh>
-            <mesh position={[0, 2.6, 0]}>
-              <coneGeometry args={[1.1, 3.2, 8]} />
-              <meshStandardMaterial color={isNight ? '#14532d' : '#166534'} roughness={0.95} />
-            </mesh>
-          </group>
-        ))}
-
-        {sourceTreeRowPoints.map(([x, z], index) => (
-          <group key={`tree-row-${index}`} position={[x, 0, z]} userData={{ source: 'OSM', natural: 'tree_row' }}>
-            <mesh position={[0, 1.0, 0]}>
-              <cylinderGeometry args={[0.12, 0.18, 2.0, 6]} />
-              <meshStandardMaterial color="#78350f" roughness={1} />
-            </mesh>
-            <mesh position={[0, 2.6, 0]}>
-              <coneGeometry args={[1.1, 3.2, 8]} />
-              <meshStandardMaterial color={isNight ? '#14532d' : '#166534'} roughness={0.95} />
-            </mesh>
-          </group>
-        ))}
+        <SourceTreeInstances positions={sourceTreePositions} isNight={isNight} />
 
         {snapshot.sourceAnchors.map((anchor) => (
           <mesh
@@ -950,7 +1196,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
                 boxShadow: '0 2px 8px rgba(2, 6, 23, 0.35)'
               }}
             >
-              OSM · {(shop.name || shop.tags.name || 'SHOP').toUpperCase()}
+              OSM SHOP · {(shop.name || shop.tags.name || 'SHOP').toUpperCase()} · {(shop.tags.shop || shop.tags.amenity || 'POI').toUpperCase()}
             </div>
           </Html>
         ))}

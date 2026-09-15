@@ -51,23 +51,72 @@ interface FootpathSegment {
 }
 
 function createPathRibbonGeometry(points: [number, number][], width: number, y: number) {
-  const positions: number[] = [];
-  for (let index = 1; index < points.length; index += 1) {
+  // Build one continuous strip from the source vertices. Creating an isolated
+  // quad per segment leaves visible pinholes at every mapped bend, which reads
+  // as a broken footpath at eye level. A clamped miter keeps tight OSM turns
+  // connected without letting an acute corner spike into the carriageway.
+  const cleanPoints = points.filter((point, index) => {
     const previous = points[index - 1];
-    const current = points[index];
-    const dx = current[0] - previous[0];
-    const dz = current[1] - previous[1];
-    const length = Math.hypot(dx, dz);
-    if (length < 0.05) continue;
-    const nx = (-dz / length) * (width / 2);
-    const nz = (dx / length) * (width / 2);
+    return !previous || Math.hypot(point[0] - previous[0], point[1] - previous[1]) >= 0.05;
+  });
+  const halfWidth = Math.max(0.05, width / 2);
+  const edges = cleanPoints.map((point, index) => {
+    const previous = cleanPoints[Math.max(0, index - 1)];
+    const next = cleanPoints[Math.min(cleanPoints.length - 1, index + 1)];
+    const previousDx = point[0] - previous[0];
+    const previousDz = point[1] - previous[1];
+    const nextDx = next[0] - point[0];
+    const nextDz = next[1] - point[1];
+    const previousLength = Math.hypot(previousDx, previousDz);
+    const nextLength = Math.hypot(nextDx, nextDz);
+    const tangentX = nextLength >= 0.05
+      ? nextDx / nextLength
+      : previousLength >= 0.05
+        ? previousDx / previousLength
+        : 1;
+    const tangentZ = nextLength >= 0.05
+      ? nextDz / nextLength
+      : previousLength >= 0.05
+        ? previousDz / previousLength
+        : 0;
+    let normalX = -tangentZ;
+    let normalZ = tangentX;
+    let miterLength = halfWidth;
+
+    if (previousLength >= 0.05 && nextLength >= 0.05) {
+      const previousNormalX = -previousDz / previousLength;
+      const previousNormalZ = previousDx / previousLength;
+      const combinedLength = Math.hypot(previousNormalX + normalX, previousNormalZ + normalZ);
+      if (combinedLength >= 0.001) {
+        normalX = (previousNormalX + normalX) / combinedLength;
+        normalZ = (previousNormalZ + normalZ) / combinedLength;
+        const denominator = normalX * (-tangentZ) + normalZ * tangentX;
+        if (Math.abs(denominator) >= 0.2) {
+          miterLength = Math.min(halfWidth * 3, halfWidth / denominator);
+        } else {
+          normalX = -tangentZ;
+          normalZ = tangentX;
+        }
+      }
+    }
+
+    return {
+      left: [point[0] + normalX * miterLength, y, point[1] + normalZ * miterLength] as const,
+      right: [point[0] - normalX * miterLength, y, point[1] - normalZ * miterLength] as const
+    };
+  });
+
+  const positions: number[] = [];
+  for (let index = 1; index < edges.length; index += 1) {
+    const previous = edges[index - 1];
+    const current = edges[index];
     positions.push(
-      previous[0] + nx, y, previous[1] + nz,
-      current[0] + nx, y, current[1] + nz,
-      previous[0] - nx, y, previous[1] - nz,
-      current[0] + nx, y, current[1] + nz,
-      current[0] - nx, y, current[1] - nz,
-      previous[0] - nx, y, previous[1] - nz
+      previous.left[0], previous.left[1], previous.left[2],
+      current.left[0], current.left[1], current.left[2],
+      previous.right[0], previous.right[1], previous.right[2],
+      current.left[0], current.left[1], current.left[2],
+      current.right[0], current.right[1], current.right[2],
+      previous.right[0], previous.right[1], previous.right[2]
     );
   }
 
@@ -402,7 +451,9 @@ export const Footpaths: React.FC<FootpathsProps> = ({
       offset: 64.5,
       width: 3.0,
       height: 0.08,
-      elevation: 7.93,
+      // Keep the audit ribbon just above the mapped deck top. The previous
+      // value floated this source trace roughly 0.4m above the actual deck.
+      elevation: MARATHAHALLI_SKYWALK_DECK_TOP_Y + 0.08,
       status: 'paved',
       sourcePath: [[63.9, -4.6], [66.2, 24.5]],
       sourceWayIds: ['way/323729567', 'way/1221361667', 'way/1221361669'],
@@ -553,7 +604,14 @@ export const Footpaths: React.FC<FootpathsProps> = ({
       />
       {segments.map((seg) => {
         if (seg.sourcePath) {
-          return <SourceMappedFootpathAuditSegment key={seg.id} segment={seg} auditMode={auditMode} />;
+          return (
+            <SourceMappedFootpathAuditSegment
+              key={seg.id}
+              segment={seg}
+              auditMode={auditMode}
+              cameraMode={cameraMode}
+            />
+          );
         }
         return showModeledNetwork
           ? <FootpathSegmentMesh key={seg.id} segment={seg} auditMode={auditMode} isNight={isNight} />
@@ -566,7 +624,7 @@ export const Footpaths: React.FC<FootpathsProps> = ({
 
 // ── Subcomponent: Animated Pedestrians walking along footpaths and crossings ──
 interface PedestrianRoute {
-  curve: THREE.CatmullRomCurve3;
+  curve: THREE.Curve<THREE.Vector3>;
   length: number;
   start: [number, number, number];
   speed: number;
@@ -578,12 +636,18 @@ function createPedestrianRoute(
   speed: number,
   color: string
 ): PedestrianRoute {
-  const curve = new THREE.CatmullRomCurve3(
-    points.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-    false,
-    'centripetal',
-    0.18
-  );
+  // These are source traces, not a cinematic spline. Keep every OSM vertex in
+  // the route so walkers do not cut across a junction corner or float between
+  // the horizontal treads of the mapped skywalk stairs.
+  const curve = new THREE.CurvePath<THREE.Vector3>();
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const from = new THREE.Vector3(...previous);
+    const to = new THREE.Vector3(...current);
+    if (from.distanceToSquared(to) < 0.0001) continue;
+    curve.add(new THREE.LineCurve3(from, to));
+  }
 
   return {
     curve,
@@ -604,15 +668,39 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
       ground: [number, number],
       deck: [number, number],
       stepCount: number
-    ): [number, number, number][] => Array.from({ length: stepCount + 1 }, (_, index) => {
-      const progress = index / stepCount;
-      return [
-        ground[0] + (deck[0] - ground[0]) * progress,
-        MARATHAHALLI_SKYWALK_GROUND_TOP_Y +
-          (MARATHAHALLI_SKYWALK_DECK_TOP_Y - MARATHAHALLI_SKYWALK_GROUND_TOP_Y) * progress,
-        ground[1] + (deck[1] - ground[1]) * progress
+    ): [number, number, number][] => {
+      // Match the rendered stair flight: each tread is horizontal, followed
+      // by a short riser. A sloped Catmull-Rom route would put a walker above
+      // the step edges and make an explicitly mapped stair look like a ramp.
+      const count = Math.max(1, stepCount);
+      const dx = ground[0] - deck[0];
+      const dz = ground[1] - deck[1];
+      const pointAtProgress = (progress: number, y: number): [number, number, number] => [
+        deck[0] + dx * progress,
+        y,
+        deck[1] + dz * progress
       ];
-    });
+      const treadTop = (index: number) => MARATHAHALLI_SKYWALK_DECK_TOP_Y +
+        (MARATHAHALLI_SKYWALK_GROUND_TOP_Y - MARATHAHALLI_SKYWALK_DECK_TOP_Y) *
+        (count <= 1 ? 1 : index / (count - 1));
+      const route: [number, number, number][] = [
+        [ground[0], MARATHAHALLI_SKYWALK_GROUND_TOP_Y, ground[1]]
+      ];
+
+      for (let index = count - 1; index >= 0; index -= 1) {
+        const nearGroundProgress = (index + 1) / count;
+        const nearDeckProgress = index / count;
+        const y = treadTop(index);
+        route.push(pointAtProgress(nearGroundProgress, y));
+        route.push(pointAtProgress(nearDeckProgress, y));
+        if (index > 0) {
+          route.push(pointAtProgress(nearDeckProgress, treadTop(index - 1)));
+        }
+      }
+
+      route.push([deck[0], MARATHAHALLI_SKYWALK_DECK_TOP_Y, deck[1]]);
+      return route;
+    };
     const southStairRoute = createStairRoute(
       MARATHAHALLI_SKYWALK_STAIR_POINTS[0].ground,
       MARATHAHALLI_SKYWALK_STAIR_POINTS[0].deck,
@@ -689,7 +777,10 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
   return (
     <group ref={pedestriansRef} name="PedestrianWalkers">
       {routes.map((route, index) => (
-        <group key={index} position={route.start}>
+        // The animation loop writes world-space positions to these groups.
+        // Do not add route.start a second time or walkers appear displaced
+        // from the footway they are meant to inspect.
+        <group key={index}>
           {/* Person torso */}
           <mesh position={[0, 0.65, 0]} castShadow>
             <cylinderGeometry args={[0.16, 0.18, 0.85, 8]} />
@@ -923,7 +1014,8 @@ const FootpathSegmentMesh: React.FC<{
 const SourceMappedFootpathAuditSegment: React.FC<{
   segment: FootpathSegment;
   auditMode: boolean;
-}> = ({ segment, auditMode }) => {
+  cameraMode: 'walk' | 'overview';
+}> = ({ segment, auditMode, cameraMode }) => {
   const auditColor = useMemo(() => {
     switch (segment.status) {
       case 'paved':
@@ -938,19 +1030,73 @@ const SourceMappedFootpathAuditSegment: React.FC<{
         return '#38bdf8';
     }
   }, [segment.status]);
+  const sourceSurfaceY = segment.elevation ?? 0.2;
   const geometry = useMemo(
-    () => createPathRibbonGeometry(segment.sourcePath || [], segment.width, segment.elevation ?? 0.38),
-    [segment.elevation, segment.sourcePath, segment.width]
+    () => createPathRibbonGeometry(segment.sourcePath || [], segment.width, sourceSurfaceY),
+    [segment.sourcePath, segment.width, sourceSurfaceY]
   );
+  const sourceLinePoints = useMemo(
+    () => (segment.sourcePath || []).map(([x, z]) => [x, sourceSurfaceY + 0.06, z] as [number, number, number]),
+    [segment.sourcePath, sourceSurfaceY]
+  );
+  const statusLinePoints = useMemo(
+    () => (segment.sourcePath || []).map(([x, z]) => [x, sourceSurfaceY + 0.1, z] as [number, number, number]),
+    [segment.sourcePath, sourceSurfaceY]
+  );
+  const labelPoint = segment.sourcePath?.[Math.floor((segment.sourcePath.length - 1) / 2)] || [0, 0];
+  const showSourceGuide = auditMode || cameraMode === 'walk';
+  const showSourceLabel = cameraMode === 'walk';
 
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  if (!auditMode) return null;
+  if (!showSourceGuide) return null;
   return (
     <group name={`SourceFootpathAudit-${segment.id}`}>
+      {/* Cyan is the source-truth channel; the condition color is overlaid
+          only in audit mode so a red/amber condition never implies that the
+          mapped footway itself is absent. */}
       <mesh geometry={geometry} renderOrder={5}>
-        <meshBasicMaterial color={auditColor} transparent opacity={0.86} depthWrite={false} />
+        <meshBasicMaterial
+          color="#22d3ee"
+          transparent
+          opacity={cameraMode === 'walk' ? 0.16 : 0.24}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
       </mesh>
+      <Line
+        points={sourceLinePoints}
+        color="#67e8f9"
+        lineWidth={cameraMode === 'walk' ? 1.8 : 2.2}
+        transparent
+        opacity={cameraMode === 'walk' ? 0.68 : 0.88}
+      />
+      {auditMode && (
+        <Line
+          points={statusLinePoints}
+          color={auditColor}
+          lineWidth={2.8}
+          dashed
+          dashSize={3.5}
+          gapSize={2.2}
+          transparent
+          opacity={0.95}
+        />
+      )}
+      {showSourceLabel && (
+        <Html
+          position={[labelPoint[0], sourceSurfaceY + 1.15, labelPoint[1]]}
+          center
+          distanceFactor={20}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div className="walk-link-world-label">
+            <span className="walk-link-world-label-dot" aria-hidden="true" style={{ background: '#22d3ee' }} />
+            <span>{segment.name}</span>
+            <strong>SOURCE · OSM FOOTWAY · {segment.sourceWayIds?.join(', ')}</strong>
+          </div>
+        </Html>
+      )}
     </group>
   );
 };

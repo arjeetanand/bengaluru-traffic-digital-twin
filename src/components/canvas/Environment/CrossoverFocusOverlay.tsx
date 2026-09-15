@@ -3,7 +3,13 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createSourceReplayCurve, U_TURN_CONNECTORS } from '../../../data/marathahalliLaneNetwork';
+import {
+  createSourceReplayCurve,
+  getSourceReplayProgressAtVertex,
+  SOURCE_CROSSOVER_CROSSING_TRACES,
+  U_TURN_CONNECTORS
+} from '../../../data/marathahalliLaneNetwork';
+import type { UTurnConnector, UTurnPhaseId } from '../../../data/marathahalliLaneNetwork';
 import { createCurveLineGeometry, createRoadRibbonGeometry } from '../../../data/RealRoadData';
 import { createCarGeometry } from '../traffic/VehicleModels';
 
@@ -16,45 +22,164 @@ const createConnectorCurve = (points: readonly [number, number, number][]) => (
   createSourceReplayCurve(points, 0.18)
 );
 
+// OSM does not publish lane widths for these ways. This is a restrained
+// display width for the source-linked scenario lane; the surrounding OSM
+// carriageway remains the authoritative pavement surface.
+const MODELLED_REPLAY_WIDTH_METERS = 3.8;
+const MODELLED_REPLAY_CURB_OFFSET = MODELLED_REPLAY_WIDTH_METERS / 2 + 0.12;
+const SOURCE_CROSSING_WIDTH_METERS = 1.8;
+
 const REPLAY_SPEED_METERS_PER_SECOND = 6.4;
 const REPLAY_YIELD_WINDOW = 0.095;
+
+const CROSSOVER_PHASES: readonly {
+  id: UTurnPhaseId;
+  label: string;
+  color: string;
+}[] = [
+  { id: 'approach', label: 'APPROACH', color: '#38bdf8' },
+  { id: 'yield', label: 'YIELD', color: '#fbbf24' },
+  { id: 'sweep', label: 'SWEEP', color: '#fb923c' },
+  { id: 'exit', label: 'EXIT', color: '#4ade80' }
+];
+
+interface ReplayPhaseFrame {
+  id: UTurnPhaseId;
+  label: string;
+  color: string;
+  startProgress: number;
+  endProgress: number;
+  progress: number;
+  sourceWayIds: readonly string[];
+}
+
+function getReplayPhaseFrames(
+  connector: UTurnConnector
+): ReplayPhaseFrame[] {
+  return CROSSOVER_PHASES.map((phase) => {
+    const range = connector.phaseRanges[phase.id];
+    const startProgress = getSourceReplayProgressAtVertex(connector.points, range.startVertex);
+    const endProgress = getSourceReplayProgressAtVertex(connector.points, range.endVertex);
+    return {
+      ...phase,
+      startProgress,
+      endProgress,
+      progress: THREE.MathUtils.lerp(startProgress, endProgress, 0.5),
+      sourceWayIds: range.sourceWayIds
+    };
+  });
+}
+
+function getReplayPhase(progress: number, phases: readonly ReplayPhaseFrame[]) {
+  return phases.find((phase, index) => (
+    progress >= phase.startProgress && (
+      progress < phase.endProgress || index === phases.length - 1
+    )
+  )) || phases[0];
+}
 
 function wrappedProgressDistance(progress: number, target: number) {
   const directDistance = Math.abs(progress - target);
   return Math.min(directDistance, 1 - directDistance);
 }
 
-function getReplayDynamics(progress: number, stopProgress: number) {
+function getReplayDynamics(
+  progress: number,
+  stopProgress: number,
+  phases: readonly ReplayPhaseFrame[]
+) {
   const yieldStrength = THREE.MathUtils.smoothstep(
     REPLAY_YIELD_WINDOW - wrappedProgressDistance(progress, stopProgress),
     0,
     REPLAY_YIELD_WINDOW
   );
 
+  const phase = getReplayPhase(progress, phases);
+  const phaseSpeedFactor = phase.id === 'yield'
+    ? 0.74
+    : phase.id === 'sweep'
+      ? 0.82
+      : phase.id === 'exit'
+        ? 0.94
+        : 1;
+
   return {
     // A modeled yield is intentionally a rolling slowdown rather than a hard
     // stop: it makes the replay read like a driver approaching the crossover
     // while avoiding a frozen hero car in the audit view.
-    speedFactor: THREE.MathUtils.lerp(1, 0.28, yieldStrength),
+    speedFactor: phaseSpeedFactor * THREE.MathUtils.lerp(1, 0.28, yieldStrength),
     yieldStrength,
-    inTurnWindow: progress >= 0.28 && progress <= 0.68
+    inTurnWindow: phase.id === 'yield' || phase.id === 'sweep',
+    phaseId: phase.id
   };
 }
 
 function createConnectorSurfaceGeometry(
   points: readonly [number, number, number][]
 ) {
-  // Keep the audit ribbon on the same geometry contract as JunctionRoads:
-  // same control points, centripetal interpolation, sampling density and
-  // pavement datum. The overlay is still modelled, but it cannot visually
-  // drift from the shared scenario lane if the source points are revised.
+  // Keep the audit ribbon on the same source control points and pavement datum
+  // as the replay. The overlay is still modelled, but it cannot visually drift
+  // from the shared scenario lane if the source points are revised.
   return createRoadRibbonGeometry(
     points.map(([x, _y, z]) => [x, z]),
-    3.8,
+    MODELLED_REPLAY_WIDTH_METERS,
     () => 0.19,
     64,
     'linear'
   );
+}
+
+function createSourceCurbGeometry(
+  points: readonly [number, number, number][],
+  lateralOffset: number,
+  y = 0.24
+) {
+  const pieces: THREE.BufferGeometry[] = [];
+  const yAxis = new THREE.Vector3(0, 1, 0);
+
+  for (let index = 1; index < points.length; index += 1) {
+    const [fromX, _fromY, fromZ] = points[index - 1];
+    const [toX, _toY, toZ] = points[index];
+    const dx = toX - fromX;
+    const dz = toZ - fromZ;
+    const length = Math.hypot(dx, dz);
+    if (length < 0.2) continue;
+
+    const normalX = -dz / length;
+    const normalZ = dx / length;
+    const curb = new THREE.BoxGeometry(0.24, 0.16, length + 0.04);
+    curb.applyMatrix4(
+      new THREE.Matrix4().compose(
+        new THREE.Vector3(
+          (fromX + toX) / 2 + normalX * lateralOffset,
+          y,
+          (fromZ + toZ) / 2 + normalZ * lateralOffset
+        ),
+        new THREE.Quaternion().setFromAxisAngle(yAxis, Math.atan2(dx, dz)),
+        new THREE.Vector3(1, 1, 1)
+      )
+    );
+    pieces.push(curb);
+  }
+
+  const geometry = mergeGeometries(pieces, false) || new THREE.BufferGeometry();
+  pieces.forEach((piece) => piece.dispose());
+  return geometry;
+}
+
+function createSourceCrossingSurfaceGeometry() {
+  const pieces = SOURCE_CROSSOVER_CROSSING_TRACES.map((trace) => (
+    createRoadRibbonGeometry(
+      trace.geometry.map(([x, z]) => [x, z] as [number, number]),
+      SOURCE_CROSSING_WIDTH_METERS,
+      () => 0.27,
+      32,
+      'linear'
+    )
+  ));
+  const geometry = mergeGeometries(pieces, false) || new THREE.BufferGeometry();
+  pieces.forEach((piece) => piece.dispose());
+  return geometry;
 }
 
 function createConnectorDashGeometry(curve: THREE.Curve<THREE.Vector3>) {
@@ -118,6 +243,7 @@ const FocusLabel: React.FC<{
 
 const CrossoverReplayVehicle: React.FC<{
   id: string;
+  connector: UTurnConnector;
   curve: THREE.Curve<THREE.Vector3>;
   startProgress: number;
   stopProgress: number;
@@ -125,10 +251,11 @@ const CrossoverReplayVehicle: React.FC<{
   color: string;
   isNight: boolean;
   cameraMode: 'walk' | 'overview';
-}> = ({ id, curve, startProgress, stopProgress, laneOffset, color, isNight, cameraMode }) => {
+}> = ({ id, connector, curve, startProgress, stopProgress, laneOffset, color, isNight, cameraMode }) => {
   const vehicleRef = useRef<THREE.Group>(null);
   const progressRef = useRef(startProgress);
   const motionClockRef = useRef(0);
+  const phaseFrames = useMemo(() => getReplayPhaseFrames(connector), [connector]);
   const geometry = useMemo(() => createCarGeometry(), []);
   const curveLength = useMemo(() => curve.getLength(), [curve]);
   const material = useMemo(() => new THREE.MeshStandardMaterial({
@@ -166,7 +293,7 @@ const CrossoverReplayVehicle: React.FC<{
     if (!vehicle) return;
 
     motionClockRef.current += Math.min(delta, 0.05);
-    const dynamics = getReplayDynamics(progressRef.current, stopProgress);
+    const dynamics = getReplayDynamics(progressRef.current, stopProgress, phaseFrames);
     progressRef.current = (
       progressRef.current
       + (Math.min(delta, 0.05) * REPLAY_SPEED_METERS_PER_SECOND * dynamics.speedFactor)
@@ -204,6 +331,8 @@ const CrossoverReplayVehicle: React.FC<{
         source: 'OSM relation/18922642',
         status: 'modelled visual replay',
         replayPhases: 'approach/yield → sweep → exit',
+        replayPhaseTiming: 'modelled at source way-member boundaries',
+        sourceWayIds: connector.sourceWayIds,
         stopProgress,
         countedInFleet: false
       }}
@@ -233,13 +362,6 @@ const CrossoverReplayVehicle: React.FC<{
   );
 };
 
-const CROSSOVER_PHASES = [
-  { id: 'approach', label: 'APPROACH', progress: 0.2, color: '#38bdf8' },
-  { id: 'yield', label: 'YIELD', progress: 0.46, color: '#fbbf24' },
-  { id: 'sweep', label: 'SWEEP', progress: 0.61, color: '#fb923c' },
-  { id: 'exit', label: 'EXIT', progress: 0.84, color: '#4ade80' }
-] as const;
-
 function getCurveFrame(
   curve: THREE.Curve<THREE.Vector3>,
   progress: number,
@@ -266,23 +388,29 @@ function getCurveFrame(
  */
 const CrossoverTurnGuide: React.FC<{
   id: string;
+  connector: UTurnConnector;
   curve: THREE.Curve<THREE.Vector3>;
   isNight: boolean;
   cameraMode: 'walk' | 'overview';
-}> = ({ id, curve, isNight, cameraMode }) => {
+}> = ({ id, connector, curve, isNight, cameraMode }) => {
   const pulseRef = useRef<THREE.Mesh>(null);
   const pulseProgressRef = useRef(id === 'north' ? 0.08 : 0.56);
   const pulsePoint = useMemo(() => new THREE.Vector3(), []);
   const phaseFrames = useMemo(
-    () => CROSSOVER_PHASES.map((phase) => ({
+    () => getReplayPhaseFrames(connector).map((phase) => ({
       ...phase,
       frame: getCurveFrame(curve, phase.progress, 0, 0.38)
     })),
-    [curve]
+    [connector, curve]
   );
   const signalFrame = useMemo(
-    () => getCurveFrame(curve, id === 'north' ? 0.46 : 0.42, id === 'north' ? 4.2 : -4.2, 0.12),
-    [curve, id]
+    () => getCurveFrame(
+      curve,
+      getSourceReplayProgressAtVertex(connector.points, connector.phaseRanges.yield.startVertex),
+      id === 'north' ? 4.2 : -4.2,
+      0.12
+    ),
+    [connector, curve, id]
   );
 
   useFrame((_, delta) => {
@@ -325,7 +453,7 @@ const CrossoverTurnGuide: React.FC<{
           <Html position={[0, 1.45, 0]} center distanceFactor={92} zIndexRange={[46, 0]}>
             <div
               role="note"
-              aria-label={`${phase.label} phase marker`}
+              aria-label={`${phase.label} phase marker. Source ways ${phase.sourceWayIds.join(', ')}`}
               style={{
                 pointerEvents: 'none',
                 padding: '2px 4px',
@@ -340,63 +468,69 @@ const CrossoverTurnGuide: React.FC<{
                 whiteSpace: 'nowrap'
               }}
             >
-              {phase.label}
+              {phase.label} · {phase.sourceWayIds.length === 1
+                ? phase.sourceWayIds[0].toUpperCase()
+                : `${phase.sourceWayIds[0].toUpperCase()} +${phase.sourceWayIds.length - 1}`}
             </div>
           </Html>
         </group>
       ))}
 
-      <group
-        position={signalFrame.position}
-        rotation={[0, signalFrame.angle, 0]}
-        name={`ModelledYieldSignal-${id}`}
-        userData={{ signalStatus: 'modelled yield gate', countedInFleet: false }}
-      >
-        <mesh position={[0, 1.35, 0]} castShadow>
-          <cylinderGeometry args={[0.075, 0.11, 2.7, 8]} />
-          <meshStandardMaterial color="#334155" metalness={0.65} roughness={0.45} />
-        </mesh>
-        <mesh position={[0, 2.76, 0]} castShadow>
-          <boxGeometry args={[0.58, 1.65, 0.36]} />
-          <meshStandardMaterial color="#111827" metalness={0.35} roughness={0.62} />
-        </mesh>
-        <mesh position={[0, 3.2, 0.2]}>
-          <sphereGeometry args={[0.115, 10, 8]} />
-          <meshStandardMaterial color="#ef4444" roughness={0.3} />
-        </mesh>
-        <mesh position={[0, 2.78, 0.2]}>
-          <sphereGeometry args={[0.13, 10, 8]} />
-          <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={isNight ? 4.5 : 1.1} />
-        </mesh>
-        <mesh position={[0, 2.36, 0.2]}>
-          <sphereGeometry args={[0.115, 10, 8]} />
-          <meshStandardMaterial color="#14532d" roughness={0.3} />
-        </mesh>
-        {isNight && <pointLight position={[0, 2.78, 0.5]} intensity={3.2} distance={8} color="#fbbf24" />}
-      </group>
+      {cameraMode === 'overview' && (
+        <group
+          position={signalFrame.position}
+          rotation={[0, signalFrame.angle, 0]}
+          name={`ModelledYieldSignal-${id}`}
+          userData={{ signalStatus: 'modelled yield cue', countedInFleet: false, source: 'OSM way boundary' }}
+        >
+          <mesh position={[0, 1.35, 0]} castShadow>
+            <cylinderGeometry args={[0.075, 0.11, 2.7, 8]} />
+            <meshStandardMaterial color="#334155" metalness={0.65} roughness={0.45} />
+          </mesh>
+          <mesh position={[0, 2.76, 0]} castShadow>
+            <boxGeometry args={[0.58, 1.65, 0.36]} />
+            <meshStandardMaterial color="#111827" metalness={0.35} roughness={0.62} />
+          </mesh>
+          <mesh position={[0, 3.2, 0.2]}>
+            <sphereGeometry args={[0.115, 10, 8]} />
+            <meshStandardMaterial color="#ef4444" roughness={0.3} />
+          </mesh>
+          <mesh position={[0, 2.78, 0.2]}>
+            <sphereGeometry args={[0.13, 10, 8]} />
+            <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={isNight ? 4.5 : 1.1} />
+          </mesh>
+          <mesh position={[0, 2.36, 0.2]}>
+            <sphereGeometry args={[0.115, 10, 8]} />
+            <meshStandardMaterial color="#14532d" roughness={0.3} />
+          </mesh>
+          {isNight && <pointLight position={[0, 2.78, 0.5]} intensity={3.2} distance={8} color="#fbbf24" />}
+        </group>
+      )}
     </group>
   );
 };
 
 const DirectionMarkers: React.FC<{
   id: string;
+  connector: UTurnConnector;
   curve: THREE.Curve<THREE.Vector3>;
   color: string;
-}> = ({ id, curve, color }) => {
-  const markers = useMemo(() => [0.34, 0.48, 0.62, 0.76].map((t) => {
-    const point = curve.getPointAt(t);
-    const tangent = curve.getTangentAt(t).setY(0).normalize();
+}> = ({ id, connector, curve, color }) => {
+  const markers = useMemo(() => getReplayPhaseFrames(connector).map((phase) => {
+    const point = curve.getPointAt(phase.progress);
+    const tangent = curve.getTangentAt(phase.progress).setY(0).normalize();
     return {
+      phaseId: phase.id,
       position: [point.x, 0.46, point.z] as [number, number, number],
       angle: Math.atan2(tangent.x, tangent.z)
     };
-  }), [curve]);
+  }), [connector, curve]);
 
   return (
     <group name={`ModelledUturnDirectionMarkers-${id}`}>
-      {markers.map((marker, index) => (
+      {markers.map((marker) => (
         <group
-          key={`${id}-direction-marker-${index}`}
+          key={`${id}-direction-marker-${marker.phaseId}`}
           position={marker.position}
           rotation={[0, marker.angle, 0]}
         >
@@ -435,6 +569,18 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   );
   const southSurfaceGeometry = useMemo(
     () => createConnectorSurfaceGeometry(U_TURN_CONNECTORS.south.points),
+    []
+  );
+  const northCurbGeometry = useMemo(
+    () => createSourceCurbGeometry(U_TURN_CONNECTORS.north.points, MODELLED_REPLAY_CURB_OFFSET),
+    []
+  );
+  const southCurbGeometry = useMemo(
+    () => createSourceCurbGeometry(U_TURN_CONNECTORS.south.points, MODELLED_REPLAY_CURB_OFFSET),
+    []
+  );
+  const crossingSurfaceGeometry = useMemo(
+    () => createSourceCrossingSurfaceGeometry(),
     []
   );
   const northDashGeometry = useMemo(() => createConnectorDashGeometry(northCurve), [northCurve]);
@@ -489,14 +635,137 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   React.useEffect(() => () => {
     northSurfaceGeometry.dispose();
     southSurfaceGeometry.dispose();
+    northCurbGeometry.dispose();
+    southCurbGeometry.dispose();
+    crossingSurfaceGeometry.dispose();
     northDashGeometry.dispose();
     southDashGeometry.dispose();
     northEdgeGeometries.forEach((geometry) => geometry.dispose());
     southEdgeGeometries.forEach((geometry) => geometry.dispose());
-  }, [northDashGeometry, northEdgeGeometries, northSurfaceGeometry, southDashGeometry, southEdgeGeometries, southSurfaceGeometry]);
+  }, [crossingSurfaceGeometry, northCurbGeometry, northDashGeometry, northEdgeGeometries, northSurfaceGeometry, southCurbGeometry, southDashGeometry, southEdgeGeometries, southSurfaceGeometry]);
 
   return (
-    <group name="MarathahalliCrossoverSourceAlignmentOverlay">
+    <group
+      name="MarathahalliCrossoverSourceAlignmentOverlay"
+      userData={{
+        source: 'OSM relation/18922642',
+        sourceRestriction: 'no_u_turn',
+        status: 'source-linked scenario replay; field verification required'
+      }}
+    >
+      {/* The OSM crossing ways are rendered as quiet paved traces. Their
+          snapshot tags say unmarked, so this layer intentionally shows no
+          zebra stripes or right-of-way signal. */}
+      <mesh
+        geometry={crossingSurfaceGeometry}
+        receiveShadow
+        renderOrder={6}
+        userData={{ source: 'OSM', feature: 'footway=crossing', markings: 'unmarked' }}
+      >
+        <meshStandardMaterial
+          color={isNight ? '#78716c' : '#d6d3d1'}
+          roughness={0.92}
+          metalness={0.02}
+          transparent
+          opacity={isOverview ? 0.48 : 0.26}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* These low concrete edges make the replay lane sit on the pavement
+          instead of reading as a floating line. Width and curb placement are
+          modelled because the OSM ways do not carry width/curb tags. */}
+      <mesh
+        geometry={northCurbGeometry}
+        castShadow
+        receiveShadow
+        renderOrder={7}
+        userData={{ source: 'modelled curb edge', sourceTrace: 'OSM relation/18922642' }}
+      >
+        <meshStandardMaterial
+          color={isNight ? '#64748b' : '#cbd5e1'}
+          roughness={0.88}
+          metalness={0.04}
+          transparent
+          opacity={isOverview ? 0.9 : 0.48}
+          depthWrite={isOverview}
+        />
+      </mesh>
+      <mesh
+        geometry={southCurbGeometry}
+        castShadow
+        receiveShadow
+        renderOrder={7}
+        userData={{ source: 'modelled curb edge', sourceTrace: 'OSM relation/18922642' }}
+      >
+        <meshStandardMaterial
+          color={isNight ? '#64748b' : '#cbd5e1'}
+          roughness={0.88}
+          metalness={0.04}
+          transparent
+          opacity={isOverview ? 0.9 : 0.48}
+          depthWrite={isOverview}
+        />
+      </mesh>
+
+      <group name="SourceCrossoverCrossingEvidence">
+        {SOURCE_CROSSOVER_CROSSING_TRACES.map((trace) => {
+          const [x, z] = trace.geometry[Math.floor(trace.geometry.length / 2)];
+          const isSignalCrossing = trace.crossing === 'traffic_signals';
+          const crossingColor = isSignalCrossing ? '#38bdf8' : '#f59e0b';
+          const crossingLabel = isSignalCrossing ? 'SIGNALLED' : 'UNCONTROLLED';
+          return (
+            <group
+              key={`source-crossing-${trace.id}`}
+              position={[x, 0.29, z]}
+              userData={{
+                source: 'OSM',
+                sourceWayId: trace.id,
+                crossing: trace.crossing,
+                markings: trace.markings
+              }}
+            >
+              <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={8}>
+                <ringGeometry args={[0.58, 0.76, 16]} />
+                <meshBasicMaterial
+                  color={crossingColor}
+                  transparent
+                  opacity={isOverview ? 0.76 : 0.3}
+                  depthWrite={false}
+                />
+              </mesh>
+              <mesh position={[0, 0.04, 0]} renderOrder={8}>
+                <cylinderGeometry args={[0.11, 0.11, 0.08, 8]} />
+                <meshStandardMaterial color={crossingColor} emissive={crossingColor} emissiveIntensity={isNight ? 1.5 : 0.2} />
+              </mesh>
+              {isOverview && (
+                <Html position={[0, 1.25, 0]} center distanceFactor={104} zIndexRange={[42, 0]}>
+                  <div
+                    role="note"
+                    aria-label={`OSM crossing ${trace.id}. ${crossingLabel}. Markings unmarked.`}
+                    style={{
+                      pointerEvents: 'none',
+                      padding: '2px 4px',
+                      border: `1px solid ${crossingColor}99`,
+                      borderRadius: 3,
+                      background: 'rgba(2, 8, 23, 0.72)',
+                      color: crossingColor,
+                      fontFamily: 'monospace',
+                      fontSize: 7,
+                      fontWeight: 800,
+                      letterSpacing: '0.06em',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    OSM CROSSING · {crossingLabel} · UNMARKED
+                  </div>
+                </Html>
+              )}
+            </group>
+          );
+        })}
+      </group>
+
       {/* JunctionRoads keeps its authored U-turn asphalt and chevrons inside
           the non-source fallback branch. In the live source-backed scene this
           group is therefore an audit visualization, not a surveyed road. Keep
@@ -555,8 +824,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           <tubeGeometry args={[southCurve, 96, 0.1, 8, false]} />
           <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
         </mesh>
-        <DirectionMarkers id="north" curve={northCurve} color={accent} />
-        <DirectionMarkers id="south" curve={southCurve} color={accent} />
+        <DirectionMarkers id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} color={accent} />
+        <DirectionMarkers id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} color={accent} />
 
         {/* These gates are anchored to the exact via vertices of the source
             relation trace. They are modelled audit markers, not
@@ -594,8 +863,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           title="TURN REPLAY"
           detail="YIELD → SWEEP → EXIT · MODELLED · NOT COUNTED"
         />
-        <CrossoverTurnGuide id="north" curve={northCurve} isNight={isNight} cameraMode={cameraMode} />
-        <CrossoverTurnGuide id="south" curve={southCurve} isNight={isNight} cameraMode={cameraMode} />
+        <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} isNight={isNight} cameraMode={cameraMode} />
+        <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} isNight={isNight} cameraMode={cameraMode} />
         </group>
       )}
 
@@ -605,6 +874,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           and legality metadata. */}
       <CrossoverReplayVehicle
         id="north"
+        connector={U_TURN_CONNECTORS.north}
         curve={northCurve}
         startProgress={0.08}
         stopProgress={U_TURN_CONNECTORS.north.stopT}
@@ -616,8 +886,9 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
 
       <CrossoverReplayVehicle
         id="south"
+        connector={U_TURN_CONNECTORS.south}
         curve={southCurve}
-        startProgress={0.58}
+        startProgress={0.08}
         stopProgress={U_TURN_CONNECTORS.south.stopT}
         laneOffset={0.72}
         color="#f97316"
@@ -645,8 +916,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
               <meshBasicMaterial color={accent} transparent opacity={0.3} depthWrite={false} />
             </mesh>
           ))}
-          <CrossoverTurnGuide id="north" curve={northCurve} isNight={isNight} cameraMode={cameraMode} />
-          <CrossoverTurnGuide id="south" curve={southCurve} isNight={isNight} cameraMode={cameraMode} />
+          <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} isNight={isNight} cameraMode="walk" />
+          <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} isNight={isNight} cameraMode="walk" />
         </>
       )}
     </group>

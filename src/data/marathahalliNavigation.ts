@@ -568,8 +568,36 @@ let registeredSourceWalkRoutes: readonly SourceWalkRoute[] = SOURCE_WALK_ROUTES_
 const SOURCE_WALK_CONNECTIVITY_TOLERANCE = 4.5;
 let sourceWalkRouteConnections = buildSourceWalkRouteConnections(SOURCE_WALK_ROUTES_FALLBACK);
 
+interface UnverifiedWalkStructure {
+  sourceWayId: string;
+  points: readonly LocalXZ[];
+  clearance: number;
+}
+
+// Unknown bridge and step ways remain visible source evidence, but they are
+// not valid pedestrian surfaces. Keep their plan corridors as no-walk guards
+// once the full snapshot is available so free movement cannot silently turn
+// an unverified structure into a flat sidewalk.
+let registeredUnverifiedWalkStructures: readonly UnverifiedWalkStructure[] = [];
+
 function sourceWalkRouteKey(route: SourceWalkRoute) {
   return route.sourceWayIds.join('|');
+}
+
+function isVerifiedSkywalkStairRoute(route: SourceWalkRoute) {
+  return route.sourceWayIds.some((wayId) => wayId === 'way/323729566' || wayId === 'way/323729569');
+}
+
+function isVerifiedSkywalkDeckRoute(route: SourceWalkRoute) {
+  return route.sourceWayIds.some((wayId) => (
+    wayId === 'way/323729567' || wayId === 'way/1221361667' || wayId === 'way/1221361669'
+  ));
+}
+
+function canConnectWalkSurfaces(left: SourceWalkRoute, right: SourceWalkRoute) {
+  return Math.abs(left.elevation - right.elevation) < 0.75 ||
+    (isVerifiedSkywalkStairRoute(left) && isVerifiedSkywalkDeckRoute(right)) ||
+    (isVerifiedSkywalkStairRoute(right) && isVerifiedSkywalkDeckRoute(left));
 }
 
 function buildSourceWalkRouteConnections(routes: readonly SourceWalkRoute[]) {
@@ -588,7 +616,7 @@ function buildSourceWalkRouteConnections(routes: readonly SourceWalkRoute[]) {
       // surface; an overpass and a ground footway can share plan coordinates
       // without being physically walkable from one another.
       if (shareSourceNode) {
-        if (Math.abs(left.elevation - right.elevation) < 0.75) {
+        if (canConnectWalkSurfaces(left, right)) {
           connections.get(sourceWalkRouteKey(left))?.add(sourceWalkRouteKey(right));
           connections.get(sourceWalkRouteKey(right))?.add(sourceWalkRouteKey(left));
         }
@@ -602,7 +630,8 @@ function buildSourceWalkRouteConnections(routes: readonly SourceWalkRoute[]) {
         Math.hypot(leftEnd[0] - rightStart[0], leftEnd[1] - rightStart[1]),
         Math.hypot(leftEnd[0] - rightEnd[0], leftEnd[1] - rightEnd[1])
       ];
-      if (Math.min(...joins) > SOURCE_WALK_CONNECTIVITY_TOLERANCE) continue;
+      if (Math.min(...joins) > SOURCE_WALK_CONNECTIVITY_TOLERANCE ||
+          !canConnectWalkSurfaces(left, right)) continue;
       connections.get(sourceWalkRouteKey(left))?.add(sourceWalkRouteKey(right));
       connections.get(sourceWalkRouteKey(right))?.add(sourceWalkRouteKey(left));
     }
@@ -651,21 +680,33 @@ export function registerSnapshotWalkRoutes(footways: readonly OSMPolylineFeature
       };
     });
 
-  if (snapshotRoutes.length > 0) {
-    registeredSourceWalkRoutes = [
-      ...snapshotRoutes,
-      ...SOURCE_SKYWALK_ROUTES,
-      ...MODELLED_MISSING_WALK_LINKS
-    ];
-    sourceWalkRouteConnections = buildSourceWalkRouteConnections(registeredSourceWalkRoutes);
-  }
+  registeredSourceWalkRoutes = snapshotRoutes.length > 0
+    ? [
+        ...snapshotRoutes,
+        ...SOURCE_SKYWALK_ROUTES,
+        ...MODELLED_MISSING_WALK_LINKS
+      ]
+    : SOURCE_WALK_ROUTES_FALLBACK;
+  sourceWalkRouteConnections = buildSourceWalkRouteConnections(registeredSourceWalkRoutes);
+  registeredUnverifiedWalkStructures = footways
+    .filter((feature) => feature.geometry.length >= 2)
+    .filter(isSourceUnverifiedStructure)
+    .map((feature) => ({
+      sourceWayId: feature.id,
+      points: feature.geometry,
+      clearance: Math.max(1.2, parseSourceWidth(feature) / 2 + 0.45)
+    }));
 }
 
 // Route guidance stays inside a bounded source-way corridor. Endpoint joins
 // prevent a nearby but unrelated footway from becoming an invisible teleport;
 // the remaining free-movement fallback keeps authored landmark aprons and
 // source gaps inspectable when the catalog has no connected way there.
-const SOURCE_WALK_ROUTE_CLEARANCE = 2.5;
+// Keep the resolver close enough to the rendered ribbon that a person cannot
+// walk several metres out into the carriageway while still being considered
+// "on" a source footway. This is a guidance corridor, not a replacement for
+// a surveyed collision mesh.
+const SOURCE_WALK_ROUTE_CLEARANCE = 1.15;
 const SOURCE_WALK_ROUTE_CONTINUITY_WEIGHT = 0.35;
 
 const distanceToSegment = (x: number, z: number, start: LocalXZ, end: LocalXZ) => {
@@ -680,11 +721,20 @@ const distanceToSegment = (x: number, z: number, start: LocalXZ, end: LocalXZ) =
   return { distance: Math.hypot(x - closestX, z - closestZ), progress };
 };
 
+function distanceToPolyline(x: number, z: number, points: readonly LocalXZ[]) {
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < points.length; index += 1) {
+    nearest = Math.min(nearest, distanceToSegment(x, z, points[index - 1], points[index]).distance);
+  }
+  return nearest;
+}
+
 interface WalkRouteProjection {
   route: SourceWalkRoute;
   point: LocalXZ;
   distance: number;
   progress: number;
+  tangent: LocalXZ;
 }
 
 function projectToWalkRoute(x: number, z: number, route: SourceWalkRoute): WalkRouteProjection {
@@ -692,7 +742,8 @@ function projectToWalkRoute(x: number, z: number, route: SourceWalkRoute): WalkR
     route,
     point: route.points[0],
     distance: Number.POSITIVE_INFINITY,
-    progress: 0
+    progress: 0,
+    tangent: [0, 1]
   };
 
   for (let index = 1; index < route.points.length; index += 1) {
@@ -700,6 +751,10 @@ function projectToWalkRoute(x: number, z: number, route: SourceWalkRoute): WalkR
     const end = route.points[index];
     const projection = distanceToSegment(x, z, start, end);
     if (projection.distance >= nearest.distance) continue;
+    const segmentLength = Math.hypot(end[0] - start[0], end[1] - start[1]);
+    const tangent: LocalXZ = segmentLength >= 0.05
+      ? [(end[0] - start[0]) / segmentLength, (end[1] - start[1]) / segmentLength]
+      : nearest.tangent;
     nearest = {
       route,
       point: [
@@ -707,11 +762,20 @@ function projectToWalkRoute(x: number, z: number, route: SourceWalkRoute): WalkR
         start[1] + (end[1] - start[1]) * projection.progress
       ],
       distance: projection.distance,
-      progress: projection.progress
+      progress: projection.progress,
+      tangent
     };
   }
 
   return nearest;
+}
+
+function getNearestWalkRouteProjection(x: number, z: number) {
+  return registeredSourceWalkRoutes
+    .map((route) => projectToWalkRoute(x, z, route))
+    .reduce<WalkRouteProjection | null>((current, candidate) => (
+      !current || candidate.distance < current.distance ? candidate : current
+    ), null);
 }
 
 /**
@@ -720,12 +784,8 @@ function projectToWalkRoute(x: number, z: number, route: SourceWalkRoute): WalkR
  * a footway. The match radius is deliberately conservative because OSM does
  * not guarantee a pedestrian route exists everywhere in the extract.
  */
-export function getNearestSourceWalkPoint(x: number, z: number, maxDistance = 18) {
-  const nearest = registeredSourceWalkRoutes
-    .map((route) => projectToWalkRoute(x, z, route))
-    .reduce<WalkRouteProjection | null>((current, candidate) => (
-      !current || candidate.distance < current.distance ? candidate : current
-    ), null);
+export function getNearestSourceWalkPoint(x: number, z: number, maxDistance = 8) {
+  const nearest = getNearestWalkRouteProjection(x, z);
 
   return nearest && nearest.distance <= maxDistance ? nearest : null;
 }
@@ -733,6 +793,11 @@ export function getNearestSourceWalkPoint(x: number, z: number, maxDistance = 18
 function isNearSourceRoute(x: number, z: number, route: SourceWalkRoute, extraClearance = 0) {
   return projectToWalkRoute(x, z, route).distance <= route.width / 2 + extraClearance;
 }
+
+const isInsideUnverifiedWalkStructure = (x: number, z: number) =>
+  registeredUnverifiedWalkStructures.some((structure) =>
+    distanceToPolyline(x, z, structure.points) <= structure.clearance
+  );
 
 /**
  * Resolve the source-mapped pedestrian surface under a local X/Z point. The
@@ -791,8 +856,10 @@ const isInsideObstacle = (x: number, z: number, padding = 0.65) =>
       z <= obstacle.maxZ + padding
   );
 
-const isOnSkywalkStair = (x: number, z: number) =>
-  SOURCE_SKYWALK_ROUTES.some((route) => route.sourceWayIds.length === 1 && isNearSourceRoute(x, z, route, 0.15));
+const getSkywalkStairIndex = (x: number, z: number) =>
+  SOURCE_SKYWALK_ROUTES.findIndex((route) => (
+    route.sourceWayIds.length === 1 && isNearSourceRoute(x, z, route, 0.15)
+  ));
 
 const canChangeWalkSurface = (
   currentX: number,
@@ -804,19 +871,26 @@ const canChangeWalkSurface = (
   const nextSurface = resolveWalkSurfaceY(nextX, nextZ);
   if (Math.abs(nextSurface - currentSurface) < 0.75) return true;
 
-  // The only proven grade/elevated connection in this snapshot is the two
-  // mapped skywalk stair flights. Varthur's elevated footways stay separate.
-  return isOnSkywalkStair(currentX, currentZ) && isOnSkywalkStair(nextX, nextZ);
+  // The only proven grade/elevated connection in this snapshot is movement
+  // along one of the two mapped skywalk stair flights. Do not let one stair
+  // flight act as a generic elevator between unrelated surfaces.
+  const currentStairIndex = getSkywalkStairIndex(currentX, currentZ);
+  const nextStairIndex = getSkywalkStairIndex(nextX, nextZ);
+  return currentStairIndex >= 0 && currentStairIndex === nextStairIndex;
 };
 
 const isWalkPathClear = (startX: number, startZ: number, endX: number, endZ: number) => {
   const distance = Math.hypot(endX - startX, endZ - startZ);
   const samples = Math.max(1, Math.ceil(distance / 0.75));
+  const startsInsideUnverifiedStructure = isInsideUnverifiedWalkStructure(startX, startZ);
   for (let index = 1; index <= samples; index += 1) {
     const progress = index / samples;
     const x = startX + (endX - startX) * progress;
     const z = startZ + (endZ - startZ) * progress;
     if (isInsideObstacle(x, z)) return false;
+    // Permit a user who is already inside an unverified source structure to
+    // step back out, but never allow a clean approach to cross its corridor.
+    if (!startsInsideUnverifiedStructure && isInsideUnverifiedWalkStructure(x, z)) return false;
   }
   return true;
 };
@@ -857,11 +931,7 @@ function resolveSourceGuidedWalkPosition(
   const requestedDistance = Math.hypot(nextX - currentX, nextZ - currentZ);
   if (requestedDistance === 0) return null;
 
-  const nearestCurrentRoute = registeredSourceWalkRoutes
-    .map((route) => projectToWalkRoute(currentX, currentZ, route))
-    .reduce<WalkRouteProjection | null>((current, candidate) => (
-      !current || candidate.distance < current.distance ? candidate : current
-    ), null);
+  const nearestCurrentRoute = getNearestWalkRouteProjection(currentX, currentZ);
   const currentRoute = nearestCurrentRoute && nearestCurrentRoute.distance <=
     getSourceRouteCorridorRadius(nearestCurrentRoute.route)
     ? nearestCurrentRoute.route
@@ -890,14 +960,10 @@ function resolveSourceGuidedWalkPosition(
     return candidateScore < nearestScore ? candidate : nearest;
   });
 
-  const routePoint = selected.next.point;
-  const corridorRadius = getSourceRouteCorridorRadius(selected.route);
-  const guidedPoint = selected.next.distance <= corridorRadius
-    ? routePoint
-    : [
-        routePoint[0] + (nextX - routePoint[0]) * corridorRadius / selected.next.distance,
-        routePoint[1] + (nextZ - routePoint[1]) * corridorRadius / selected.next.distance
-      ] as LocalXZ;
+  // Finish on the projected source vertex/segment, never at an arbitrary
+  // point inside the corridor. The corridor only decides whether a route is
+  // eligible; the visible source footway remains the actual movement surface.
+  const guidedPoint = selected.next.point;
   const boundedGuidedPoint = moveTowardWalkPoint(
     currentX,
     currentZ,
@@ -927,6 +993,9 @@ export function resolveWalkPosition(
     [boundedX, currentZ],
     [currentX, boundedZ]
   ];
+  const currentRoute = getNearestWalkRouteProjection(currentX, currentZ);
+  const currentIsOnVisibleWalkway = currentRoute !== null &&
+    currentRoute.distance <= getSourceRouteCorridorRadius(currentRoute.route);
 
   for (const [candidateX, candidateZ] of movementCandidates) {
     const sourceGuidedPosition = resolveSourceGuidedWalkPosition(
@@ -937,12 +1006,21 @@ export function resolveWalkPosition(
     );
     if (sourceGuidedPosition) return sourceGuidedPosition;
 
+    // A camera already inside a source-route corridor must not use the free
+    // movement fallback for this candidate. The route resolver owns the
+    // decision so every accepted step stays on the visible walkway.
+    if (currentIsOnVisibleWalkway) continue;
+
     if (canChangeWalkSurface(currentX, currentZ, candidateX, candidateZ) &&
         isWalkPathClear(currentX, currentZ, candidateX, candidateZ)) {
       return [candidateX, candidateZ];
     }
   }
 
+  // Once the camera is on a mapped or explicitly modelled route, the loop
+  // above has already rejected unconstrained candidates. Staying put is
+  // preferable to stepping into a road, building, unknown bridge, or an
+  // elevation that the source does not establish.
   return [currentX, currentZ];
 }
 
@@ -994,9 +1072,31 @@ export function resolveWalkStart(x: number, z: number): [number, number] {
 export function createWalkView(position: [number, number, number], target: [number, number, number]): CameraView {
   const [safeX, safeZ] = resolveWalkStart(position[0], position[2]);
   const eyeHeight = resolveWalkEyeHeight(safeX, safeZ);
-  const dx = target[0] - safeX;
+  const sourceMatch = getNearestSourceWalkPoint(safeX, safeZ);
+  let lookTargetX = target[0];
+  let lookTargetZ = target[2];
+  if (sourceMatch && sourceMatch.distance <= getSourceRouteCorridorRadius(sourceMatch.route)) {
+    const targetDx = target[0] - safeX;
+    const targetDz = target[2] - safeZ;
+    const targetDistance = Math.hypot(targetDx, targetDz);
+    const alignment = targetDistance > 0.001
+      ? (targetDx * sourceMatch.tangent[0] + targetDz * sourceMatch.tangent[1]) / targetDistance
+      : 0;
+
+    // Preset targets normally point down the mapped footway. If an authored
+    // target is across the road or has become stale after a source refresh,
+    // use the local route tangent so the first frame still contains the
+    // pedestrian surface instead of staring into an unwalkable edge.
+    if (targetDistance < 0.5 || Math.abs(alignment) < 0.25) {
+      const direction = targetDx * sourceMatch.tangent[0] + targetDz * sourceMatch.tangent[1] >= 0 ? 1 : -1;
+      lookTargetX = safeX + sourceMatch.tangent[0] * WALK_LOOK_DISTANCE * direction;
+      lookTargetZ = safeZ + sourceMatch.tangent[1] * WALK_LOOK_DISTANCE * direction;
+    }
+  }
+
+  const dx = lookTargetX - safeX;
   const dy = target[1] - position[1];
-  const dz = target[2] - safeZ;
+  const dz = lookTargetZ - safeZ;
   const distance = Math.hypot(dx, dy, dz) || 1;
 
   return {
