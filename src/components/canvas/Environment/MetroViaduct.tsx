@@ -5,6 +5,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   MarathahalliDemoSnapshot,
   OSMPolylineFeature,
+  NAMMA_METRO_MAINLINE_WAY_IDS,
   isNammaMetroMainlineWay,
   isNammaMetroPierSupport
 } from '../../../data/marathahalliDemo';
@@ -19,7 +20,8 @@ type LocalPoint = [number, number];
 // The OSM extract gives the alignment and relative layer only. Keep the
 // display elevation above the mapped Varthur viaduct while using the 5.5 m
 // Phase 2A road-clearance value as a minimum structural datum; this is not a
-// surveyed rail level.
+// surveyed rail level. The numeric deck datum is deliberately a renderer
+// contract, not an assertion about the built Namma Metro vertical profile.
 const METRO_DECK_CENTER_Y = 10.8;
 const METRO_DECK_WIDTH = 8.5;
 const METRO_TRACK_WIDTH = 2.75;
@@ -39,10 +41,20 @@ const METRO_MIN_SOFFIT_Y = 5.5;
 const METRO_UNDERDECK_CENTER_DROP = 0.68;
 const METRO_UNDERDECK_HEIGHT = 0.46;
 const METRO_PIER_CAP_HEIGHT = 0.72;
-const METRO_PIER_CAP_DEPTH = 1.65;
-const METRO_PIER_SHAFT_RADIUS = 0.62;
-const METRO_PIER_BASE_RADIUS = 0.96;
+const METRO_PIER_CAP_DEPTH = 1.8;
+const METRO_PIER_SHAFT_RADIUS = 0.72;
+const METRO_PIER_BASE_RADIUS = 1.05;
+const METRO_PIER_BASE_TOP_Y = 0.42;
+const METRO_PIER_BUILDING_BUFFER = 0.55;
+const METRO_MIN_SOURCE_PIER_SPACING = 8;
+const METRO_BEARING_BASE_HEIGHT = 0.07;
 const METRO_BEARING_PAD_HEIGHT = 0.14;
+const METRO_BEARING_TO_DECK_CLEARANCE = 0.08;
+// This is a modeled comparison datum for the mapped road viaduct crossing.
+// It is not Namma Metro evidence and does not turn the local OSM layer tags
+// into a surveyed vertical section.
+const METRO_REFERENCE_ROAD_DECK_TOP_Y = 8.0;
+const METRO_REFERENCE_ROAD_CLEARANCE_BUFFER = 1.2;
 // The source ways carry a relative OSM layer (layer=2), not survey elevations.
 // These are display elevations for the modeled viaduct detail only.
 const METRO_JUNCTION_CLEAR_HALF_LENGTH = 42;
@@ -53,6 +65,9 @@ interface MetroTrackData {
   centerline: LocalPoint[];
   centerCurve: THREE.Curve<THREE.Vector3>;
   trainCurve: THREE.Curve<THREE.Vector3>;
+  sourceWayIds: readonly string[];
+  sourceNodeCounts: number[];
+  sourceTrackTags: Record<string, string>;
   trainLength: number;
   initialProgress: number;
   trackSeparation: number;
@@ -66,6 +81,8 @@ interface MetroPierFrame {
   point: LocalPoint;
   angle: number;
   sourceBacked: boolean;
+  sourceSupportId?: string;
+  sourceSupportOffset?: number;
 }
 
 interface SourceCurveData {
@@ -201,10 +218,13 @@ function createBeamGeometry(
 }
 
 function buildMetroTrackData(snapshot: MarathahalliDemoSnapshot): MetroTrackData | null {
-  const ways = snapshot.railways
-    .filter(isNammaMetroMainlineWay)
-    .sort((a, b) => a.id.localeCompare(b.id));
-  if (ways.length < 2) return null;
+  // Select the two committed through-way IDs explicitly. This keeps the
+  // short way/1551136769 siding out of the viaduct even if a future extract
+  // adds more Namma Metro service ways to the snapshot.
+  const ways = NAMMA_METRO_MAINLINE_WAY_IDS
+    .map((id) => snapshot.railways.find((feature) => feature.id === id))
+    .filter((way): way is OSMPolylineFeature => Boolean(way));
+  if (ways.length !== NAMMA_METRO_MAINLINE_WAY_IDS.length) return null;
 
   const sourceCurves = ways.slice(0, 2).map(sourceCurve);
   sourceCurves[1] = orientSourceCurveLike(sourceCurves[0], sourceCurves[1]);
@@ -272,6 +292,9 @@ function buildMetroTrackData(snapshot: MarathahalliDemoSnapshot): MetroTrackData
     centerline,
     centerCurve,
     trainCurve,
+    sourceWayIds: ways.map((way) => way.id),
+    sourceNodeCounts: ways.map((way) => way.nodeRefs.length),
+    sourceTrackTags: { ...ways[0].tags },
     trainLength: trainCurve.getLength(),
     initialProgress: nearestIndex / Math.max(1, firstTrack.length - 1),
     trackSeparation,
@@ -283,19 +306,36 @@ function buildMetroTrackData(snapshot: MarathahalliDemoSnapshot): MetroTrackData
 }
 
 function nearestCenterlineFrame(trackData: MetroTrackData, point: LocalPoint) {
-  let nearestIndex = 0;
+  let nearestPoint: LocalPoint = trackData.centerline[0] || point;
+  let nearestTangent: LocalPoint = getTangent(trackData.centerline, 0);
   let nearestDistance = Infinity;
-  trackData.centerline.forEach((candidate, index) => {
+  for (let index = 1; index < trackData.centerline.length; index += 1) {
+    const start = trackData.centerline[index - 1];
+    const end = trackData.centerline[index];
+    const dx = end[0] - start[0];
+    const dz = end[1] - start[1];
+    const lengthSquared = dx * dx + dz * dz;
+    const progress = lengthSquared > 0
+      ? Math.max(0, Math.min(1, (
+        (point[0] - start[0]) * dx + (point[1] - start[1]) * dz
+      ) / lengthSquared))
+      : 0;
+    const candidate: LocalPoint = [
+      start[0] + progress * dx,
+      start[1] + progress * dz
+    ];
     const distance = distanceBetween(point, candidate);
     if (distance < nearestDistance) {
       nearestDistance = distance;
-      nearestIndex = index;
+      nearestPoint = candidate;
+      const length = Math.hypot(dx, dz) || 1;
+      nearestTangent = [dx / length, dz / length];
     }
-  });
-  const tangent = getTangent(trackData.centerline, nearestIndex);
+  }
   return {
-    point,
-    angle: Math.atan2(tangent[0], tangent[1])
+    point: nearestPoint,
+    angle: Math.atan2(nearestTangent[0], nearestTangent[1]),
+    sourceSupportOffset: nearestDistance
   };
 }
 
@@ -318,33 +358,83 @@ function isPointInsidePolygon([x, z]: LocalPoint, polygon: LocalPoint[]) {
   return inside;
 }
 
-function isInsideSourceBuilding(point: LocalPoint, buildings: OSMPolylineFeature[]) {
+function pointToSegmentDistance(point: LocalPoint, start: LocalPoint, end: LocalPoint) {
+  const dx = end[0] - start[0];
+  const dz = end[1] - start[1];
+  const lengthSquared = dx * dx + dz * dz;
+  if (lengthSquared === 0) return distanceBetween(point, start);
+  const progress = Math.max(0, Math.min(1, (
+    (point[0] - start[0]) * dx + (point[1] - start[1]) * dz
+  ) / lengthSquared));
+  return distanceBetween(point, [
+    start[0] + progress * dx,
+    start[1] + progress * dz
+  ]);
+}
+
+function pointToPolygonDistance(point: LocalPoint, polygon: LocalPoint[]) {
+  if (polygon.length < 2) return Number.POSITIVE_INFINITY;
+  if (polygon.length >= 3 && isPointInsidePolygon(point, polygon)) return 0;
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < polygon.length; index += 1) {
+    nearest = Math.min(
+      nearest,
+      pointToSegmentDistance(point, polygon[index], polygon[(index + 1) % polygon.length])
+    );
+  }
+  return nearest;
+}
+
+function isInsideSourceBuilding(
+  point: LocalPoint,
+  buildings: OSMPolylineFeature[],
+  clearanceRadius = METRO_PIER_BASE_RADIUS + METRO_PIER_BUILDING_BUFFER
+) {
   return buildings.some((building) => {
     if (building.geometry.length < 3) return false;
     const xs = building.geometry.map(([x]) => x);
     const zs = building.geometry.map(([, z]) => z);
     if (
-      point[0] < Math.min(...xs) - 1.8 ||
-      point[0] > Math.max(...xs) + 1.8 ||
-      point[1] < Math.min(...zs) - 1.8 ||
-      point[1] > Math.max(...zs) + 1.8
+      point[0] < Math.min(...xs) - clearanceRadius ||
+      point[0] > Math.max(...xs) + clearanceRadius ||
+      point[1] < Math.min(...zs) - clearanceRadius ||
+      point[1] > Math.max(...zs) + clearanceRadius
     ) return false;
-    return isPointInsidePolygon(point, building.geometry);
+    return pointToPolygonDistance(point, building.geometry) <= clearanceRadius;
   });
+}
+
+function deduplicatePierFrames(frames: MetroPierFrame[]) {
+  const accepted: MetroPierFrame[] = [];
+  frames.forEach((frame) => {
+    if (accepted.every((candidate) => (
+      distanceBetween(candidate.point, frame.point) >= METRO_MIN_SOURCE_PIER_SPACING
+    ))) {
+      accepted.push(frame);
+    }
+  });
+  return accepted;
 }
 
 function sourcePierFrames(
   trackData: MetroTrackData,
-  sourceSupports: LocalPoint[],
+  sourceSupports: { id: string; position: LocalPoint }[],
   sourceBuildings: OSMPolylineFeature[]
 ): MetroPierFrame[] {
   if (sourceSupports.length) {
-    return sourceSupports
-      .filter((point) => !isJunctionClearZone(point))
-      .map((point) => ({
-        ...nearestCenterlineFrame(trackData, point),
-        sourceBacked: true
-      }));
+    return deduplicatePierFrames(sourceSupports
+      .map((support) => {
+        const frame = nearestCenterlineFrame(trackData, support.position);
+        return {
+          ...frame,
+          sourceBacked: true,
+          sourceSupportId: support.id,
+          sourceSupportOffset: frame.sourceSupportOffset
+        };
+      })
+      .filter(({ point }) => (
+        !isJunctionClearZone(point) && !isInsideSourceBuilding(point, sourceBuildings)
+      )));
   }
 
   // The current extract has no explicitly metro-tagged supports. Keep a
@@ -450,7 +540,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     () => (trackData
       ? sourcePierFrames(
         trackData,
-        sourceMetroSupportFeatures.map((support) => support.position),
+        sourceMetroSupportFeatures,
         snapshot?.buildings || []
       )
       : []),

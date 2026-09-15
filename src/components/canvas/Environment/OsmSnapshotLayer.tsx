@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   MarathahalliDemoSnapshot,
+  OSMHeightSource,
   OSMPolylineFeature,
   isSourceElevatedRoad,
   isNammaMetroSourceWay,
@@ -147,6 +148,111 @@ function getRoadRibbonWidth(feature: OSMPolylineFeature) {
   if (['secondary', 'tertiary'].includes(feature.tags.highway || '')) return 8;
   if (feature.tags.highway === 'service') return 4.2;
   return 5.4;
+}
+
+const SOURCE_ROAD_DETAIL_HIGHWAYS = new Set([
+  'trunk',
+  'trunk_link',
+  'primary',
+  'primary_link',
+  'secondary',
+  'tertiary',
+  'tertiary_link'
+]);
+const SOURCE_ROAD_DETAIL_LIMIT = 220;
+
+function createLineGeometry(positions: number[]) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function pushDashedSegment(
+  positions: number[],
+  start: [number, number],
+  end: [number, number],
+  startY: number,
+  endY: number,
+  dashLength = 4.5,
+  gapLength = 4.5
+) {
+  const dx = end[0] - start[0];
+  const dz = end[1] - start[1];
+  const length = Math.hypot(dx, dz);
+  if (length < 0.2) return;
+
+  for (let distance = 0; distance < length; distance += dashLength + gapLength) {
+    const from = distance / length;
+    const to = Math.min(1, (distance + dashLength) / length);
+    positions.push(
+      start[0] + dx * from,
+      startY + (endY - startY) * from,
+      start[1] + dz * from,
+      start[0] + dx * to,
+      startY + (endY - startY) * to,
+      start[1] + dz * to
+    );
+  }
+}
+
+function createRoadDetailGeometries(features: OSMPolylineFeature[]) {
+  const edgePositions: number[] = [];
+  const lanePositions: number[] = [];
+
+  for (const feature of features.slice(0, SOURCE_ROAD_DETAIL_LIMIT)) {
+    const lanes = Math.max(1, Math.min(8, Math.round(Number(feature.tags.lanes)) || 1));
+    const halfWidth = getRoadRibbonWidth(feature) / 2;
+
+    for (let index = 1; index < feature.geometry.length; index += 1) {
+      const previous = feature.geometry[index - 1];
+      const current = feature.geometry[index];
+      const dx = current[0] - previous[0];
+      const dz = current[1] - previous[1];
+      const length = Math.hypot(dx, dz);
+      if (length < 0.2) continue;
+
+      const normalX = -dz / length;
+      const normalZ = dx / length;
+      const edgeOffset = Math.max(0.35, halfWidth - 0.32);
+      const previousY = getRoadSurfaceY(feature, previous) + 0.045;
+      const currentY = getRoadSurfaceY(feature, current) + 0.045;
+
+      // OSM way geometry supplies the road center trace; these two lines are
+      // display edges derived from its lane width, not a survey of paint or
+      // curb placement.
+      for (const side of [-1, 1]) {
+        edgePositions.push(
+          previous[0] + normalX * edgeOffset * side,
+          previousY,
+          previous[1] + normalZ * edgeOffset * side,
+          current[0] + normalX * edgeOffset * side,
+          currentY,
+          current[1] + normalZ * edgeOffset * side
+        );
+      }
+
+      if (lanes < 2) continue;
+      const laneWidth = (halfWidth * 2) / lanes;
+      for (let lane = 1; lane < lanes; lane += 1) {
+        const offset = -halfWidth + laneWidth * lane;
+        const laneStart: [number, number] = [
+          previous[0] + normalX * offset,
+          previous[1] + normalZ * offset
+        ];
+        const laneEnd: [number, number] = [
+          current[0] + normalX * offset,
+          current[1] + normalZ * offset
+        ];
+        pushDashedSegment(lanePositions, laneStart, laneEnd, previousY, currentY);
+      }
+    }
+  }
+
+  return {
+    edge: createLineGeometry(edgePositions),
+    lane: createLineGeometry(lanePositions)
+  };
 }
 
 function isSourceBridgeFeature(feature: OSMPolylineFeature) {
