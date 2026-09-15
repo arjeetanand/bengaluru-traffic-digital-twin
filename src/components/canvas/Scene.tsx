@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { Sky, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   SUN_POSITION_DAY,
@@ -30,6 +31,7 @@ import { OsmSnapshotLayer } from './Environment/OsmSnapshotLayer';
 import { CrossoverFocusOverlay } from './Environment/CrossoverFocusOverlay';
 import { ScenarioImpactOverlay } from './Environment/ScenarioImpactOverlay';
 import { CorridorAttractorLayer } from './Environment/CorridorAttractorLayer';
+import { SourceLandmarkMassings } from './Environment/SourceLandmarkMassings';
 import { MARATHAHALLI_SOURCE_ANCHORS } from '../../data/marathahalliNavigation';
 
 interface SceneProps {
@@ -100,6 +102,11 @@ export const Scene: React.FC<SceneProps> = ({
     'kadubeesanahalli',
     'bellandur'
   ].includes(cameraPreset);
+  // These handcrafted facades are positioned on the matching source
+  // footprints. Show them only at their named stop so a close inspection can
+  // read the landmark frontage while the OSM snapshot remains the authority
+  // for surrounding roads, footways, and building plan geometry.
+  const isSourceAnchoredLandmarkFocus = ['multiplex', 'kalamandir', 'brandfactory'].includes(cameraPreset);
   const sourceBuildingLimit = cameraPreset === 'corridor'
     ? 3000
     : (isCrossoverFocusView ? 850 : (isSourceGeometryFocusView ? 1600 : 1000));
@@ -136,6 +143,27 @@ export const Scene: React.FC<SceneProps> = ({
         {/* Background & Subtle Fog */}
         <color attach="background" args={[fogColor]} />
         <fogExp2 attach="fog" args={[fogColor, fogDensity]} />
+        {!isNight && (
+          <Sky
+            distance={4500}
+            sunPosition={sunPosition}
+            turbidity={isRaining ? 11 : 4}
+            rayleigh={isRaining ? 0.35 : 1.8}
+            mieCoefficient={0.006}
+            mieDirectionalG={0.78}
+          />
+        )}
+        {isNight && (
+          <Stars
+            radius={1800}
+            depth={900}
+            count={900}
+            factor={2.2}
+            saturation={0.1}
+            fade
+            speed={0.15}
+          />
+        )}
 
         {/* Camera Rig & OrbitControls */}
         <CameraController
@@ -186,10 +214,17 @@ export const Scene: React.FC<SceneProps> = ({
             isNight={isNight}
             showBuildings={buildingMode !== 'google-tiles' || googleTilesFailed}
             buildingLimit={sourceBuildingLimit}
-            buildingOpacity={isCrossoverFocusView ? 0.28 : (isLongCorridorView ? 0.68 : 0.5)}
+            buildingOpacity={isCrossoverFocusView ? 0.28 : (isLongCorridorView ? 0.68 : (isSourceAnchoredLandmarkFocus ? 0.24 : 0.5))}
             buildingOutlineOpacity={isCrossoverFocusView ? 0.2 : (isLongCorridorView ? 0.46 : 0.32)}
             labelDistanceFactor={sourceLabelDistanceFactor}
           />
+
+          {buildingMode !== 'google-tiles' && (
+            <SourceLandmarkMassings
+              cameraPreset={cameraPreset}
+              isNight={isNight}
+            />
+          )}
 
           <CorridorAttractorLayer
             isNight={isNight}
@@ -253,14 +288,14 @@ export const Scene: React.FC<SceneProps> = ({
           <Greenery isRaining={isRaining} isPersonView={cameraMode === 'walk'} />
 
           {/* ── Realistic West Corridor Landmarks (Innovative Multiplex, Krishna Summit, Krishna Grand, Novel MSR) ── */}
-          {!isSourceGeometryFocusView && (
+          {(!isSourceGeometryFocusView || isSourceAnchoredLandmarkFocus) && (
             <WestCorridorBuildings
               isNight={isNight}
             />
           )}
 
           {/* ── Realistic East Corridor Landmarks (Brand Factory, Kalamandir Palace, Factory Outlets Row, Nalli Silks) ── */}
-          {!isSourceGeometryFocusView && (
+          {(!isSourceGeometryFocusView || isSourceAnchoredLandmarkFocus) && (
             <EastCorridorBuildings
               isNight={isNight}
             />

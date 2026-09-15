@@ -165,7 +165,10 @@ const BIRD_VIEWS: Record<CameraPreset, CameraView> = {
     ]
   },
   kalamandir: {
-    position: [-10, 22, 382],
+    // Keep the full palatial frontage, Nalli neighbour, and source road in
+    // frame; the previous 90m stand-off cropped the upper facade at bird
+    // scale and made the landmark harder to inspect.
+    position: [-55, 44, 455],
     target: [
       MARATHAHALLI_SOURCE_ANCHORS.kalamandir.buildingCentroid[0],
       14,

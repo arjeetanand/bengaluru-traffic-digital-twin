@@ -19,6 +19,31 @@ const createConnectorCurve = (points: readonly [number, number, number][]) => ne
   0.25
 );
 
+const REPLAY_SPEED_METERS_PER_SECOND = 6.4;
+const REPLAY_YIELD_WINDOW = 0.095;
+
+function wrappedProgressDistance(progress: number, target: number) {
+  const directDistance = Math.abs(progress - target);
+  return Math.min(directDistance, 1 - directDistance);
+}
+
+function getReplayDynamics(progress: number, stopProgress: number) {
+  const yieldStrength = THREE.MathUtils.smoothstep(
+    REPLAY_YIELD_WINDOW - wrappedProgressDistance(progress, stopProgress),
+    0,
+    REPLAY_YIELD_WINDOW
+  );
+
+  return {
+    // A modeled yield is intentionally a rolling slowdown rather than a hard
+    // stop: it makes the replay read like a driver approaching the crossover
+    // while avoiding a frozen hero car in the audit view.
+    speedFactor: THREE.MathUtils.lerp(1, 0.28, yieldStrength),
+    yieldStrength,
+    inTurnWindow: progress >= 0.28 && progress <= 0.68
+  };
+}
+
 function createConnectorSurfaceGeometry(
   points: readonly [number, number, number][]
 ) {
@@ -97,13 +122,15 @@ const CrossoverReplayVehicle: React.FC<{
   id: string;
   curve: THREE.CatmullRomCurve3;
   startProgress: number;
+  stopProgress: number;
   laneOffset: number;
   color: string;
   isNight: boolean;
   cameraMode: 'walk' | 'overview';
-}> = ({ id, curve, startProgress, laneOffset, color, isNight, cameraMode }) => {
+}> = ({ id, curve, startProgress, stopProgress, laneOffset, color, isNight, cameraMode }) => {
   const vehicleRef = useRef<THREE.Group>(null);
   const progressRef = useRef(startProgress);
+  const motionClockRef = useRef(0);
   const geometry = useMemo(() => createCarGeometry(), []);
   const curveLength = useMemo(() => curve.getLength(), [curve]);
   const material = useMemo(() => new THREE.MeshStandardMaterial({
@@ -113,6 +140,18 @@ const CrossoverReplayVehicle: React.FC<{
     emissive: isNight ? new THREE.Color(color) : new THREE.Color('#000000'),
     emissiveIntensity: isNight ? 0.42 : 0
   }), [color, isNight]);
+  const turnSignalMaterial = useMemo(() => new THREE.MeshBasicMaterial({
+    color: isNight ? '#fde68a' : '#f59e0b',
+    transparent: true,
+    opacity: 0,
+    toneMapped: false
+  }), [isNight]);
+  const brakeLightMaterial = useMemo(() => new THREE.MeshBasicMaterial({
+    color: '#ef4444',
+    transparent: true,
+    opacity: 0.28,
+    toneMapped: false
+  }), []);
   const point = useMemo(() => new THREE.Vector3(), []);
   const tangent = useMemo(() => new THREE.Vector3(), []);
   const normal = useMemo(() => new THREE.Vector3(), []);
@@ -120,13 +159,21 @@ const CrossoverReplayVehicle: React.FC<{
   useEffect(() => () => {
     geometry.dispose();
     material.dispose();
-  }, [geometry, material]);
+    turnSignalMaterial.dispose();
+    brakeLightMaterial.dispose();
+  }, [brakeLightMaterial, geometry, material, turnSignalMaterial]);
 
   useFrame((_, delta) => {
     const vehicle = vehicleRef.current;
     if (!vehicle) return;
 
-    progressRef.current = (progressRef.current + (delta * 6.4) / Math.max(1, curveLength)) % 1;
+    motionClockRef.current += Math.min(delta, 0.05);
+    const dynamics = getReplayDynamics(progressRef.current, stopProgress);
+    progressRef.current = (
+      progressRef.current
+      + (Math.min(delta, 0.05) * REPLAY_SPEED_METERS_PER_SECOND * dynamics.speedFactor)
+        / Math.max(1, curveLength)
+    ) % 1;
     curve.getPointAt(progressRef.current, point);
     curve.getTangentAt(progressRef.current, tangent).setY(0).normalize();
     normal.set(-tangent.z, 0, tangent.x).normalize();
@@ -138,6 +185,14 @@ const CrossoverReplayVehicle: React.FC<{
     // VehicleModels faces +Z; rotate it into the direction of the source
     // replay tangent while keeping the wheels on the mapped road datum.
     vehicle.rotation.y = Math.atan2(tangent.x, tangent.z) + Math.PI;
+
+    // Make the turn leg read as a maneuver: both indicators blink only during
+    // the modeled sweep, while the rear lamps brighten as the vehicle rolls
+    // through the source-linked yield point. These are visual replay cues,
+    // not claims about observed vehicle behavior or traffic-signal control.
+    const blinkOn = Math.floor(motionClockRef.current * 4) % 2 === 0;
+    turnSignalMaterial.opacity = dynamics.inTurnWindow && blinkOn ? (isNight ? 1 : 0.82) : 0.08;
+    brakeLightMaterial.opacity = 0.26 + dynamics.yieldStrength * (isNight ? 0.74 : 0.58);
   });
 
   return (
@@ -147,10 +202,24 @@ const CrossoverReplayVehicle: React.FC<{
       userData={{
         source: 'OSM relation/18922642',
         status: 'modelled visual replay',
+        replayPhases: 'approach/yield → sweep → exit',
+        stopProgress,
         countedInFleet: false
       }}
     >
       <mesh geometry={geometry} material={material} scale={cameraMode === 'walk' ? 0.54 : 0.72} castShadow />
+      <mesh position={[-0.6, 0.55, 2.13]} material={turnSignalMaterial}>
+        <boxGeometry args={[0.35, 0.15, 0.1]} />
+      </mesh>
+      <mesh position={[0.6, 0.55, 2.13]} material={turnSignalMaterial}>
+        <boxGeometry args={[0.35, 0.15, 0.1]} />
+      </mesh>
+      <mesh position={[-0.6, 0.55, -2.13]} material={brakeLightMaterial}>
+        <boxGeometry args={[0.35, 0.15, 0.1]} />
+      </mesh>
+      <mesh position={[0.6, 0.55, -2.13]} material={brakeLightMaterial}>
+        <boxGeometry args={[0.35, 0.15, 0.1]} />
+      </mesh>
       <mesh position={[0, 0.64, 1.58]}>
         <boxGeometry args={[0.22, 0.12, 0.06]} />
         <meshBasicMaterial color={isNight ? '#fef08a' : '#fde68a'} toneMapped={false} />
@@ -343,7 +412,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         <FocusLabel
           position={[12, 5.4, 1]}
           title="TURN REPLAY"
-          detail="2 HERO VEHICLES · MODELLED · NOT COUNTED"
+          detail="YIELD → SWEEP → EXIT · MODELLED · NOT COUNTED"
         />
         </group>
       )}
@@ -356,6 +425,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         id="north"
         curve={northCurve}
         startProgress={0.08}
+        stopProgress={U_TURN_CONNECTORS.north.stopT}
         laneOffset={-0.72}
         color="#0ea5e9"
         isNight={isNight}
@@ -365,6 +435,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         id="south"
         curve={southCurve}
         startProgress={0.58}
+        stopProgress={U_TURN_CONNECTORS.south.stopT}
         laneOffset={0.72}
         color="#f97316"
         isNight={isNight}

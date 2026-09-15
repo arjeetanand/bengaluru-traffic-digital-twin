@@ -19,6 +19,7 @@ import { ControlsBar } from './ControlsBar';
 import { ApiUsageBadge } from './ApiUsageBadge';
 import { FallbackBanner } from './FallbackBanner';
 import { NavigationWidget } from './NavigationWidget';
+import { CorridorJourneyBar } from './CorridorJourneyBar';
 import { GoogleMapsStoreDrawer } from './GoogleMapsStoreDrawer';
 import { GoogleMapsStore } from '../../data/GoogleMapsStoreRegistry';
 import { FOOTPATH_AUDIT_SUMMARY } from '../../data/footpathAudit';
@@ -129,6 +130,13 @@ export const HUD: React.FC<HUDProps> = ({
         isDemo={flowData.isDemo}
         isCapped={usage.isCapped}
         onDismiss={onDismissNotice}
+      />
+
+      <CorridorJourneyBar
+        flowData={flowData}
+        metrics={metrics}
+        mode={mode}
+        onUpdateMode={onUpdateMode}
       />
 
       {/* ── Docked Left Telemetry Panel (Compact, Dark, Monospace) ── */}

@@ -294,6 +294,229 @@ canvas:active {
   color: #ffffff;
 }
 
+/* ── Source-backed corridor journey rail ── */
+.journey-bar {
+  position: absolute;
+  top: 118px;
+  left: 50%;
+  z-index: 12;
+  width: min(820px, calc(100vw - 560px));
+  min-width: 650px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  padding: 10px 12px 9px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 10px;
+  background: linear-gradient(115deg, rgba(8, 18, 34, 0.94), rgba(15, 23, 42, 0.86));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.journey-bar-header,
+.journey-bar-stats,
+.journey-title-group,
+.journey-provenance,
+.journey-stat {
+  display: flex;
+  align-items: center;
+}
+
+.journey-bar-header {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.journey-title-group {
+  min-width: 0;
+  gap: 8px;
+  color: #38bdf8;
+}
+
+.journey-title-group > div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-width: 0;
+}
+
+.journey-eyebrow {
+  color: #7dd3fc;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.journey-title-group strong {
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journey-provenance {
+  flex: 0 0 auto;
+  gap: 5px;
+  color: #a7f3d0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.journey-provenance small {
+  color: #94a3b8;
+  font-size: 8px;
+  font-weight: 500;
+}
+
+.journey-source-dot,
+.journey-stat-pulse {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.journey-source-dot.is-live {
+  color: #34d399;
+  background: #34d399;
+}
+
+.journey-source-dot.is-modelled {
+  color: #38bdf8;
+  background: #38bdf8;
+}
+
+.journey-stop-rail {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-top: 9px;
+}
+
+.journey-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 3px 4px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  white-space: nowrap;
+}
+
+.journey-stop:hover {
+  color: #f8fafc;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.28);
+}
+
+.journey-stop.is-active {
+  color: #f8fafc;
+  background: rgba(14, 165, 233, 0.18);
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.18);
+}
+
+.journey-stop.is-passed {
+  color: #a7f3d0;
+}
+
+.journey-stop-marker {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.journey-stop.is-active .journey-stop-marker {
+  background: #38bdf8;
+  border-color: #7dd3fc;
+  box-shadow: 0 0 8px #38bdf8;
+}
+
+.journey-stop.is-passed .journey-stop-marker {
+  background: #34d399;
+  border-color: #34d399;
+}
+
+.journey-connector {
+  height: 1px;
+  min-width: 10px;
+  flex: 1 1 auto;
+  background: rgba(148, 163, 184, 0.32);
+}
+
+.journey-connector.is-passed {
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.72), rgba(56, 189, 248, 0.42));
+}
+
+.journey-bar-stats {
+  gap: 7px;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.journey-stat {
+  min-width: 0;
+  gap: 5px;
+  padding-right: 9px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  color: #38bdf8;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.journey-stat:last-child {
+  border-right: 0;
+  padding-right: 0;
+}
+
+.journey-stat b {
+  color: #e2e8f0;
+  font-size: 9px;
+}
+
+.journey-stat small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 8px;
+  text-overflow: ellipsis;
+}
+
+.journey-footpath-stat {
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.journey-footpath-stat:hover,
+.journey-footpath-stat.is-audit-active {
+  color: #4ade80;
+}
+
+.journey-footpath-stat.is-audit-active b {
+  color: #a7f3d0;
+}
+
 /* ── Docked Left Telemetry Panel ── */
 .hud-dock-left {
   pointer-events: auto;
@@ -1312,6 +1535,28 @@ input:focus-visible {
     --hud-mobile-footer-height: min(46vh, 380px);
   }
 
+  .journey-bar {
+    top: calc(var(--hud-mobile-header-clearance) + 48px);
+    right: 10px;
+    left: auto;
+    width: min(640px, calc(100vw - 280px));
+    min-width: 0;
+    transform: none;
+  }
+
+  .journey-stop-rail {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .journey-stop-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .journey-stop {
+    flex: 0 0 auto;
+  }
+
   .hud-top-bar {
     padding: 8px 12px;
   }
@@ -1467,9 +1712,57 @@ input:focus-visible {
     --hud-mobile-footer-height: min(46vh, 380px);
   }
 
+  .journey-bar {
+    top: calc(var(--hud-mobile-header-clearance) + 4px);
+    right: 8px;
+    left: 8px;
+    width: auto;
+    padding: 7px 9px;
+    transform: none;
+  }
+
+  .journey-title-group > div {
+    gap: 4px;
+  }
+
+  .journey-eyebrow,
+  .journey-provenance small {
+    display: none;
+  }
+
+  .journey-title-group strong {
+    font-size: 9px;
+  }
+
+  .journey-stop-rail {
+    display: none;
+  }
+
+  .journey-bar-stats {
+    gap: 4px;
+    margin-top: 5px;
+    padding-top: 5px;
+  }
+
+  .journey-stat {
+    flex: 1 1 0;
+    gap: 3px;
+    padding-right: 4px;
+  }
+
+  .journey-stat b {
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+  }
+
+  .journey-stat small {
+    display: none;
+  }
+
   .banner-toast {
-    /* Keep the fallback notice below the compact health card on phones. */
-    top: calc(var(--hud-mobile-header-clearance) + 86px);
+    /* Keep the fallback notice below the compact route and health cards. */
+    top: calc(var(--hud-mobile-header-clearance) + 148px);
     width: min( calc(100vw - 20px), 640px );
     max-width: none;
   }
@@ -1487,10 +1780,10 @@ input:focus-visible {
   }
 
   .hud-dock-left {
-    top: var(--hud-mobile-header-clearance);
+    top: calc(var(--hud-mobile-header-clearance) + 60px);
     left: 8px;
     width: min(218px, calc(100vw - 16px));
-    max-height: 82px;
+    max-height: 74px;
     gap: 0;
     overflow: hidden;
   }
