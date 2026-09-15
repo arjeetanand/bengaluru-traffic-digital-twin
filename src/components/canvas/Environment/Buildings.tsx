@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
@@ -34,6 +34,8 @@ const SURROUNDING_BATCH_STYLES: SurroundingBatchStyle[] = [
   'residential_balcony'
 ];
 const SURROUNDING_BUILDING_LIMIT = 420;
+const SURROUNDING_CONTEXT_CELL_SIZE = 70;
+const SURROUNDING_CONTEXT_REPRESENTATIVES_PER_CELL = 3;
 
 function isInsideHandcraftedCorridor(cx: number, cz: number) {
   // Brand Factory Mall zone (East side, x: 25 to 75, z: 35 to 85)
@@ -47,34 +49,60 @@ function isInsideHandcraftedCorridor(cx: number, cz: number) {
   return false;
 }
 
+function getSurroundingFootprintArea(building: SurroundingBuilding) {
+  if (!building.pts || building.pts.length < 3) return 1;
+  let twiceArea = 0;
+  for (let index = 0; index < building.pts.length; index += 1) {
+    const current = building.pts[index];
+    const next = building.pts[(index + 1) % building.pts.length];
+    twiceArea += current[0] * next[1] - next[0] * current[1];
+  }
+  return Math.max(1, Math.abs(twiceArea) / 2);
+}
+
+function getSurroundingBuildingScore(building: SurroundingBuilding) {
+  const typeScore = building.type === 'apartments'
+    ? 34
+    : building.type === 'commercial'
+      ? 28
+      : building.type === 'retail'
+        ? 24
+        : 12;
+  return typeScore
+    + Math.min(48, Math.log1p(getSurroundingFootprintArea(building)) * 8)
+    + Math.min(42, Math.max(0, building.height));
+}
+
 function selectSurroundingBuildings(features: readonly SurroundingBuilding[], limit: number) {
   const eligible = features.filter((building) => !isInsideHandcraftedCorridor(building.cx, building.cz));
   if (eligible.length <= limit) return eligible;
 
-  const byDistance = [...eligible].sort((left, right) => (
-    (left.cx ** 2 + left.cz ** 2) - (right.cx ** 2 + right.cz ** 2)
+  // Fixed metre cells keep the older authored fallback context spatially
+  // legible around the junction. A normalized grid over the whole dataset
+  // could spend its representatives near the origin and leave the outer
+  // road edges visually empty.
+  const byScore = [...eligible].sort((left, right) => (
+    getSurroundingBuildingScore(right) - getSurroundingBuildingScore(left)
+      || left.id.localeCompare(right.id)
   ));
-  const minX = Math.min(...eligible.map((building) => building.cx));
-  const maxX = Math.max(...eligible.map((building) => building.cx));
-  const minZ = Math.min(...eligible.map((building) => building.cz));
-  const maxZ = Math.max(...eligible.map((building) => building.cz));
-  const representatives: SurroundingBuilding[] = [];
-  const cells = new Set<string>();
-
-  // Preserve a low-cost spatial sample first, then fill the remaining budget
-  // by distance so both the crossover and the far corridor retain context.
-  for (const building of byDistance) {
-    const cellX = Math.min(15, Math.max(0, Math.floor(((building.cx - minX) / Math.max(1, maxX - minX)) * 16)));
-    const cellZ = Math.min(15, Math.max(0, Math.floor(((building.cz - minZ) / Math.max(1, maxZ - minZ)) * 16)));
+  const grid = new Map<string, SurroundingBuilding[]>();
+  for (const building of byScore) {
+    const cellX = Math.floor(building.cx / SURROUNDING_CONTEXT_CELL_SIZE);
+    const cellZ = Math.floor(building.cz / SURROUNDING_CONTEXT_CELL_SIZE);
     const key = `${cellX}:${cellZ}`;
-    if (cells.has(key)) continue;
-    cells.add(key);
-    representatives.push(building);
+    const cell = grid.get(key) || [];
+    if (cell.length < SURROUNDING_CONTEXT_REPRESENTATIVES_PER_CELL) cell.push(building);
+    grid.set(key, cell);
   }
 
   const selected: SurroundingBuilding[] = [];
   const selectedIds = new Set<string>();
-  for (const building of [...representatives, ...byDistance]) {
+  for (const building of [...grid.values()].flat()) {
+    if (selected.length >= limit || selectedIds.has(building.id)) continue;
+    selected.push(building);
+    selectedIds.add(building.id);
+  }
+  for (const building of byScore) {
     if (selected.length >= limit || selectedIds.has(building.id)) continue;
     selected.push(building);
     selectedIds.add(building.id);
@@ -82,7 +110,44 @@ function selectSurroundingBuildings(features: readonly SurroundingBuilding[], li
   return selected;
 }
 
+function getSurroundingDisplayHeight(building: SurroundingBuilding) {
+  const taggedHeight = Number(building.height);
+  const levelHeight = Number(building.levels) * 3.2;
+  return Math.min(70, Math.max(3.5, Number.isFinite(taggedHeight) && taggedHeight > 0
+    ? taggedHeight
+    : (Number.isFinite(levelHeight) && levelHeight > 0 ? levelHeight : 6)));
+}
+
+function createSurroundingRooflineGeometry(features: readonly SurroundingBuilding[]) {
+  const positions: number[] = [];
+  for (const building of features) {
+    if (!building.pts || building.pts.length < 2) continue;
+    const roofY = getSurroundingDisplayHeight(building) + 0.08;
+    for (let index = 0; index < building.pts.length; index += 1) {
+      const previous = building.pts[index];
+      const current = building.pts[(index + 1) % building.pts.length];
+      positions.push(
+        building.cx + previous[0], roofY, building.cz + previous[1],
+        building.cx + current[0], roofY, building.cz + current[1]
+      );
+    }
+  }
+
+  if (!positions.length) return null;
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
 export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundingBuildings = false }) => {
+  const selectedSurroundingBuildings = useMemo(
+    () => (includeSurroundingBuildings
+      ? selectSurroundingBuildings(SURROUNDING_OSM_BUILDINGS, SURROUNDING_BUILDING_LIMIT)
+      : []),
+    [includeSurroundingBuildings]
+  );
+
   // ── 1. Batch-merge surrounding OSM-derived context by facade style ──
   const surroundingBatches = useMemo<SurroundingGeometryBatch[]>(() => {
     if (!includeSurroundingBuildings) return [];
@@ -105,7 +170,7 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundin
         shape.closePath();
 
         const geom = new THREE.ExtrudeGeometry(shape, {
-          depth: b.height,
+          depth: getSurroundingDisplayHeight(b),
           bevelEnabled: false
         });
 
@@ -127,7 +192,7 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundin
       }
     };
 
-    for (const b of selectSurroundingBuildings(SURROUNDING_OSM_BUILDINGS, SURROUNDING_BUILDING_LIMIT)) {
+    for (const b of selectedSurroundingBuildings) {
 
       const g = makeExtrudedGeom(b);
       if (!g) continue;
@@ -152,7 +217,19 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundin
       const geometry = safeMerge(styleGeometries);
       return geometry ? [{ style, count: styleGeometries.length, geometry }] : [];
     });
-  }, [includeSurroundingBuildings]);
+  }, [includeSurroundingBuildings, selectedSurroundingBuildings]);
+
+  const surroundingRooflineGeometry = useMemo(
+    () => (includeSurroundingBuildings
+      ? createSurroundingRooflineGeometry(selectedSurroundingBuildings)
+      : null),
+    [includeSurroundingBuildings, selectedSurroundingBuildings]
+  );
+
+  useEffect(() => () => {
+    surroundingBatches.forEach((batch) => batch.geometry.dispose());
+    surroundingRooflineGeometry?.dispose();
+  }, [surroundingBatches, surroundingRooflineGeometry]);
 
   // Textures for surrounding buildings
   const curtainTexture = useMemo(() => createGlassCurtainTexture(isNight), [isNight]);
@@ -181,7 +258,8 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundin
             rendering: 'merged',
             facadeStyle: batch.style,
             featureCount: batch.count,
-            heightProvenance: 'modelled'
+            heightProvenance: 'modelled',
+            geometryAuthority: 'curated OSM-derived footprint approximation'
           }}
         >
           <meshStandardMaterial
@@ -201,6 +279,26 @@ export const Buildings: React.FC<BuildingsProps> = ({ isNight, includeSurroundin
           />
         </mesh>
       ))}
+
+      {surroundingRooflineGeometry && (
+        <lineSegments
+          geometry={surroundingRooflineGeometry}
+          renderOrder={2}
+          userData={{
+            source: 'curated OSM-derived context',
+            featureType: 'building roofline',
+            featureCount: selectedSurroundingBuildings.length,
+            heightProvenance: 'modelled'
+          }}
+        >
+          <lineBasicMaterial
+            color={isNight ? '#67e8f9' : '#cbd5e1'}
+            transparent
+            opacity={isNight ? 0.32 : 0.22}
+            depthWrite={false}
+          />
+        </lineSegments>
+      )}
 
       {/* ── Real Landmark Buildings with High-Res Storefront Signage (Excluding Handcrafted Corridor Twins) ── */}
       {remainingLandmarks.map((lm) => (

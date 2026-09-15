@@ -160,6 +160,15 @@ const SOURCE_ROAD_DETAIL_HIGHWAYS = new Set([
   'tertiary_link'
 ]);
 const SOURCE_ROAD_DETAIL_LIMIT = 220;
+// Use only the mapped corridor-scale road classes for the building selection
+// score. Residential/service ways remain rendered by the source road layer;
+// including all of them here would make every building selection revisit a
+// much larger segment index without improving the skyline LOD.
+const SOURCE_BUILDING_CONTEXT_HIGHWAYS = SOURCE_ROAD_DETAIL_HIGHWAYS;
+const SOURCE_BUILDING_CONTEXT_CELL_SIZE = 110;
+const SOURCE_BUILDING_REPRESENTATIVES_PER_CELL = 3;
+const SOURCE_BUILDING_OUTLINE_COVERAGE_MIN_LIMIT = 800;
+const SOURCE_BUILDING_MAX_RENDER_HEIGHT = 32;
 
 function createLineGeometry(positions: number[]) {
   const geometry = new THREE.BufferGeometry();
@@ -297,43 +306,162 @@ function getRestrictionFeatures(snapshot: MarathahalliDemoSnapshot, restrictionT
   return { restriction, roads };
 }
 
-function selectBuildingFeatures(features: OSMPolylineFeature[], limit: number) {
+function pointToSegmentDistance(
+  point: [number, number],
+  start: [number, number],
+  end: [number, number]
+) {
+  const dx = end[0] - start[0];
+  const dz = end[1] - start[1];
+  const lengthSquared = dx * dx + dz * dz;
+  if (lengthSquared < 0.01) return Math.hypot(point[0] - start[0], point[1] - start[1]);
+
+  const progress = Math.max(0, Math.min(1, (
+    (point[0] - start[0]) * dx + (point[1] - start[1]) * dz
+  ) / lengthSquared));
+  return Math.hypot(
+    point[0] - (start[0] + progress * dx),
+    point[1] - (start[1] + progress * dz)
+  );
+}
+
+function getFeatureBounds(feature: OSMPolylineFeature) {
+  const xs = feature.geometry.map(([x]) => x);
+  const zs = feature.geometry.map(([, z]) => z);
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minZ: Math.min(...zs),
+    maxZ: Math.max(...zs)
+  };
+}
+
+interface SourceRoadSelectionFeature extends OSMPolylineFeature {
+  bounds: ReturnType<typeof getFeatureBounds>;
+}
+
+function distanceToSourceRoad(point: [number, number], roads: readonly SourceRoadSelectionFeature[]) {
+  let nearest = Infinity;
+  for (const road of roads) {
+    const bounds = road.bounds;
+    if (bounds && (
+      point[0] < bounds.minX - 120 || point[0] > bounds.maxX + 120
+      || point[1] < bounds.minZ - 120 || point[1] > bounds.maxZ + 120
+    )) continue;
+
+    for (let index = 1; index < road.geometry.length; index += 1) {
+      nearest = Math.min(nearest, pointToSegmentDistance(point, road.geometry[index - 1], road.geometry[index]));
+      if (nearest <= 6) return nearest;
+    }
+  }
+  return nearest;
+}
+
+function getBuildingFootprintArea(feature: OSMPolylineFeature) {
+  if (feature.geometry.length < 3) return 1;
+  let twiceArea = 0;
+  for (let index = 0; index < feature.geometry.length; index += 1) {
+    const current = feature.geometry[index];
+    const next = feature.geometry[(index + 1) % feature.geometry.length];
+    twiceArea += current[0] * next[1] - next[0] * current[1];
+  }
+  return Math.max(1, Math.abs(twiceArea) / 2);
+}
+
+function getStableFeatureJitter(id: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < id.length; index += 1) {
+    hash ^= id.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 1000) / 1000;
+}
+
+function getBuildingUseScore(feature: OSMPolylineFeature) {
+  const tags = feature.tags;
+  const use = `${tags.building || ''} ${tags.amenity || ''} ${tags.landuse || ''}`.toLowerCase();
+  if (/apartments|residential|dormitory|hotel/.test(use)) return 32;
+  if (/office|commercial|retail|hospital|school|industrial/.test(use)) return 24;
+  if (/house|detached|semidetached|terrace/.test(use)) return 12;
+  if (/garage|shed|hut/.test(use)) return 2;
+  return 8;
+}
+
+function selectBuildingFeatures(
+  features: OSMPolylineFeature[],
+  limit: number,
+  contextRoadFeatures: readonly OSMPolylineFeature[] = []
+) {
   if (limit <= 0 || features.length === 0) return [];
 
-  const byDistance = [...features]
-    .sort((a, b) => {
-      const aDistance = a.centroid[0] ** 2 + a.centroid[1] ** 2;
-      const bDistance = b.centroid[0] ** 2 + b.centroid[1] ** 2;
-      return aDistance - bDistance;
+  // Build a small, bounded road index once per selection pass. The previous
+  // normalized 16×16 grid could leave a close view with only a handful of
+  // buildings because a 250 m neighborhood occupied one global cell. Fixed
+  // metre cells keep the crossover, Oracle campus and Kalamandir frontages
+  // populated while still distributing the long corridor across the budget.
+  const contextRoads: SourceRoadSelectionFeature[] = contextRoadFeatures
+    .filter((road) => {
+      const highway = road.tags.highway || '';
+      const isNamed = Boolean(road.name || road.tags.name);
+      const lanes = Number(road.tags.lanes);
+      return SOURCE_BUILDING_CONTEXT_HIGHWAYS.has(highway)
+        && (isNamed || Number.isFinite(lanes) || road.geometry.length > 4);
     })
-  const minX = Math.min(...features.map((feature) => feature.centroid[0]));
-  const maxX = Math.max(...features.map((feature) => feature.centroid[0]));
-  const minZ = Math.min(...features.map((feature) => feature.centroid[1]));
-  const maxZ = Math.max(...features.map((feature) => feature.centroid[1]));
-  const grid = new Map<string, OSMPolylineFeature[]>();
+    .sort((left, right) => right.geometry.length - left.geometry.length)
+    .slice(0, 220)
+    .map((road) => ({ ...road, bounds: getFeatureBounds(road) }));
 
-  // A 16×16 spatial sample with a few representatives per cell keeps named
-  // buildings and local massing visible at both ends of the widened
-  // Oracle→Spice corridor instead of spending the budget almost entirely
-  // near the junction origin.
-  for (const feature of byDistance) {
-    const gridX = Math.min(15, Math.max(0, Math.floor(((feature.centroid[0] - minX) / Math.max(1, maxX - minX)) * 16)));
-    const gridZ = Math.min(15, Math.max(0, Math.floor(((feature.centroid[1] - minZ) / Math.max(1, maxZ - minZ)) * 16)));
-    const key = `${gridX}:${gridZ}`;
-    const cell = grid.get(key) || [];
-    if (cell.length < 3) cell.push(feature);
-    grid.set(key, cell);
+  const candidates = features.map((feature) => {
+    const isNamed = Boolean(feature.name || feature.tags.name);
+    const source = getBuildingHeightSource(feature);
+    const roadDistance = distanceToSourceRoad(feature.centroid, contextRoads);
+    const area = getBuildingFootprintArea(feature);
+    const roadFrontageScore = Number.isFinite(roadDistance)
+      ? Math.max(0, 140 - roadDistance) * 2.2
+      : 0;
+    const score = (isNamed ? 10000 : 0)
+      + roadFrontageScore
+      + Math.min(120, Math.log1p(area) * 12)
+      + getBuildingUseScore(feature)
+      + (source === 'modelled:fallback' ? 0 : 20);
+    return {
+      feature,
+      area,
+      score,
+      roadDistance,
+      cell: `${Math.floor(feature.centroid[0] / SOURCE_BUILDING_CONTEXT_CELL_SIZE)}:${Math.floor(feature.centroid[1] / SOURCE_BUILDING_CONTEXT_CELL_SIZE)}`
+    };
+  });
+
+  const byScore = [...candidates].sort((left, right) => (
+    right.score - left.score || right.area - left.area || left.feature.id.localeCompare(right.feature.id)
+  ));
+  const grid = new Map<string, typeof candidates>();
+  for (const candidate of byScore) {
+    const cell = grid.get(candidate.cell) || [];
+    if (cell.length < SOURCE_BUILDING_REPRESENTATIVES_PER_CELL) cell.push(candidate);
+    grid.set(candidate.cell, cell);
   }
 
-  const named = features.filter((feature) => feature.name || feature.tags.name);
-  const spatialRepresentatives = [...grid.values()].flat();
-  const representative = [...named, ...spatialRepresentatives, ...byDistance];
   const selected: OSMPolylineFeature[] = [];
   const selectedIds = new Set<string>();
-  for (const feature of representative) {
-    if (selected.length >= limit || selectedIds.has(feature.id)) continue;
-    selected.push(feature);
-    selectedIds.add(feature.id);
+  // Keep named buildings first, then a fixed-size context sample. All
+  // selections remain source footprints; score only controls visibility LOD.
+  for (const candidate of byScore) {
+    if (!candidate.feature.name && !candidate.feature.tags.name) continue;
+    if (selected.length >= limit) break;
+    selected.push(candidate.feature);
+    selectedIds.add(candidate.feature.id);
+  }
+  for (const candidate of [...grid.values()].flat()) {
+    if (selected.length >= limit || selectedIds.has(candidate.feature.id)) continue;
+    selected.push(candidate.feature);
+    selectedIds.add(candidate.feature.id);
+  }
+  for (const candidate of byScore) {
+    if (selected.length >= limit || selectedIds.has(candidate.feature.id)) continue;
+    selected.push(candidate.feature);
+    selectedIds.add(candidate.feature.id);
   }
   return selected;
 }
@@ -345,6 +473,33 @@ function getBuildingHeightSource(feature: OSMPolylineFeature): OSMHeightSource {
   if (Number.isFinite(explicitHeight) && explicitHeight > 0) return 'osm:height';
   if (Number.isFinite(explicitLevels) && explicitLevels > 0) return 'osm:building:levels';
   return 'modelled:fallback';
+}
+
+function getRenderableBuildingHeight(feature: OSMPolylineFeature) {
+  const source = getBuildingHeightSource(feature);
+  if (source !== 'modelled:fallback' || !feature.tags.building) {
+    return Math.min(SOURCE_BUILDING_MAX_RENDER_HEIGHT, Math.max(3.2, feature.height || 4));
+  }
+
+  // The snapshot's fallback value is intentionally conservative (4 m). Use a
+  // deterministic urban-massing estimate for display only, retaining the
+  // modelled:fallback batch provenance. OSM plan geometry and use tags still
+  // control the footprint; only missing vertical evidence is inferred here.
+  const buildingType = feature.tags.building.toLowerCase();
+  const baseHeight = /apartments|residential|dormitory|hotel/.test(buildingType)
+    ? 12.5
+    : /office|commercial|retail|hospital|school/.test(buildingType)
+      ? 9.5
+      : /industrial|warehouse/.test(buildingType)
+        ? 7.5
+        : /house|detached|semidetached|terrace/.test(buildingType)
+          ? 5.4
+          : /garage|shed|hut/.test(buildingType)
+            ? 3.5
+            : 6.5;
+  const areaLift = Math.min(6, Math.sqrt(getBuildingFootprintArea(feature)) / 24);
+  const jitter = (getStableFeatureJitter(feature.id) - 0.5) * 1.4;
+  return Math.min(SOURCE_BUILDING_MAX_RENDER_HEIGHT, Math.max(3.5, baseHeight + areaLift + jitter));
 }
 
 function createBuildingExtrusion(feature: OSMPolylineFeature) {
@@ -360,7 +515,7 @@ function createBuildingExtrusion(feature: OSMPolylineFeature) {
     shape.closePath();
 
     const geometry = new THREE.ExtrudeGeometry(shape, {
-      depth: Math.min(32, Math.max(3.5, feature.height || 4)),
+      depth: getRenderableBuildingHeight(feature),
       bevelEnabled: false,
       curveSegments: 1
     });
@@ -392,6 +547,7 @@ function mergeBuildingGeometries(features: OSMPolylineFeature[]) {
 interface SourceBuildingGeometryBatch {
   source: OSMHeightSource;
   count: number;
+  heightEvidence: string;
   geometry: THREE.BufferGeometry;
 }
 
@@ -412,7 +568,16 @@ function createBuildingGeometryBatches(features: OSMPolylineFeature[]): SourceBu
     .flatMap((source) => {
       const sourceFeatures = byProvenance.get(source) || [];
       const geometry = mergeBuildingGeometries(sourceFeatures);
-      return geometry ? [{ source, count: sourceFeatures.length, geometry }] : [];
+      return geometry
+        ? [{
+          source,
+          count: sourceFeatures.length,
+          heightEvidence: source === 'modelled:fallback'
+            ? 'missing OSM height/levels · deterministic use/area estimate'
+            : source,
+          geometry
+        }]
+        : [];
     });
 }
 
@@ -447,14 +612,14 @@ function createNamedAreaGeometry(features: OSMPolylineFeature[]) {
 }
 
 function getHeightProvenanceLabel(feature: OSMPolylineFeature) {
-  const height = Number.isFinite(feature.height) ? `${feature.height?.toFixed(1)}M` : '—';
   const source = getBuildingHeightSource(feature);
+  const height = `${getRenderableBuildingHeight(feature).toFixed(1)}M`;
 
   if (source === 'osm:height') return `HEIGHT OSM TAG · ${height}`;
   if (source === 'osm:building:levels') {
     return `HEIGHT DERIVED · ${feature.tags['building:levels']} OSM LEVELS`;
   }
-  return `HEIGHT UNKNOWN · ${height} FALLBACK`;
+  return `HEIGHT UNKNOWN · ${height} MODELLED FALLBACK`;
 }
 
 interface SourceMarkerInstancesProps {
@@ -503,6 +668,70 @@ const SourceMarkerInstances: React.FC<SourceMarkerInstancesProps> = ({
         roughness={0.72}
       />
     </instancedMesh>
+  );
+};
+
+interface SourceShopFrontageInstancesProps {
+  positions: readonly [number, number][];
+  isNight: boolean;
+}
+
+const SourceShopFrontageInstances: React.FC<SourceShopFrontageInstancesProps> = ({ positions, isNight }) => {
+  const baseRef = useRef<THREE.InstancedMesh>(null);
+  const canopyRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  useLayoutEffect(() => {
+    if (!baseRef.current || !canopyRef.current) return;
+    positions.forEach(([x, z], index) => {
+      const width = 0.9 + (index % 3) * 0.16;
+      dummy.position.set(x, 0.5, z);
+      dummy.rotation.set(0, (index % 4) * Math.PI / 2, 0);
+      dummy.scale.set(width, 1, 0.72 + (index % 2) * 0.12);
+      dummy.updateMatrix();
+      baseRef.current?.setMatrixAt(index, dummy.matrix);
+
+      dummy.position.set(x, 1.12, z);
+      dummy.scale.set(width * 1.12, 0.65, 0.86 + (index % 2) * 0.12);
+      dummy.updateMatrix();
+      canopyRef.current?.setMatrixAt(index, dummy.matrix);
+    });
+    baseRef.current.instanceMatrix.needsUpdate = true;
+    canopyRef.current.instanceMatrix.needsUpdate = true;
+    baseRef.current.computeBoundingSphere();
+    canopyRef.current.computeBoundingSphere();
+  }, [dummy, positions]);
+
+  if (!positions.length) return null;
+  return (
+    <group
+      name="OSMNamedShopFrontageMarkers"
+      userData={{
+        source: 'OSM',
+        featureType: 'named shop node',
+        rendering: 'instanced',
+        geometry: 'visual frontage marker, not a building footprint',
+        count: positions.length
+      }}
+    >
+      <instancedMesh ref={baseRef} args={[undefined, undefined, positions.length]} castShadow>
+        <boxGeometry args={[1.65, 1, 1.2]} />
+        <meshStandardMaterial
+          color={isNight ? '#78350f' : '#b45309'}
+          roughness={0.78}
+          metalness={0.08}
+        />
+      </instancedMesh>
+      <instancedMesh ref={canopyRef} args={[undefined, undefined, positions.length]} castShadow>
+        <boxGeometry args={[1.65, 0.16, 1.2]} />
+        <meshStandardMaterial
+          color={isNight ? '#f59e0b' : '#fbbf24'}
+          emissive={isNight ? '#92400e' : '#000000'}
+          emissiveIntensity={isNight ? 0.75 : 0}
+          roughness={0.6}
+        />
+      </instancedMesh>
+    </group>
   );
 };
 
@@ -714,7 +943,9 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [snapshot]
   );
   const selectedBuildingFeatures = useMemo(
-    () => (snapshot && showBuildings ? selectBuildingFeatures(snapshot.buildings, buildingLimit) : []),
+    () => (snapshot && showBuildings
+      ? selectBuildingFeatures(snapshot.buildings, buildingLimit, snapshot.roads)
+      : []),
     [buildingLimit, showBuildings, snapshot]
   );
   const buildingGeometryBatches = useMemo(
@@ -723,7 +954,13 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   );
   const buildingOutlineFeatures = useMemo(
     () => (snapshot && showBuildings
-      ? (buildingLimit >= 2500 ? snapshot.buildings : selectedBuildingFeatures)
+      // A single low-opacity line batch is substantially cheaper than
+      // extruding every footprint. Keep the complete source plan visible once
+      // the scene is in a normal corridor/local inspection budget; the
+      // smaller fallback still avoids doing extra work during initial load.
+      ? (buildingLimit >= SOURCE_BUILDING_OUTLINE_COVERAGE_MIN_LIMIT
+        ? snapshot.buildings
+        : selectedBuildingFeatures)
       : []),
     [buildingLimit, selectedBuildingFeatures, showBuildings, snapshot]
   );
@@ -745,6 +982,12 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   }, [snapshot]);
   const sourceShopMarkerPositions = useMemo(
     () => sourceShopFeatures.map((shop) => shop.position),
+    [sourceShopFeatures]
+  );
+  const sourceNamedShopFrontagePositions = useMemo(
+    () => sourceShopFeatures
+      .filter((shop) => shop.name || shop.tags.name)
+      .map((shop) => shop.position),
     [sourceShopFeatures]
   );
   const sourceTreePositions = useMemo(() => {
@@ -896,7 +1139,8 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             source: 'OSM',
             heightProvenance: batch.source,
             featureCount: batch.count,
-            rendering: 'merged'
+            rendering: 'merged',
+            heightEvidence: batch.heightEvidence
           }}
         >
           <meshStandardMaterial
@@ -920,7 +1164,17 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       ))}
 
       {buildingOutlineGeometry && (
-        <lineSegments geometry={buildingOutlineGeometry} renderOrder={1}>
+        <lineSegments
+          geometry={buildingOutlineGeometry}
+          renderOrder={1}
+          userData={{
+            source: 'OSM',
+            featureType: 'building footprint',
+            coverage: buildingOutlineFeatures.length === snapshot.buildings.length ? 'full snapshot' : 'selected LOD',
+            featureCount: buildingOutlineFeatures.length,
+            heightProvenance: 'plan geometry only; no vertical claim'
+          }}
+        >
           <lineBasicMaterial
             color={isNight ? '#64748b' : '#a8bac8'}
             transparent
@@ -1116,6 +1370,10 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           color="#f59e0b"
           emissive="#b45309"
           emissiveIntensity={isNight ? 0.9 : 0.15}
+        />
+        <SourceShopFrontageInstances
+          positions={sourceNamedShopFrontagePositions}
+          isNight={isNight}
         />
 
         {snapshot.signals.map((signal) => (

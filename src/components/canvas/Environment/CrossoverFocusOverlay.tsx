@@ -27,10 +27,24 @@ const createConnectorCurve = (points: readonly [number, number, number][]) => (
 // carriageway remains the authoritative pavement surface.
 const MODELLED_REPLAY_WIDTH_METERS = 3.8;
 const MODELLED_REPLAY_CURB_OFFSET = MODELLED_REPLAY_WIDTH_METERS / 2 + 0.12;
+const MODELLED_REPLAY_CURB_WIDTH_METERS = 0.26;
+const MODELLED_REPLAY_CURB_HEIGHT_METERS = 0.16;
+const MODELLED_CONFLICT_BUFFER_WIDTH_METERS = MODELLED_REPLAY_WIDTH_METERS + 1.4;
+const MODELLED_SIGNAL_OFFSET = MODELLED_REPLAY_CURB_OFFSET + 1.15;
 const SOURCE_CROSSING_WIDTH_METERS = 1.8;
 
 const REPLAY_SPEED_METERS_PER_SECOND = 6.4;
-const REPLAY_YIELD_WINDOW = 0.095;
+const REPLAY_YIELD_WINDOW = 0.055;
+const REPLAY_HOLD_GAP_METERS = 2.3;
+
+type ReplayVehicleId = 'north' | 'south';
+
+interface ReplayConflictState {
+  owner: ReplayVehicleId;
+  clock: number;
+  lastCompleted: ReplayVehicleId | null;
+  lastTransferAt: number;
+}
 
 const CROSSOVER_PHASES: readonly {
   id: UTurnPhaseId;
@@ -53,6 +67,12 @@ interface ReplayPhaseFrame {
   sourceWayIds: readonly string[];
 }
 
+interface ReplayConflictWindow {
+  startProgress: number;
+  endProgress: number;
+  holdProgress: number;
+}
+
 function getReplayPhaseFrames(
   connector: UTurnConnector
 ): ReplayPhaseFrame[] {
@@ -68,6 +88,23 @@ function getReplayPhaseFrames(
       sourceWayIds: range.sourceWayIds
     };
   });
+}
+
+function getReplayConflictWindow(
+  connector: UTurnConnector,
+  curveLength: number
+): ReplayConflictWindow {
+  const phases = getReplayPhaseFrames(connector);
+  const sweep = phases.find((phase) => phase.id === 'sweep') || phases[0];
+  const holdGap = Math.min(
+    0.028,
+    Math.max(0.008, REPLAY_HOLD_GAP_METERS / Math.max(1, curveLength))
+  );
+  return {
+    startProgress: sweep.startProgress,
+    endProgress: sweep.endProgress,
+    holdProgress: Math.max(0, sweep.startProgress - holdGap)
+  };
 }
 
 function getReplayPhase(progress: number, phases: readonly ReplayPhaseFrame[]) {
@@ -96,11 +133,11 @@ function getReplayDynamics(
 
   const phase = getReplayPhase(progress, phases);
   const phaseSpeedFactor = phase.id === 'yield'
-    ? 0.74
+    ? 0.46
     : phase.id === 'sweep'
-      ? 0.82
+      ? 0.7
       : phase.id === 'exit'
-        ? 0.94
+        ? 0.9
         : 1;
 
   return {
@@ -134,37 +171,112 @@ function createSourceCurbGeometry(
   lateralOffset: number,
   y = 0.24
 ) {
-  const pieces: THREE.BufferGeometry[] = [];
-  const yAxis = new THREE.Vector3(0, 1, 0);
+  if (points.length < 2) return new THREE.BufferGeometry();
 
-  for (let index = 1; index < points.length; index += 1) {
-    const [fromX, _fromY, fromZ] = points[index - 1];
-    const [toX, _toY, toZ] = points[index];
-    const dx = toX - fromX;
-    const dz = toZ - fromZ;
-    const length = Math.hypot(dx, dz);
-    if (length < 0.2) continue;
+  // Build one mitered polyline instead of one box per source segment. The
+  // source trace remains the center of every join, but the curb has a single
+  // continuous top/side surface so corners do not reveal gaps or overlapping
+  // caps at either camera scale.
+  const sourceVertices = points.map(([x, _pointY, z]) => new THREE.Vector2(x, z));
+  const curbCenters = sourceVertices.map((point, index) => {
+    const previous = sourceVertices[Math.max(0, index - 1)];
+    const next = sourceVertices[Math.min(sourceVertices.length - 1, index + 1)];
+    const incoming = point.clone().sub(previous);
+    const outgoing = next.clone().sub(point);
+    if (incoming.lengthSq() < 0.04) incoming.copy(outgoing);
+    if (outgoing.lengthSq() < 0.04) outgoing.copy(incoming);
+    incoming.normalize();
+    outgoing.normalize();
 
-    const normalX = -dz / length;
-    const normalZ = dx / length;
-    const curb = new THREE.BoxGeometry(0.24, 0.16, length + 0.04);
-    curb.applyMatrix4(
-      new THREE.Matrix4().compose(
-        new THREE.Vector3(
-          (fromX + toX) / 2 + normalX * lateralOffset,
-          y,
-          (fromZ + toZ) / 2 + normalZ * lateralOffset
-        ),
-        new THREE.Quaternion().setFromAxisAngle(yAxis, Math.atan2(dx, dz)),
-        new THREE.Vector3(1, 1, 1)
-      )
+    const incomingNormal = new THREE.Vector2(-incoming.y, incoming.x);
+    const outgoingNormal = new THREE.Vector2(-outgoing.y, outgoing.x);
+    const normal = index === 0
+      ? outgoingNormal
+      : index === sourceVertices.length - 1
+        ? incomingNormal
+        : incomingNormal.clone().add(outgoingNormal);
+
+    if (normal.lengthSq() < 0.04) {
+      normal.copy(outgoingNormal);
+    } else {
+      normal.normalize();
+    }
+
+    const miterScale = index === 0 || index === sourceVertices.length - 1
+      ? lateralOffset
+      : lateralOffset / Math.max(0.45, Math.abs(normal.dot(outgoingNormal)));
+    return point.clone().add(normal.multiplyScalar(Math.min(miterScale, lateralOffset * 1.75)));
+  });
+
+  const halfWidth = MODELLED_REPLAY_CURB_WIDTH_METERS / 2;
+  const baseY = y - MODELLED_REPLAY_CURB_HEIGHT_METERS / 2;
+  const topY = y + MODELLED_REPLAY_CURB_HEIGHT_METERS / 2;
+  const positions: number[] = [];
+  const indices: number[] = [];
+
+  curbCenters.forEach((center, index) => {
+    const previous = curbCenters[Math.max(0, index - 1)];
+    const next = curbCenters[Math.min(curbCenters.length - 1, index + 1)];
+    const tangent = next.clone().sub(previous).normalize();
+    const across = new THREE.Vector2(-tangent.y, tangent.x);
+    const inner = center.clone().sub(across.clone().multiplyScalar(halfWidth));
+    const outer = center.clone().add(across.multiplyScalar(halfWidth));
+    positions.push(
+      inner.x, baseY, inner.y,
+      outer.x, baseY, outer.y,
+      inner.x, topY, inner.y,
+      outer.x, topY, outer.y
     );
-    pieces.push(curb);
+  });
+
+  for (let index = 0; index < curbCenters.length - 1; index += 1) {
+    const current = index * 4;
+    const next = current + 4;
+    // Top, inner side, outer side, and the underside. The caps are added
+    // below so the raised modelled curb reads as a physical object in walk
+    // view instead of a floating line.
+    indices.push(
+      current + 2, current + 3, next + 2,
+      current + 3, next + 3, next + 2,
+      current, next + 2, current + 2,
+      current, next, next + 2,
+      current + 1, current + 3, next + 3,
+      current + 1, next + 3, next + 1,
+      current, current + 1, next,
+      current, next, next + 1
+    );
   }
 
-  const geometry = mergeGeometries(pieces, false) || new THREE.BufferGeometry();
-  pieces.forEach((piece) => piece.dispose());
+  indices.push(
+    0, 2, 3,
+    0, 3, 1,
+    (curbCenters.length - 1) * 4, (curbCenters.length - 1) * 4 + 1, (curbCenters.length - 1) * 4 + 3,
+    (curbCenters.length - 1) * 4, (curbCenters.length - 1) * 4 + 3, (curbCenters.length - 1) * 4 + 2
+  );
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
   return geometry;
+}
+
+function createConnectorSegmentGeometry(
+  curve: THREE.Curve<THREE.Vector3>,
+  startProgress: number,
+  endProgress: number,
+  width: number,
+  y: number
+) {
+  const sampleCount = 40;
+  const controlPoints: [number, number][] = [];
+  for (let index = 0; index <= sampleCount; index += 1) {
+    const progress = THREE.MathUtils.lerp(startProgress, endProgress, index / sampleCount);
+    const point = curve.getPointAt(progress);
+    controlPoints.push([point.x, point.z]);
+  }
+  return createRoadRibbonGeometry(controlPoints, width, () => y, sampleCount, 'linear');
 }
 
 function createSourceCrossingSurfaceGeometry() {
@@ -251,13 +363,18 @@ const CrossoverReplayVehicle: React.FC<{
   color: string;
   isNight: boolean;
   cameraMode: 'walk' | 'overview';
-}> = ({ id, connector, curve, startProgress, stopProgress, laneOffset, color, isNight, cameraMode }) => {
+  conflictRef: React.MutableRefObject<ReplayConflictState>;
+}> = ({ id, connector, curve, startProgress, stopProgress, laneOffset, color, isNight, cameraMode, conflictRef }) => {
   const vehicleRef = useRef<THREE.Group>(null);
   const progressRef = useRef(startProgress);
   const motionClockRef = useRef(0);
   const phaseFrames = useMemo(() => getReplayPhaseFrames(connector), [connector]);
   const geometry = useMemo(() => createCarGeometry(), []);
   const curveLength = useMemo(() => curve.getLength(), [curve]);
+  const conflictWindow = useMemo(
+    () => getReplayConflictWindow(connector, curveLength),
+    [connector, curveLength]
+  );
   const material = useMemo(() => new THREE.MeshStandardMaterial({
     color,
     roughness: 0.34,
@@ -278,7 +395,9 @@ const CrossoverReplayVehicle: React.FC<{
     toneMapped: false
   }), []);
   const point = useMemo(() => new THREE.Vector3(), []);
-  const tangent = useMemo(() => new THREE.Vector3(), []);
+  const headingPoint = useMemo(() => new THREE.Vector3(), []);
+  const pathTangent = useMemo(() => new THREE.Vector3(), []);
+  const headingTangent = useMemo(() => new THREE.Vector3(), []);
   const normal = useMemo(() => new THREE.Vector3(), []);
 
   useEffect(() => () => {
@@ -292,41 +411,96 @@ const CrossoverReplayVehicle: React.FC<{
     const vehicle = vehicleRef.current;
     if (!vehicle) return;
 
-    motionClockRef.current += Math.min(delta, 0.05);
-    const dynamics = getReplayDynamics(progressRef.current, stopProgress, phaseFrames);
-    progressRef.current = (
-      progressRef.current
-      + (Math.min(delta, 0.05) * REPLAY_SPEED_METERS_PER_SECOND * dynamics.speedFactor)
+    const frameDelta = Math.min(delta, 0.05);
+    motionClockRef.current += frameDelta;
+    const currentProgress = progressRef.current;
+    const dynamics = getReplayDynamics(currentProgress, stopProgress, phaseFrames);
+    const conflict = conflictRef.current;
+    const ownsConflict = conflict.owner === id;
+    let nextProgress = (
+      currentProgress
+      + (frameDelta * REPLAY_SPEED_METERS_PER_SECOND * dynamics.speedFactor)
         / Math.max(1, curveLength)
     ) % 1;
-    curve.getPointAt(progressRef.current, point);
-    curve.getTangentAt(progressRef.current, tangent).setY(0).normalize();
-    normal.set(-tangent.z, 0, tangent.x).normalize();
+
+    // The OSM relation is a no_u_turn restriction, so both directions are
+    // deliberately treated as replay scenarios. They can approach the same
+    // source-linked sweep, but only one scenario owns that conflict envelope
+    // at a time. The other vehicle settles at a modelled hold line rather than
+    // visually driving through the opposing replay.
+    const isBeforeConflict = currentProgress <= conflictWindow.endProgress;
+    const isEnteringBlockedConflict = !ownsConflict
+      && isBeforeConflict
+      && nextProgress >= conflictWindow.holdProgress;
+    const isHolding = isEnteringBlockedConflict || (
+      !ownsConflict
+      && currentProgress >= conflictWindow.holdProgress
+      && currentProgress <= conflictWindow.endProgress
+    );
+    if (isHolding) nextProgress = conflictWindow.holdProgress;
+
+    if (
+      ownsConflict
+      && currentProgress < conflictWindow.endProgress
+      && nextProgress >= conflictWindow.endProgress
+    ) {
+      conflict.owner = id === 'north' ? 'south' : 'north';
+      conflict.lastCompleted = id;
+      conflict.lastTransferAt = conflict.clock;
+    }
+
+    progressRef.current = nextProgress;
+    curve.getPointAt(nextProgress, point);
+    curve.getTangentAt(nextProgress, pathTangent).setY(0).normalize();
+    normal.set(-pathTangent.z, 0, pathTangent.x).normalize();
     vehicle.position.set(
       point.x + normal.x * laneOffset,
       0.12,
       point.z + normal.z * laneOffset
     );
+
+    // Use a short forward chord for the body heading. Positioning still uses
+    // the exact source tangent, while the heading eases into each source
+    // vertex instead of snapping at the sparse OSM polyline corners.
+    const headingLookAhead = Math.min(0.035, Math.max(0.008, 5 / Math.max(1, curveLength)));
+    curve.getPointAt((nextProgress + headingLookAhead) % 1, headingPoint);
+    headingTangent.subVectors(headingPoint, point).setY(0);
+    if (headingTangent.lengthSq() < 0.04) headingTangent.copy(pathTangent);
+    else headingTangent.normalize();
     // VehicleModels faces +Z; rotate it directly into the source replay
     // tangent. The regular instanced fleet uses Object3D.lookAt (which needs
     // a PI correction for its -Z convention), but this hero group receives a
     // raw Euler angle and must not be inverted.
-    vehicle.rotation.y = Math.atan2(tangent.x, tangent.z);
+    vehicle.rotation.y = Math.atan2(headingTangent.x, headingTangent.z);
+    vehicle.rotation.z = THREE.MathUtils.clamp(
+      (headingTangent.x * pathTangent.z - headingTangent.z * pathTangent.x) * 0.32,
+      -0.08,
+      0.08
+    );
+
+    vehicle.userData.replayPhase = isHolding ? 'yield-hold' : dynamics.phaseId;
+    vehicle.userData.waitingForConflict = isHolding;
+    vehicle.userData.conflictOwner = conflict.owner;
 
     // Make the turn leg read as a maneuver: both indicators blink only during
     // the modeled sweep, while the rear lamps brighten as the vehicle rolls
     // through the source-linked yield point. These are visual replay cues,
     // not claims about observed vehicle behavior or traffic-signal control.
     const blinkOn = Math.floor(motionClockRef.current * 4) % 2 === 0;
-    turnSignalMaterial.opacity = dynamics.inTurnWindow && blinkOn ? (isNight ? 1 : 0.82) : 0.08;
-    brakeLightMaterial.opacity = 0.26 + dynamics.yieldStrength * (isNight ? 0.74 : 0.58);
+    turnSignalMaterial.opacity = (dynamics.inTurnWindow || isHolding) && blinkOn
+      ? (isNight ? 1 : 0.82)
+      : 0.08;
+    brakeLightMaterial.opacity = isHolding
+      ? (isNight ? 1 : 0.86)
+      : 0.26 + dynamics.yieldStrength * (isNight ? 0.74 : 0.58);
   });
 
   return (
     <group
       ref={vehicleRef}
       name={`CrossoverReplayVehicle-${id}`}
-      scale={cameraMode === 'walk' ? 0.54 : 0.72}
+      renderOrder={14}
+      scale={cameraMode === 'walk' ? 0.86 : 0.78}
       userData={{
         source: 'OSM relation/18922642',
         status: 'modelled visual replay',
@@ -334,6 +508,7 @@ const CrossoverReplayVehicle: React.FC<{
         replayPhaseTiming: 'modelled at source way-member boundaries',
         sourceWayIds: connector.sourceWayIds,
         stopProgress,
+        conflictEnvelope: 'modelled single-owner sweep; opposing replay yields',
         countedInFleet: false
       }}
     >
@@ -381,21 +556,78 @@ function getCurveFrame(
   };
 }
 
+const CrossoverConflictHoldLine: React.FC<{
+  id: ReplayVehicleId;
+  connector: UTurnConnector;
+  curve: THREE.Curve<THREE.Vector3>;
+  cameraMode: 'walk' | 'overview';
+}> = ({ id, connector, curve, cameraMode }) => {
+  const curveLength = useMemo(() => curve.getLength(), [curve]);
+  const conflictWindow = useMemo(
+    () => getReplayConflictWindow(connector, curveLength),
+    [connector, curveLength]
+  );
+  const frame = useMemo(
+    () => getCurveFrame(curve, conflictWindow.holdProgress, 0, 0.36),
+    [conflictWindow.holdProgress, curve]
+  );
+
+  return (
+    <group
+      name={`ModelledConflictHoldLine-${id}`}
+      position={frame.position}
+      rotation={[0, frame.angle, 0]}
+      userData={{
+        source: 'OSM relation/18922642',
+        status: 'modelled conflict hold line',
+        purpose: 'visual replay sequencing; not a legal stop line'
+      }}
+    >
+      <mesh renderOrder={10}>
+        <boxGeometry args={[MODELLED_REPLAY_WIDTH_METERS - 0.18, 0.045, 0.16]} />
+        <meshBasicMaterial
+          color="#fbbf24"
+          transparent
+          opacity={cameraMode === 'overview' ? 0.86 : 0.5}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh position={[0, 0.015, 0.25]} renderOrder={10}>
+        <boxGeometry args={[MODELLED_REPLAY_WIDTH_METERS - 0.18, 0.028, 0.08]} />
+        <meshBasicMaterial
+          color="#f8fafc"
+          transparent
+          opacity={cameraMode === 'overview' ? 0.8 : 0.34}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  );
+};
+
 /**
  * Add a small physical signal gate and a moving route pulse to each
  * source-linked connector. This makes the maneuver legible in 3D while
  * keeping its no_u_turn legality boundary explicit in userData.
  */
 const CrossoverTurnGuide: React.FC<{
-  id: string;
+  id: ReplayVehicleId;
   connector: UTurnConnector;
   curve: THREE.Curve<THREE.Vector3>;
   isNight: boolean;
   cameraMode: 'walk' | 'overview';
-}> = ({ id, connector, curve, isNight, cameraMode }) => {
+  conflictRef: React.MutableRefObject<ReplayConflictState>;
+}> = ({ id, connector, curve, isNight, cameraMode, conflictRef }) => {
   const pulseRef = useRef<THREE.Mesh>(null);
-  const pulseProgressRef = useRef(id === 'north' ? 0.08 : 0.56);
+  const pulseProgressRef = useRef(0.08);
   const pulsePoint = useMemo(() => new THREE.Vector3(), []);
+  const curveLength = useMemo(() => curve.getLength(), [curve]);
+  const conflictWindow = useMemo(
+    () => getReplayConflictWindow(connector, curveLength),
+    [connector, curveLength]
+  );
   const phaseFrames = useMemo(
     () => getReplayPhaseFrames(connector).map((phase) => ({
       ...phase,
@@ -407,7 +639,7 @@ const CrossoverTurnGuide: React.FC<{
     () => getCurveFrame(
       curve,
       getSourceReplayProgressAtVertex(connector.points, connector.phaseRanges.yield.startVertex),
-      id === 'north' ? 4.2 : -4.2,
+      id === 'north' ? MODELLED_SIGNAL_OFFSET : -MODELLED_SIGNAL_OFFSET,
       0.12
     ),
     [connector, curve, id]
@@ -416,18 +648,33 @@ const CrossoverTurnGuide: React.FC<{
   useFrame((_, delta) => {
     const pulse = pulseRef.current;
     if (!pulse) return;
-    pulseProgressRef.current = (pulseProgressRef.current + Math.min(delta, 0.05) * 0.16) % 1;
+    const currentProgress = pulseProgressRef.current;
+    const nextProgress = (
+      currentProgress + Math.min(delta, 0.05) * 0.16
+    ) % 1;
+    const isBeforeConflict = currentProgress <= conflictWindow.endProgress;
+    pulseProgressRef.current = conflictRef.current.owner !== id
+      && isBeforeConflict
+      && nextProgress >= conflictWindow.holdProgress
+      ? conflictWindow.holdProgress
+      : nextProgress;
     curve.getPointAt(pulseProgressRef.current, pulsePoint);
     pulse.position.set(pulsePoint.x, 0.52, pulsePoint.z);
     const breathe = 0.85 + Math.sin(pulseProgressRef.current * Math.PI * 2) * 0.15;
     pulse.scale.setScalar(breathe);
+    const activePhase = getReplayPhase(pulseProgressRef.current, phaseFrames);
+    const pulseMaterial = pulse.material as THREE.MeshBasicMaterial;
+    pulseMaterial.color.set(activePhase.color);
+    pulseMaterial.opacity = conflictRef.current.owner === id ? 0.98 : 0.38;
+    pulse.userData.activePhase = activePhase.id;
   });
 
   return (
-    <group name={`CrossoverTurnGuide-${id}`} userData={{
+    <group name={`CrossoverTurnGuide-${id}`} renderOrder={11} userData={{
       source: 'OSM relation/18922642',
       status: 'modelled maneuver guide',
-      phaseOrder: 'approach → yield → sweep → exit'
+      phaseOrder: 'approach → yield → sweep → exit',
+      conflictSequencing: 'single-owner sweep; opposing replay waits at hold line'
     }}>
       <mesh ref={pulseRef} renderOrder={12}>
         <sphereGeometry args={[0.34, 12, 8]} />
@@ -439,6 +686,13 @@ const CrossoverTurnGuide: React.FC<{
           depthWrite={false}
         />
       </mesh>
+
+      <CrossoverConflictHoldLine
+        id={id}
+        connector={connector}
+        curve={curve}
+        cameraMode={cameraMode}
+      />
 
       {cameraMode === 'overview' && phaseFrames.map((phase) => (
         <group key={`${id}-phase-${phase.id}`} position={phase.frame.position} rotation={[0, phase.frame.angle, 0]}>
@@ -585,6 +839,26 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   );
   const northDashGeometry = useMemo(() => createConnectorDashGeometry(northCurve), [northCurve]);
   const southDashGeometry = useMemo(() => createConnectorDashGeometry(southCurve), [southCurve]);
+  const northConflictGeometry = useMemo(() => {
+    const conflictWindow = getReplayConflictWindow(U_TURN_CONNECTORS.north, northCurve.getLength());
+    return createConnectorSegmentGeometry(
+      northCurve,
+      conflictWindow.startProgress,
+      conflictWindow.endProgress,
+      MODELLED_CONFLICT_BUFFER_WIDTH_METERS,
+      0.225
+    );
+  }, [northCurve]);
+  const southConflictGeometry = useMemo(() => {
+    const conflictWindow = getReplayConflictWindow(U_TURN_CONNECTORS.south, southCurve.getLength());
+    return createConnectorSegmentGeometry(
+      southCurve,
+      conflictWindow.startProgress,
+      conflictWindow.endProgress,
+      MODELLED_CONFLICT_BUFFER_WIDTH_METERS,
+      0.225
+    );
+  }, [southCurve]);
   const northEdgeGeometries = useMemo(
     () => [-1.72, 1.72].map((offset) => createCurveLineGeometry(
       U_TURN_CONNECTORS.north.points.map(([x, _y, z]) => [x, z]),
@@ -619,18 +893,18 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
     const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
     return [point.x - normal.x * 8, 4.8, point.z - normal.z * 8] as [number, number, number];
   }, [southCurve]);
-  const gates = useMemo(() => [
-    {
-      id: 'relation-via-entry',
-      position: [U_TURN_CONNECTORS.north.points[4][0], 0.42, U_TURN_CONNECTORS.north.points[4][2]] as [number, number, number]
-    },
-    {
-      id: 'relation-via-exit',
-      position: [U_TURN_CONNECTORS.north.points[6][0], 0.42, U_TURN_CONNECTORS.north.points[6][2]] as [number, number, number]
-    }
-  ], []);
   const accent = isNight ? '#fbbf24' : '#f59e0b';
   const isOverview = cameraMode === 'overview';
+  const replayConflictRef = useRef<ReplayConflictState>({
+    owner: 'north',
+    clock: 0,
+    lastCompleted: null,
+    lastTransferAt: 0
+  });
+
+  useFrame((_, delta) => {
+    replayConflictRef.current.clock += Math.min(delta, 0.05);
+  });
 
   React.useEffect(() => () => {
     northSurfaceGeometry.dispose();
@@ -640,9 +914,11 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
     crossingSurfaceGeometry.dispose();
     northDashGeometry.dispose();
     southDashGeometry.dispose();
+    northConflictGeometry.dispose();
+    southConflictGeometry.dispose();
     northEdgeGeometries.forEach((geometry) => geometry.dispose());
     southEdgeGeometries.forEach((geometry) => geometry.dispose());
-  }, [crossingSurfaceGeometry, northCurbGeometry, northDashGeometry, northEdgeGeometries, northSurfaceGeometry, southCurbGeometry, southDashGeometry, southEdgeGeometries, southSurfaceGeometry]);
+  }, [crossingSurfaceGeometry, northConflictGeometry, northCurbGeometry, northDashGeometry, northEdgeGeometries, northSurfaceGeometry, southConflictGeometry, southCurbGeometry, southDashGeometry, southEdgeGeometries, southSurfaceGeometry]);
 
   return (
     <group
@@ -669,6 +945,47 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           transparent
           opacity={isOverview ? 0.48 : 0.26}
           depthWrite={false}
+        />
+      </mesh>
+
+      {/* The sweep is the only shared conflict envelope in the two reversed
+          scenarios. This translucent band is modelled review geometry: it
+          never replaces the mapped road and remains below the source crossing
+          traces and raised curb edges in the render stack. */}
+      <mesh
+        geometry={northConflictGeometry}
+        renderOrder={5}
+        userData={{
+          source: 'OSM relation/18922642',
+          status: 'modelled conflict envelope',
+          phase: 'sweep',
+          semantics: 'opposing replay yields; not a legal movement'
+        }}
+      >
+        <meshBasicMaterial
+          color="#fb923c"
+          transparent
+          opacity={isOverview ? 0.16 : 0.08}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh
+        geometry={southConflictGeometry}
+        renderOrder={5}
+        userData={{
+          source: 'OSM relation/18922642',
+          status: 'modelled conflict envelope',
+          phase: 'sweep',
+          semantics: 'opposing replay yields; not a legal movement'
+        }}
+      >
+        <meshBasicMaterial
+          color="#fb923c"
+          transparent
+          opacity={isOverview ? 0.16 : 0.08}
+          depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 
@@ -827,22 +1144,6 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         <DirectionMarkers id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} color={accent} />
         <DirectionMarkers id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} color={accent} />
 
-        {/* These gates are anchored to the exact via vertices of the source
-            relation trace. They are modelled audit markers, not
-            legal-movement permissions. */}
-        {gates.map((gate) => (
-          <group key={gate.id} position={gate.position}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={9}>
-              <ringGeometry args={[1.35, 1.58, 20]} />
-              <meshBasicMaterial color="#f8fafc" transparent opacity={0.9} depthWrite={false} />
-            </mesh>
-            <mesh position={[0, 0.12, 0]}>
-              <cylinderGeometry args={[0.08, 0.08, 1.35, 8]} />
-              <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={isNight ? 1.6 : 0.35} />
-            </mesh>
-          </group>
-        ))}
-
         <FocusLabel
           position={northLabelPosition}
           title="NORTH TURN REPLAY"
@@ -863,8 +1164,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           title="TURN REPLAY"
           detail="YIELD → SWEEP → EXIT · MODELLED · NOT COUNTED"
         />
-        <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} isNight={isNight} cameraMode={cameraMode} />
-        <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} isNight={isNight} cameraMode={cameraMode} />
+        <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} isNight={isNight} cameraMode={cameraMode} conflictRef={replayConflictRef} />
+        <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} isNight={isNight} cameraMode={cameraMode} conflictRef={replayConflictRef} />
         </group>
       )}
 
@@ -882,6 +1183,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         color="#0ea5e9"
         isNight={isNight}
         cameraMode={cameraMode}
+        conflictRef={replayConflictRef}
       />
 
       <CrossoverReplayVehicle
@@ -894,6 +1196,7 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
         color="#f97316"
         isNight={isNight}
         cameraMode={cameraMode}
+        conflictRef={replayConflictRef}
       />
 
       {/* At eye level, retain only a thin, low-contrast audit trace. The
@@ -916,8 +1219,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
               <meshBasicMaterial color={accent} transparent opacity={0.3} depthWrite={false} />
             </mesh>
           ))}
-          <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} isNight={isNight} cameraMode="walk" />
-          <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} isNight={isNight} cameraMode="walk" />
+          <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} isNight={isNight} cameraMode="walk" conflictRef={replayConflictRef} />
+          <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} isNight={isNight} cameraMode="walk" conflictRef={replayConflictRef} />
         </>
       )}
     </group>

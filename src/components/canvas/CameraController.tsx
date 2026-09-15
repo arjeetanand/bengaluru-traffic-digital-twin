@@ -15,6 +15,7 @@ import {
   MARATHAHALLI_OVERVIEW_BOUNDS,
   MARATHAHALLI_WALK_BOUNDS,
   resolveWalkEyeHeight,
+  getNearestSourceWalkPoint,
   registerSnapshotWalkRoutes
 } from '../../data/marathahalliNavigation';
 import { loadMarathahalliSnapshot } from '../../services/marathahalliSnapshot';
@@ -25,6 +26,26 @@ interface CameraControllerProps {
   cameraMode: CameraMode;
   simSpeedMultiplier: number;
 }
+
+// The controller deliberately keeps these limits here instead of spreading
+// them through the scene. They describe the camera experience, not the map
+// geometry: a bird view can inspect a roof or metro deck, while a person view
+// stays at eye level and never tumbles below the pavement or into the sky.
+const WALK_FOV_DEFAULT = 68;
+const WALK_FOV_MIN = 54;
+const WALK_FOV_MAX = 78;
+const WALK_MIN_PITCH = -0.72;
+const WALK_MAX_PITCH = 0.62;
+const OVERVIEW_MIN_POLAR = 0.06;
+const OVERVIEW_MAX_POLAR = Math.PI * 0.48;
+const OVERVIEW_MIN_DISTANCE = 12;
+const OVERVIEW_MAX_DISTANCE = 4500;
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const easeInOutCubic = (value: number) => (
+  value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2
+);
 
 export const CameraController: React.FC<CameraControllerProps> = ({
   isCinematic,
@@ -41,11 +62,26 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const [initialView] = React.useState(() => getCameraView(cameraPreset, cameraMode));
   const targetCamPos = useRef(new THREE.Vector3(...initialView.position));
   const targetLookAt = useRef(new THREE.Vector3(...initialView.target));
+  const transitionStartPos = useRef(new THREE.Vector3(...initialView.position));
+  const transitionStartLookAt = useRef(new THREE.Vector3(...initialView.target));
   const isTransitioning = useRef(false);
-  const transitionProgress = useRef(0);
+  const transitionElapsed = useRef(0);
+  const transitionDuration = useRef(0);
+  const transitionArcHeight = useRef(0);
   const hasInitializedCamera = useRef(false);
   const cameraPresetRef = useRef(cameraPreset);
   const cameraModeRef = useRef(cameraMode);
+  const activeCameraMode = useRef(cameraMode);
+
+  // Person mode is intentionally represented as an orientation, rather than
+  // repeatedly extracting Euler angles from the camera. That keeps heading
+  // continuous through a 360° turn and lets the walk resolver gently steer a
+  // forward walk onto the tangent of the mapped footway.
+  const walkForward = useRef(new THREE.Vector3(0, 0, -1));
+  const desiredWalkForward = useRef(new THREE.Vector3());
+  const actualWalkDelta = useRef(new THREE.Vector3());
+  const walkPitch = useRef(0);
+  const walkFovTarget = useRef(WALK_FOV_DEFAULT);
 
   // Active keyboard inputs
   const keys = useRef({
@@ -74,6 +110,107 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
   cameraPresetRef.current = cameraPreset;
   cameraModeRef.current = cameraMode;
+
+  const setWalkOrientationFromDirection = (direction: THREE.Vector3) => {
+    const horizontalLength = Math.hypot(direction.x, direction.z);
+    if (horizontalLength > 0.001) {
+      walkForward.current.set(direction.x / horizontalLength, 0, direction.z / horizontalLength);
+      walkPitch.current = clamp(
+        Math.atan2(direction.y, horizontalLength),
+        WALK_MIN_PITCH,
+        WALK_MAX_PITCH
+      );
+    }
+  };
+
+  const syncWalkOrientationFromTarget = (position: THREE.Vector3, target: THREE.Vector3) => {
+    cameraDirection.current.subVectors(target, position);
+    setWalkOrientationFromDirection(cameraDirection.current);
+  };
+
+  const updateWalkLookAt = () => {
+    const horizontalScale = Math.cos(walkPitch.current);
+    cameraDirection.current.set(
+      walkForward.current.x * horizontalScale,
+      Math.sin(walkPitch.current),
+      walkForward.current.z * horizontalScale
+    );
+    targetLookAt.current.copy(camera.position).addScaledVector(cameraDirection.current, WALK_LOOK_DISTANCE);
+    if (controlsRef.current) controlsRef.current.target.copy(targetLookAt.current);
+    camera.lookAt(targetLookAt.current);
+  };
+
+  const cancelCameraTransition = () => {
+    if (!isTransitioning.current) return;
+    isTransitioning.current = false;
+    transitionElapsed.current = transitionDuration.current;
+    // Cancelling is an intentional hand-off to the mode the user selected;
+    // do not let a later preset interpret the interrupted flight as a stale
+    // bird/person boundary.
+    activeCameraMode.current = cameraModeRef.current;
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = false;
+      controlsRef.current.enabled = cameraModeRef.current === 'overview';
+      controlsRef.current.update();
+      if (cameraModeRef.current === 'walk') {
+        camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
+        syncWalkOrientationFromTarget(camera.position, controlsRef.current.target);
+        updateWalkLookAt();
+      }
+    }
+  };
+
+  const beginCameraTransition = (
+    position: [number, number, number],
+    target: [number, number, number]
+  ) => {
+    const controls = controlsRef.current;
+    targetCamPos.current.set(...position);
+    targetLookAt.current.set(...target);
+
+    if (!hasInitializedCamera.current || !controls) {
+      camera.position.copy(targetCamPos.current);
+      if (controls) controls.target.copy(targetLookAt.current);
+      return;
+    }
+
+    transitionStartPos.current.copy(camera.position);
+    transitionStartLookAt.current.copy(controls.target);
+
+    const horizontalDistance = Math.hypot(
+      targetCamPos.current.x - transitionStartPos.current.x,
+      targetCamPos.current.z - transitionStartPos.current.z
+    );
+    const cameraDistance = transitionStartPos.current.distanceTo(targetCamPos.current);
+    const modeChanged = activeCameraMode.current !== cameraModeRef.current;
+    const destinationIsWalk = cameraModeRef.current === 'walk';
+
+    // Longer flights get a little more time, but the cap keeps a route-stop
+    // click responsive. The small lift is what makes a long preset change read
+    // as a deliberate Google-Earth-style flight instead of a camera teleport.
+    const travelRate = destinationIsWalk ? 260 : 680;
+    const duration = 0.78 + (cameraDistance + horizontalDistance * 0.18) / travelRate;
+    transitionDuration.current = clamp(
+      duration,
+      modeChanged ? 1.05 : 0.82,
+      destinationIsWalk ? 3.2 : 4.4
+    );
+    transitionElapsed.current = 0;
+    transitionArcHeight.current = destinationIsWalk
+      ? (modeChanged ? clamp(horizontalDistance * 0.035, 8, 26) : clamp(horizontalDistance * 0.018, 0, 14))
+      : clamp(horizontalDistance * 0.12 + Math.abs(targetCamPos.current.y - transitionStartPos.current.y) * 0.08, 12, 300);
+
+    isTransitioning.current = true;
+    controls.autoRotate = false;
+    // OrbitControls keeps its own spherical deltas. Pausing it during the
+    // flight prevents a previous drag from fighting the transition.
+    controls.enabled = false;
+    const dampingWasEnabled = controls.enableDamping;
+    controls.enableDamping = false;
+    controls.update();
+    controls.enableDamping = dampingWasEnabled;
+    cameraControlBus.releaseAllInputs();
+  };
 
   // Attach window keyboard listeners for controlled movement & rotation
   useEffect(() => {
@@ -153,7 +290,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       }
 
       if (handled) {
-        isTransitioning.current = false;
+        cancelCameraTransition();
         // Prevent default scrolling for arrows and space
         if (e.code.startsWith('Arrow') || e.code === 'Space') {
           e.preventDefault();
@@ -227,11 +364,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     // Register reset view handler
     const unsubscribeReset = cameraControlBus.onResetView(() => {
       const view = getCameraView(cameraPresetRef.current, cameraModeRef.current);
-      targetCamPos.current.set(...view.position);
-      targetLookAt.current.set(...view.target);
-      isTransitioning.current = true;
-      transitionProgress.current = 0;
-      cameraControlBus.releaseAllInputs();
+      beginCameraTransition(view.position, view.target);
     });
 
     // Register dynamic fly-to handler (e.g. clicking on a store marker or store list item)
@@ -239,15 +372,10 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       if (cameraModeRef.current === 'walk') {
         const [safeX, safeZ] = resolveWalkStart(pos[0], pos[2]);
         const view = createWalkView([safeX, WALK_EYE_HEIGHT, safeZ], target);
-        targetCamPos.current.set(...view.position);
-        targetLookAt.current.set(...view.target);
+        beginCameraTransition(view.position, view.target);
       } else {
-        targetCamPos.current.set(...pos);
-        targetLookAt.current.set(...target);
+        beginCameraTransition(pos, target);
       }
-      isTransitioning.current = true;
-      transitionProgress.current = 0;
-      cameraControlBus.releaseAllInputs();
     });
 
     return () => {
@@ -270,14 +398,18 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     const canvas = gl.domElement;
     const pointerId = { current: null as number | null };
     const lastPointer = { x: 0, y: 0 };
+    const previousTouchAction = canvas.style.touchAction;
+    canvas.style.touchAction = 'none';
 
     const handlePointerDown = (event: PointerEvent) => {
       if (cameraModeRef.current !== 'walk' || event.button !== 0) return;
       pointerId.current = event.pointerId;
       lastPointer.x = event.clientX;
       lastPointer.y = event.clientY;
+      camera.getWorldDirection(cameraDirection.current);
+      setWalkOrientationFromDirection(cameraDirection.current);
       canvas.setPointerCapture(event.pointerId);
-      isTransitioning.current = false;
+      cancelCameraTransition();
       event.preventDefault();
     };
 
@@ -289,19 +421,26 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       lastPointer.x = event.clientX;
       lastPointer.y = event.clientY;
 
-      camera.getWorldDirection(cameraDirection.current);
-      cameraDirection.current.applyAxisAngle(worldUp.current, -deltaX * 0.0045);
-      cameraRight.current.crossVectors(cameraDirection.current, worldUp.current);
-      if (cameraRight.current.lengthSq() > 0.001) {
-        cameraRight.current.normalize();
-        cameraDirection.current.applyAxisAngle(cameraRight.current, -deltaY * 0.004);
-      }
-      cameraDirection.current.y = Math.max(-0.92, Math.min(0.92, cameraDirection.current.y));
-      cameraDirection.current.normalize();
-      camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
-      targetLookAt.current.copy(camera.position).addScaledVector(cameraDirection.current, WALK_LOOK_DISTANCE);
-      controlsRef.current?.target.copy(targetLookAt.current);
-      camera.lookAt(targetLookAt.current);
+      walkForward.current.applyAxisAngle(worldUp.current, -deltaX * 0.0045).normalize();
+      walkPitch.current = clamp(
+        walkPitch.current - deltaY * 0.004,
+        WALK_MIN_PITCH,
+        WALK_MAX_PITCH
+      );
+      updateWalkLookAt();
+      event.preventDefault();
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (cameraModeRef.current !== 'walk') return;
+      cancelCameraTransition();
+      // Person mode keeps the eye on the mapped surface, so its zoom is a
+      // bounded lens change rather than a dolly that could leave the route.
+      walkFovTarget.current = clamp(
+        walkFovTarget.current + event.deltaY * 0.025,
+        WALK_FOV_MIN,
+        WALK_FOV_MAX
+      );
       event.preventDefault();
     };
 
@@ -336,14 +475,17 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     canvas.addEventListener('pointerup', releasePointer);
     canvas.addEventListener('pointercancel', releasePointer);
     canvas.addEventListener('lostpointercapture', handleLostPointerCapture);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       clearPointerGesture();
+      canvas.style.touchAction = previousTouchAction;
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerup', releasePointer);
       canvas.removeEventListener('pointercancel', releasePointer);
       canvas.removeEventListener('lostpointercapture', handleLostPointerCapture);
+      canvas.removeEventListener('wheel', handleWheel);
     };
   }, [gl]);
 
@@ -352,10 +494,10 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   // overview mode keeps the full orbit/bird's-eye framing.
   useEffect(() => {
     const view = getCameraView(cameraPreset, cameraMode);
-    targetCamPos.current.set(...view.position);
-    targetLookAt.current.set(...view.target);
-    isTransitioning.current = true;
-    transitionProgress.current = 0;
+    const modeChanged = activeCameraMode.current !== cameraMode;
+    if (modeChanged && cameraMode === 'walk') {
+      walkFovTarget.current = WALK_FOV_DEFAULT;
+    }
 
     // OrbitControls' auto-rotation is imperative state. Turn it off at the
     // mode boundary as well as in the frame loop so a person-mode switch can
@@ -372,21 +514,41 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       controlsRef.current.target.copy(targetLookAt.current);
       controlsRef.current.update();
       hasInitializedCamera.current = true;
+      activeCameraMode.current = cameraMode;
+      controlsRef.current.enabled = cameraMode === 'overview';
+      if (cameraMode === 'walk') {
+        syncWalkOrientationFromTarget(camera.position, controlsRef.current.target);
+        camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
+        updateWalkLookAt();
+      }
       isTransitioning.current = false;
+      return;
     }
+
+    beginCameraTransition(view.position, view.target);
   }, [cameraPreset, cameraMode]);
 
   useFrame((_, delta) => {
-    if (!controlsRef.current) return;
+    const controls = controlsRef.current;
+    if (!controls) return;
 
     const safeDelta = Math.min(delta, 0.1);
 
     // A wider street-level lens preserves context around a pedestrian while
-    // the bird view keeps the more cinematic survey framing.
+    // the bird view keeps the more cinematic survey framing. Both transitions
+    // are damped so switching modes does not produce a lens pop.
     if (camera instanceof THREE.PerspectiveCamera) {
-      const desiredFov = cameraMode === 'walk' ? 68 : 50;
-      if (Math.abs(camera.fov - desiredFov) > 0.1) {
-        camera.fov = desiredFov;
+      const desiredFov = cameraMode === 'walk' ? walkFovTarget.current : 50;
+      const nextFov = THREE.MathUtils.damp(camera.fov, desiredFov, 8, safeDelta);
+      if (Math.abs(camera.fov - nextFov) > 0.01) {
+        camera.fov = nextFov;
+        camera.updateProjectionMatrix();
+      }
+      const desiredNear = cameraMode === 'walk' ? 0.08 : 0.5;
+      const desiredFar = cameraMode === 'walk' ? 4500 : 7000;
+      if (Math.abs(camera.near - desiredNear) > 0.001 || Math.abs(camera.far - desiredFar) > 0.5) {
+        camera.near = desiredNear;
+        camera.far = desiredFar;
         camera.updateProjectionMatrix();
       }
     }
@@ -403,15 +565,21 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     const hasMoveInput = isForward || isBackward || isLeft || isRight || isUp || isDown;
 
     if (hasMoveInput) {
-      isTransitioning.current = false;
+      cancelCameraTransition();
 
-      // Compute horizontal forward vector from camera orientation
-      camera.getWorldDirection(forwardVec.current);
-      forwardVec.current.y = 0;
-      if (forwardVec.current.lengthSq() > 0.001) {
-        forwardVec.current.normalize();
+      // Person movement is relative to the persistent heading. Bird movement
+      // remains relative to the current camera bearing, as expected for an
+      // orbit/map inspection surface.
+      if (cameraMode === 'walk') {
+        forwardVec.current.copy(walkForward.current);
       } else {
-        forwardVec.current.set(0, 0, -1);
+        camera.getWorldDirection(forwardVec.current);
+        forwardVec.current.y = 0;
+        if (forwardVec.current.lengthSq() > 0.001) {
+          forwardVec.current.normalize();
+        } else {
+          forwardVec.current.set(0, 0, -1);
+        }
       }
 
       // Compute horizontal right vector (perpendicular to forward and world Y)
@@ -434,27 +602,45 @@ export const CameraController: React.FC<CameraControllerProps> = ({
           : (keys.current.sprint ? 50 : 25)) * busState.speedMultiplier * safeDelta;
 
         if (cameraMode === 'walk') {
-          const nextX = camera.position.x + moveVec.current.x * moveSpeed;
-          const nextZ = camera.position.z + moveVec.current.z * moveSpeed;
+          const previousX = camera.position.x;
+          const previousZ = camera.position.z;
+          const nextX = previousX + moveVec.current.x * moveSpeed;
+          const nextZ = previousZ + moveVec.current.z * moveSpeed;
           const [resolvedX, resolvedZ] = resolveWalkPosition(
-            camera.position.x,
-            camera.position.z,
+            previousX,
+            previousZ,
             nextX,
             nextZ
           );
-          const deltaX = resolvedX - camera.position.x;
-          const deltaZ = resolvedZ - camera.position.z;
+          const deltaX = resolvedX - previousX;
+          const deltaZ = resolvedZ - previousZ;
           camera.position.x = resolvedX;
           camera.position.z = resolvedZ;
-          camera.position.y = resolveWalkEyeHeight(resolvedX, resolvedZ);
-          controlsRef.current.target.x += deltaX;
-          controlsRef.current.target.z += deltaZ;
-          controlsRef.current.target.y = Math.max(-3, Math.min(8, controlsRef.current.target.y));
+
+          // Follow the source way only while the user is walking forward. A
+          // reverse or strafe input remains under direct user control. The
+          // actual accepted step is used to choose the tangent direction so a
+          // bidirectional OSM way never flips the camera at a junction.
+          const actualDistance = Math.hypot(deltaX, deltaZ);
+          if (actualDistance > 0.01 && isForward && !isBackward) {
+            actualWalkDelta.current.set(deltaX / actualDistance, 0, deltaZ / actualDistance);
+            const sourceMatch = getNearestSourceWalkPoint(resolvedX, resolvedZ, 12);
+            if (sourceMatch) {
+              desiredWalkForward.current.set(sourceMatch.tangent[0], 0, sourceMatch.tangent[1]);
+              if (desiredWalkForward.current.dot(actualWalkDelta.current) < 0) {
+                desiredWalkForward.current.negate();
+              }
+            } else {
+              desiredWalkForward.current.copy(actualWalkDelta.current);
+            }
+            const headingBlend = 1 - Math.exp(-7 * safeDelta);
+            walkForward.current.lerp(desiredWalkForward.current, headingBlend).normalize();
+          }
         } else {
           camera.position.addScaledVector(moveVec.current, moveSpeed);
-          controlsRef.current.target.addScaledVector(moveVec.current, moveSpeed);
+          controls.target.addScaledVector(moveVec.current, moveSpeed);
           camera.position.y = Math.max(0.75, camera.position.y);
-          controlsRef.current.target.y = Math.max(-6, controlsRef.current.target.y);
+          controls.target.y = Math.max(-6, controls.target.y);
         }
       }
     }
@@ -468,28 +654,26 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     const hasRotateInput = isTurnLeft || isTurnRight || isTiltUp || isTiltDown;
 
     if (hasRotateInput) {
-      isTransitioning.current = false;
-      const rotSpeed = 1.4 * safeDelta;
-      const target = controlsRef.current.target;
+      cancelCameraTransition();
+      const rotSpeed = 1.25 * safeDelta;
+      const target = controls.target;
 
       if (cameraMode === 'walk') {
         // First-person rotation changes only the look vector; the eye stays at
         // 1.7m and the orbit target remains a short, stable look-ahead.
-        camera.getWorldDirection(cameraDirection.current);
         if (isTurnLeft || isTurnRight) {
           const yawAngle = (isTurnLeft ? 1 : -1) * rotSpeed;
-          cameraDirection.current.applyAxisAngle(worldUp.current, yawAngle);
+          walkForward.current.applyAxisAngle(worldUp.current, yawAngle).normalize();
         }
         if (isTiltUp || isTiltDown) {
-          cameraRight.current.crossVectors(cameraDirection.current, worldUp.current);
-          if (cameraRight.current.lengthSq() > 0.001) cameraRight.current.normalize();
           const tiltAngle = (isTiltUp ? 1 : -1) * rotSpeed;
-          cameraDirection.current.applyAxisAngle(cameraRight.current, tiltAngle);
+          walkPitch.current = clamp(
+            walkPitch.current + tiltAngle,
+            WALK_MIN_PITCH,
+            WALK_MAX_PITCH
+          );
         }
-        cameraDirection.current.normalize();
-        camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
-        target.copy(camera.position).addScaledVector(cameraDirection.current, WALK_LOOK_DISTANCE);
-        camera.lookAt(target);
+        updateWalkLookAt();
       } else {
         cameraOffset.current.copy(camera.position).sub(target);
 
@@ -511,41 +695,77 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       }
     }
 
-    // 3. Smooth Preset Transitions
+    // 3. Smooth preset transitions. OrbitControls is paused while this runs,
+    // so its previous spherical drag state cannot overwrite the flight path.
     if (isTransitioning.current) {
-      transitionProgress.current += safeDelta * 2.5;
-      const t = Math.min(1, transitionProgress.current);
+      transitionElapsed.current = Math.min(
+        transitionDuration.current,
+        transitionElapsed.current + safeDelta
+      );
+      const progress = transitionDuration.current > 0
+        ? transitionElapsed.current / transitionDuration.current
+        : 1;
+      const easedProgress = easeInOutCubic(Math.min(1, progress));
 
-      camera.position.lerp(targetCamPos.current, cameraMode === 'walk' ? 0.18 : 0.25);
-      controlsRef.current.target.lerp(targetLookAt.current, cameraMode === 'walk' ? 0.18 : 0.25);
+      camera.position.lerpVectors(
+        transitionStartPos.current,
+        targetCamPos.current,
+        easedProgress
+      );
+      if (transitionArcHeight.current > 0) {
+        camera.position.y += Math.sin(Math.PI * easedProgress) * transitionArcHeight.current;
+      }
+      controls.target.lerpVectors(
+        transitionStartLookAt.current,
+        targetLookAt.current,
+        easedProgress
+      );
+      camera.lookAt(controls.target);
 
-      if (t >= 1 || camera.position.distanceTo(targetCamPos.current) < 0.2) {
+      if (progress >= 1) {
         camera.position.copy(targetCamPos.current);
-        controlsRef.current.target.copy(targetLookAt.current);
-        controlsRef.current.update();
+        controls.target.copy(targetLookAt.current);
+        activeCameraMode.current = cameraMode;
+        controls.enabled = cameraMode === 'overview';
+        controls.update();
+        if (cameraMode === 'walk') {
+          camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
+          syncWalkOrientationFromTarget(camera.position, controls.target);
+          updateWalkLookAt();
+        }
         isTransitioning.current = false;
+      } else {
+        return;
       }
     }
 
-    // 4. Auto-orbit only when cinematic mode is explicitly turned ON
-    if (cameraMode === 'overview' && isCinematic && !isTransitioning.current && !hasMoveInput && !hasRotateInput) {
-      controlsRef.current.autoRotate = true;
-      controlsRef.current.autoRotateSpeed = 0.5 * Math.min(2, Math.max(0.4, simSpeedMultiplier * 0.2 + 0.3));
-    } else {
-      controlsRef.current.autoRotate = false;
-    }
-
-    // Ensure orbit controls updates every frame for smooth damping.
-    controlsRef.current.update();
+    // 4. Keep person mode physically at the current mapped surface. Damp the
+    // vertical component so a verified stair/deck change reads as a step-up,
+    // not a camera pop. The look target is rebuilt from the heading/pitch refs
+    // after the height settles, keeping the eye-to-horizon relationship fixed.
     if (cameraMode === 'walk' && !isTransitioning.current) {
-      camera.position.y = resolveWalkEyeHeight(camera.position.x, camera.position.z);
-    } else if (camera.position.y < 0.75) {
-      camera.position.y = 0.75;
-      controlsRef.current.update();
+      const desiredEyeHeight = resolveWalkEyeHeight(camera.position.x, camera.position.z);
+      camera.position.y = THREE.MathUtils.damp(camera.position.y, desiredEyeHeight, 14, safeDelta);
+      updateWalkLookAt();
     }
 
-    // OrbitControls can pan outside the modeled corridor. Keep both the
-    // camera and its target inside the bounded local overview envelope.
+    // 5. Auto-orbit only when cinematic mode is explicitly turned ON.
+    if (cameraMode === 'overview' && isCinematic && !isTransitioning.current && !hasMoveInput && !hasRotateInput) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.5 * Math.min(2, Math.max(0.4, simSpeedMultiplier * 0.2 + 0.3));
+    } else {
+      controls.autoRotate = false;
+    }
+
+    // Ensure orbit controls updates every settled frame for smooth damping.
+    // Person mode leaves the imperative control disabled; calling update()
+    // directly still keeps its spherical cache in sync with our look target.
+    controls.update();
+
+    // OrbitControls can pan outside the modeled corridor. Keep both the camera
+    // and its target inside the bounded local overview envelope. The final
+    // camera.lookAt() matters because clamping a world coordinate after the
+    // control update must not leave a stale quaternion for the next frame.
     if (cameraMode === 'overview') {
       camera.position.x = Math.max(
         MARATHAHALLI_OVERVIEW_BOUNDS.minX,
@@ -559,16 +779,16 @@ export const CameraController: React.FC<CameraControllerProps> = ({
         MARATHAHALLI_OVERVIEW_BOUNDS.minZ,
         Math.min(MARATHAHALLI_OVERVIEW_BOUNDS.maxZ, camera.position.z)
       );
-      controlsRef.current.target.x = Math.max(
+      controls.target.x = Math.max(
         MARATHAHALLI_WALK_BOUNDS.minX,
-        Math.min(MARATHAHALLI_WALK_BOUNDS.maxX, controlsRef.current.target.x)
+        Math.min(MARATHAHALLI_WALK_BOUNDS.maxX, controls.target.x)
       );
-      controlsRef.current.target.z = Math.max(
+      controls.target.z = Math.max(
         MARATHAHALLI_WALK_BOUNDS.minZ,
-        Math.min(MARATHAHALLI_WALK_BOUNDS.maxZ, controlsRef.current.target.z)
+        Math.min(MARATHAHALLI_WALK_BOUNDS.maxZ, controls.target.z)
       );
-      controlsRef.current.target.y = Math.max(-6, Math.min(32, controlsRef.current.target.y));
-      controlsRef.current.update();
+      controls.target.y = Math.max(-6, Math.min(32, controls.target.y));
+      camera.lookAt(controls.target);
     }
   });
 
@@ -576,26 +796,25 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     <OrbitControls
       ref={controlsRef}
       enableDamping
-      dampingFactor={0.06}
+      dampingFactor={0.075}
       enableRotate={cameraMode === 'overview'}
-      rotateSpeed={0.85}
+      rotateSpeed={0.72}
       enableZoom={cameraMode === 'overview'}
-      zoomSpeed={1.1}
+      zoomSpeed={0.9}
+      zoomToCursor={cameraMode === 'overview'}
       enablePan={cameraMode === 'overview'}
-      panSpeed={0.85}
-      // Completely unrestricted vertical angles:
-      // minPolarAngle 0.001 allows viewing straight down (overhead aerial)
-      // maxPolarAngle Math.PI - 0.001 allows viewing straight up (looking up at elevated flyover, metro viaduct, buildings & sky)
-      minPolarAngle={cameraMode === 'walk' ? 0.15 : 0.001}
-      maxPolarAngle={cameraMode === 'walk' ? Math.PI - 0.15 : Math.PI - 0.001}
-      // Keep walk-mode transitions unconstrained while OrbitControls is still
-      // settling from a bird view. Custom canvas drag-to-look handles person
-      // rotation; OrbitControls zoom and pan remain disabled in this mode.
-      minDistance={cameraMode === 'walk' ? 0.1 : 1.5}
-      maxDistance={cameraMode === 'walk' ? 1000 : 5000}
+      panSpeed={0.72}
+      // Keep a useful map hemisphere: near-nadir is allowed for roof/metro
+      // inspection, but the orbit cannot flip underneath the terrain.
+      minPolarAngle={cameraMode === 'walk' ? 0.15 : OVERVIEW_MIN_POLAR}
+      maxPolarAngle={cameraMode === 'walk' ? Math.PI - 0.15 : OVERVIEW_MAX_POLAR}
+      // Person mode has a fixed eye-to-look distance; overview zoom remains
+      // bounded to the local source corridor and its wide corridor preset.
+      minDistance={cameraMode === 'walk' ? 0.1 : OVERVIEW_MIN_DISTANCE}
+      maxDistance={cameraMode === 'walk' ? 1000 : OVERVIEW_MAX_DISTANCE}
       onStart={() => {
         // As soon as user touches/drags mouse or trackpad, immediately yield 100% control
-        isTransitioning.current = false;
+        cancelCameraTransition();
       }}
     />
   );

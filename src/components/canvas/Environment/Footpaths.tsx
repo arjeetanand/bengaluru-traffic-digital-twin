@@ -17,6 +17,8 @@ import {
 } from '../../../data/marathahalliDemo';
 import {
   MODELLED_MISSING_WALK_LINKS,
+  SOURCE_ELEVATED_WALK_ROUTES,
+  SOURCE_GROUND_WALK_ROUTES,
   SourceWalkRoute
 } from '../../../data/marathahalliPedestrianData';
 
@@ -50,7 +52,16 @@ interface FootpathSegment {
   description: string;
 }
 
-function createPathRibbonGeometry(points: [number, number][], width: number, y: number) {
+interface PathRibbonEdge {
+  left: [number, number, number];
+  right: [number, number, number];
+}
+
+function createPathRibbonEdges(
+  points: readonly [number, number][],
+  width: number,
+  y: number
+): PathRibbonEdge[] {
   // Build one continuous strip from the source vertices. Creating an isolated
   // quad per segment leaves visible pinholes at every mapped bend, which reads
   // as a broken footpath at eye level. A clamped miter keeps tight OSM turns
@@ -79,8 +90,10 @@ function createPathRibbonGeometry(points: [number, number][], width: number, y: 
       : previousLength >= 0.05
         ? previousDz / previousLength
         : 0;
-    let normalX = -tangentZ;
-    let normalZ = tangentX;
+    const currentNormalX = -tangentZ;
+    const currentNormalZ = tangentX;
+    let normalX = currentNormalX;
+    let normalZ = currentNormalZ;
     let miterLength = halfWidth;
 
     if (previousLength >= 0.05 && nextLength >= 0.05) {
@@ -90,21 +103,30 @@ function createPathRibbonGeometry(points: [number, number][], width: number, y: 
       if (combinedLength >= 0.001) {
         normalX = (previousNormalX + normalX) / combinedLength;
         normalZ = (previousNormalZ + normalZ) / combinedLength;
-        const denominator = normalX * (-tangentZ) + normalZ * tangentX;
-        if (Math.abs(denominator) >= 0.2) {
-          miterLength = Math.min(halfWidth * 3, halfWidth / denominator);
+        const denominator = normalX * currentNormalX + normalZ * currentNormalZ;
+        // A reversing or nearly reversing OSM vertex should use a bevel-like
+        // corner. A negative miter length flips the ribbon across the path and
+        // can put the apparent sidewalk inside the carriageway.
+        if (denominator >= 0.2) {
+          miterLength = Math.min(halfWidth * 2.6, halfWidth / denominator);
         } else {
-          normalX = -tangentZ;
-          normalZ = tangentX;
+          normalX = currentNormalX;
+          normalZ = currentNormalZ;
         }
       }
     }
 
     return {
-      left: [point[0] + normalX * miterLength, y, point[1] + normalZ * miterLength] as const,
-      right: [point[0] - normalX * miterLength, y, point[1] - normalZ * miterLength] as const
+      left: [point[0] + normalX * miterLength, y, point[1] + normalZ * miterLength] as [number, number, number],
+      right: [point[0] - normalX * miterLength, y, point[1] - normalZ * miterLength] as [number, number, number]
     };
   });
+
+  return edges;
+}
+
+function createPathRibbonGeometry(points: readonly [number, number][], width: number, y: number) {
+  const edges = createPathRibbonEdges(points, width, y);
 
   const positions: number[] = [];
   for (let index = 1; index < edges.length; index += 1) {
@@ -126,6 +148,168 @@ function createPathRibbonGeometry(points: [number, number][], width: number, y: 
   geometry.computeBoundingSphere();
   return geometry;
 }
+
+function createPathEdgeLinePoints(
+  points: readonly [number, number][],
+  width: number,
+  y: number
+) {
+  const edges = createPathRibbonEdges(points, width, y);
+  return {
+    left: edges.map(({ left }) => left),
+    right: edges.map(({ right }) => right)
+  };
+}
+
+function formatFootpathStatus(status: FootpathStatus) {
+  return status === 'metro_blocked'
+    ? 'METRO BLOCKED'
+    : status.toUpperCase();
+}
+
+function getSourceFootwaySurfaceY(route: SourceWalkRoute) {
+  // The source navigation registry owns explicit elevated datums. Ground
+  // ribbons sit a few centimetres above the shared ground top so the cyan
+  // evidence line is readable without changing the walkable elevation.
+  return route.elevation === 0
+    ? MARATHAHALLI_SKYWALK_GROUND_TOP_Y + 0.04
+    : route.elevation;
+}
+
+const SourceFootwayBoundaryGuides: React.FC<{
+  points: readonly [number, number][];
+  width: number;
+  y: number;
+  cameraMode: 'walk' | 'overview';
+  auditMode: boolean;
+}> = ({ points, width, y, cameraMode, auditMode }) => {
+  const edgePoints = useMemo(
+    () => createPathEdgeLinePoints(points, width, y + 0.08),
+    [points, width, y]
+  );
+
+  if (edgePoints.left.length < 2) return null;
+
+  const guideOpacity = auditMode ? 0.84 : (cameraMode === 'walk' ? 0.72 : 0.5);
+  const guideWidth = cameraMode === 'walk' ? 1.2 : 1.35;
+
+  return (
+    <>
+      {/* These are boundary cues, not additional pavement. Keeping both edges
+          on the exact mapped width makes the road stand-off legible in person
+          view without widening an uncertain footway. */}
+      {[edgePoints.left, edgePoints.right].map((edge, index) => (
+        <group key={index}>
+          <Line
+            points={edge}
+            color="#083344"
+            lineWidth={guideWidth + 2.2}
+            transparent
+            opacity={guideOpacity * 0.4}
+          />
+          <Line
+            points={edge}
+            color="#a5f3fc"
+            lineWidth={guideWidth}
+            transparent
+            opacity={guideOpacity}
+          />
+        </group>
+      ))}
+    </>
+  );
+};
+
+const SourceFootwayCoverageRibbon: React.FC<{
+  route: SourceWalkRoute;
+  auditMode: boolean;
+  cameraMode: 'walk' | 'overview';
+  showLabel: boolean;
+}> = ({ route, auditMode, cameraMode, showLabel }) => {
+  const sourceSurfaceY = getSourceFootwaySurfaceY(route);
+  const geometry = useMemo(
+    () => createPathRibbonGeometry(route.points, route.width, sourceSurfaceY),
+    [route.points, route.width, sourceSurfaceY]
+  );
+  const sourceLinePoints = useMemo(
+    () => route.points.map(([x, z]) => [x, sourceSurfaceY + 0.1, z] as [number, number, number]),
+    [route.points, sourceSurfaceY]
+  );
+  const labelPoint = route.points[Math.floor(route.points.length / 2)];
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  return (
+    <group name={`SourceFootwayCoverage:${route.sourceWayIds.join('|')}`}>
+      <mesh geometry={geometry} renderOrder={5}>
+        <meshBasicMaterial
+          color="#22d3ee"
+          transparent
+          opacity={cameraMode === 'walk' ? 0.1 : (auditMode ? 0.16 : 0.08)}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <SourceFootwayBoundaryGuides
+        points={route.points}
+        width={route.width}
+        y={sourceSurfaceY}
+        cameraMode={cameraMode}
+        auditMode={auditMode}
+      />
+      <Line
+        points={sourceLinePoints}
+        color="#67e8f9"
+        lineWidth={cameraMode === 'walk' ? 1.5 : 1.8}
+        transparent
+        opacity={cameraMode === 'walk' ? 0.56 : (auditMode ? 0.78 : 0.42)}
+      />
+      {showLabel && (
+        <Html
+          position={[labelPoint[0], sourceSurfaceY + 1.1, labelPoint[1]]}
+          center
+          distanceFactor={cameraMode === 'walk' ? 20 : 105}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div className="walk-link-world-label">
+            <span className="walk-link-world-label-dot" aria-hidden="true" style={{ background: '#22d3ee' }} />
+            <span>{route.name || 'OSM source footway coverage'}</span>
+            <strong>SOURCE · OSM FOOTWAY · {route.sourceWayIds.join(', ')}</strong>
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+};
+
+const SourceFootwayCoverage: React.FC<{
+  routes: readonly SourceWalkRoute[];
+  auditMode: boolean;
+  cameraMode: 'walk' | 'overview';
+}> = ({ routes, auditMode, cameraMode }) => {
+  // The full OSM layer already supplies the physical source surface in person
+  // view. Keep this supplemental, corridor-wide ribbon set for audit overview
+  // only: showing every long source route at eye level makes unrelated paths
+  // overlap the camera and weakens the actual footway boundary.
+  if (!auditMode || cameraMode !== 'overview') return null;
+
+  return (
+    <group name="SourceFootwayCoverage">
+      {routes.map((route) => (
+        <SourceFootwayCoverageRibbon
+          key={route.sourceWayIds.join('|')}
+          route={route}
+          auditMode={auditMode}
+          cameraMode={cameraMode}
+          // Audit overview labels identify the additional source-linked
+          // coverage ribbons without adding another label stack to person
+          // view.
+          showLabel={true}
+        />
+      ))}
+    </group>
+  );
+};
 
 const ModeledWalkLink: React.FC<{
   route: SourceWalkRoute;
@@ -195,9 +379,12 @@ const ModeledWalkLinks: React.FC<{
   auditMode: boolean;
   cameraMode: 'walk' | 'overview';
   cameraPreset: string;
-}> = ({ auditMode, cameraMode, cameraPreset }) => {
+  showModeledNetwork: boolean;
+}> = ({ auditMode, cameraMode, cameraPreset, showModeledNetwork }) => {
   const showLabel = auditMode || cameraMode === 'walk' ||
     ['corridor', 'oraclehub', 'kadubeesanahalli'].includes(cameraPreset);
+
+  if (!showModeledNetwork) return null;
 
   return (
     <group name="ModeledMissingFootpathLinks">
@@ -595,12 +782,28 @@ export const Footpaths: React.FC<FootpathsProps> = ({
     }
   ], []);
 
+  const sourceWayIdsCoveredByAuditSegments = useMemo(
+    () => new Set(segments.flatMap((segment) => segment.sourceWayIds || [])),
+    [segments]
+  );
+  const sourceCoverageRoutes = useMemo(
+    () => [...SOURCE_GROUND_WALK_ROUTES, ...SOURCE_ELEVATED_WALK_ROUTES]
+      .filter((route) => !route.sourceWayIds.some((wayId) => sourceWayIdsCoveredByAuditSegments.has(wayId))),
+    [sourceWayIdsCoveredByAuditSegments]
+  );
+
   return (
     <group name="MarathahalliFootpathNetwork">
       <ModeledWalkLinks
         auditMode={auditMode}
         cameraMode={cameraMode}
         cameraPreset={cameraPreset}
+        showModeledNetwork={showModeledNetwork}
+      />
+      <SourceFootwayCoverage
+        routes={sourceCoverageRoutes}
+        auditMode={auditMode}
+        cameraMode={cameraMode}
       />
       {segments.map((seg) => {
         if (seg.sourcePath) {
@@ -614,7 +817,13 @@ export const Footpaths: React.FC<FootpathsProps> = ({
           );
         }
         return showModeledNetwork
-          ? <FootpathSegmentMesh key={seg.id} segment={seg} auditMode={auditMode} isNight={isNight} />
+          ? <FootpathSegmentMesh
+            key={seg.id}
+            segment={seg}
+            auditMode={auditMode}
+            isNight={isNight}
+            cameraMode={cameraMode}
+          />
           : null;
       })}
       <AnimatedPedestrians isNight={isNight} />
@@ -656,6 +865,11 @@ function createPedestrianRoute(
     speed,
     color
   };
+}
+
+function sourceRouteToPedestrianPoints(route: SourceWalkRoute): [number, number, number][] {
+  const surfaceY = getSourceFootwaySurfaceY(route);
+  return route.points.map(([x, z]) => [x, surfaceY + 0.04, z]);
 }
 
 const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
@@ -720,39 +934,32 @@ const AnimatedPedestrians: React.FC<{ isNight: boolean }> = ({ isNight }) => {
       ...northStairRoute.slice(1)
     ];
 
-    // The source footways rise onto the Varthur viaduct without a mapped ramp.
-    // Keep ground and elevated sections as separate exact routes rather than
-    // animating a pedestrian through an invented vertical connection.
-    const varthurNorthGround: [number, number, number][] = [
-      [226.6, 0.35, 5.1],
-      [338.7, 0.35, -1.3]
-    ];
-    const varthurNorthBridge: [number, number, number][] = [
-      [338.7, VARTHUR_VIADUCT_DECK_TOP_Y + 0.16, -1.3],
-      [414.9, VARTHUR_VIADUCT_DECK_TOP_Y + 0.16, -6.8]
-    ];
-    const varthurSouthGround: [number, number, number][] = [
-      [246.7, 0.35, -19.4],
-      [337.2, 0.35, -23.1]
-    ];
-    const varthurSouthBridge: [number, number, number][] = [
-      [337.2, VARTHUR_VIADUCT_DECK_TOP_Y + 0.16, -23.1],
-      [413.3, VARTHUR_VIADUCT_DECK_TOP_Y + 0.16, -29.1]
-    ];
+    // The source ground graph carries the long Oracle/Marathahalli approach
+    // and the source elevated graph carries the two Varthur footways. Animate
+    // directly on those exact polylines so the people never bridge an OSM gap
+    // or silently turn an unverified structure into a walkable connection.
+    const sourceGroundRoutes = SOURCE_GROUND_WALK_ROUTES.flatMap((route, index) => {
+      const points = sourceRouteToPedestrianPoints(route);
+      return [
+        createPedestrianRoute(points, 2.4 + (index % 3) * 0.25, ['#15803d', '#0284c7', '#2563eb'][index % 3]),
+        createPedestrianRoute([...points].reverse(), 2.2 + (index % 2) * 0.3, ['#9333ea', '#e11d48'][index % 2])
+      ];
+    });
+    const sourceElevatedRoutes = SOURCE_ELEVATED_WALK_ROUTES.flatMap((route, index) => {
+      const points = sourceRouteToPedestrianPoints(route);
+      return [
+        createPedestrianRoute(points, 2.8, index === 0 ? '#0e7490' : '#0369a1'),
+        createPedestrianRoute([...points].reverse(), 2.5, index === 0 ? '#be123c' : '#9f1239')
+      ];
+    });
 
     return [
+      ...sourceGroundRoutes,
+      ...sourceElevatedRoutes,
       // Source-mapped Marathahalli Skywalk: ground → 27-step south flight →
       // deck → 42-step north flight → ground, in both directions.
       createPedestrianRoute(skywalkRoute, 2.5, '#15803d'),
       createPedestrianRoute([...skywalkRoute].reverse(), 2.6, '#9333ea'),
-      createPedestrianRoute(varthurNorthGround, 3.0, '#0284c7'),
-      createPedestrianRoute([...varthurNorthGround].reverse(), 2.7, '#e11d48'),
-      createPedestrianRoute(varthurNorthBridge, 3.0, '#0e7490'),
-      createPedestrianRoute([...varthurNorthBridge].reverse(), 2.7, '#be123c'),
-      createPedestrianRoute(varthurSouthGround, 3.0, '#2563eb'),
-      createPedestrianRoute([...varthurSouthGround].reverse(), 2.7, '#db2777'),
-      createPedestrianRoute(varthurSouthBridge, 3.0, '#0369a1'),
-      createPedestrianRoute([...varthurSouthBridge].reverse(), 2.7, '#9f1239')
     ];
   }, []);
 
@@ -809,7 +1016,8 @@ const FootpathSegmentMesh: React.FC<{
   segment: FootpathSegment;
   auditMode: boolean;
   isNight: boolean;
-}> = ({ segment, auditMode, isNight }) => {
+  cameraMode: 'walk' | 'overview';
+}> = ({ segment, auditMode, isNight, cameraMode }) => {
   const { axis, start, end, offset, width, height, status, elevation = 0 } = segment;
 
   const length = Math.abs(end - start);
@@ -1007,6 +1215,26 @@ const FootpathSegmentMesh: React.FC<{
           </mesh>
         </group>
       )}
+      {auditMode && status !== 'paved' && (
+        <Html
+          position={[0, height + 1.1, 0]}
+          center
+          distanceFactor={cameraMode === 'walk' ? 20 : 105}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div className="walk-link-world-label" title={segment.description}>
+            <span
+              className="walk-link-world-label-dot"
+              aria-hidden="true"
+              style={{ background: auditColor }}
+            />
+            <span>{segment.name}</span>
+            <strong style={{ color: auditColor }}>
+              MODELLED · FIELD VERIFY · {formatFootpathStatus(status)}
+            </strong>
+          </div>
+        </Html>
+      )}
     </group>
   );
 };
@@ -1043,9 +1271,13 @@ const SourceMappedFootpathAuditSegment: React.FC<{
     () => (segment.sourcePath || []).map(([x, z]) => [x, sourceSurfaceY + 0.1, z] as [number, number, number]),
     [segment.sourcePath, sourceSurfaceY]
   );
+  const sourceEdgePoints = useMemo(
+    () => createPathEdgeLinePoints(segment.sourcePath || [], segment.width, sourceSurfaceY),
+    [segment.sourcePath, segment.width, sourceSurfaceY]
+  );
   const labelPoint = segment.sourcePath?.[Math.floor((segment.sourcePath.length - 1) / 2)] || [0, 0];
   const showSourceGuide = auditMode || cameraMode === 'walk';
-  const showSourceLabel = cameraMode === 'walk';
+  const showSourceLabel = cameraMode === 'walk' || auditMode;
 
   useEffect(() => () => geometry.dispose(), [geometry]);
 
@@ -1064,6 +1296,15 @@ const SourceMappedFootpathAuditSegment: React.FC<{
           side={THREE.DoubleSide}
         />
       </mesh>
+      {sourceEdgePoints.left.length >= 2 && (
+        <SourceFootwayBoundaryGuides
+          points={segment.sourcePath || []}
+          width={segment.width}
+          y={sourceSurfaceY}
+          cameraMode={cameraMode}
+          auditMode={auditMode}
+        />
+      )}
       <Line
         points={sourceLinePoints}
         color="#67e8f9"
@@ -1085,15 +1326,18 @@ const SourceMappedFootpathAuditSegment: React.FC<{
       )}
       {showSourceLabel && (
         <Html
-          position={[labelPoint[0], sourceSurfaceY + 1.15, labelPoint[1]]}
+          position={[labelPoint[0], sourceSurfaceY + (cameraMode === 'walk' ? 1.15 : 1.45), labelPoint[1]]}
           center
-          distanceFactor={20}
+          distanceFactor={cameraMode === 'walk' ? 20 : 105}
           style={{ pointerEvents: 'none' }}
         >
           <div className="walk-link-world-label">
             <span className="walk-link-world-label-dot" aria-hidden="true" style={{ background: '#22d3ee' }} />
             <span>{segment.name}</span>
             <strong>SOURCE · OSM FOOTWAY · {segment.sourceWayIds?.join(', ')}</strong>
+            {auditMode && (
+              <strong style={{ color: auditColor }}>AUDIT · {formatFootpathStatus(segment.status)}</strong>
+            )}
           </div>
         </Html>
       )}
