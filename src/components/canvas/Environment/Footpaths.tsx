@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   createOrrOffsetRibbonGeometry,
@@ -14,10 +15,16 @@ import {
   MARATHAHALLI_SKYWALK_STAIR_STEP_COUNTS,
   VARTHUR_VIADUCT_DECK_TOP_Y
 } from '../../../data/marathahalliDemo';
+import {
+  MODELLED_MISSING_WALK_LINKS,
+  SourceWalkRoute
+} from '../../../data/marathahalliPedestrianData';
 
 interface FootpathsProps {
   auditMode: boolean;
   isNight?: boolean;
+  cameraMode?: 'walk' | 'overview';
+  cameraPreset?: string;
   // Source-focus views should show the compiled OSM footways as the physical
   // surface. The procedural catalog remains useful for the default demo and
   // audit storytelling, but rendering both layers in the same focus view can
@@ -71,9 +78,98 @@ function createPathRibbonGeometry(points: [number, number][], width: number, y: 
   return geometry;
 }
 
+const ModeledWalkLink: React.FC<{
+  route: SourceWalkRoute;
+  auditMode: boolean;
+  cameraMode: 'walk' | 'overview';
+  showLabel: boolean;
+}> = ({ route, auditMode, cameraMode, showLabel }) => {
+  const ribbonGeometry = useMemo(
+    () => createPathRibbonGeometry(route.points as [number, number][], route.width, 0.22),
+    [route]
+  );
+  const linePoints = useMemo(
+    () => route.points.map(([x, z]) => [x, 0.42, z] as [number, number, number]),
+    [route]
+  );
+  const labelPoint = route.points[Math.floor(route.points.length / 2)];
+  const endpointPoints = [route.points[0], route.points[route.points.length - 1]];
+
+  useEffect(() => () => ribbonGeometry.dispose(), [ribbonGeometry]);
+
+  return (
+    <group name={`ModeledWalkLink:${route.sourceWayIds[0]}`}>
+      <mesh geometry={ribbonGeometry} renderOrder={4}>
+        <meshBasicMaterial
+          color="#f59e0b"
+          transparent
+          opacity={auditMode ? 0.46 : 0.18}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <Line
+        points={linePoints}
+        color="#fbbf24"
+        lineWidth={auditMode ? 2.6 : 1.4}
+        dashed
+        dashSize={auditMode ? 5 : 7}
+        gapSize={auditMode ? 3 : 5}
+        transparent
+        opacity={auditMode ? 0.96 : 0.52}
+      />
+      {endpointPoints.map(([x, z], index) => (
+        <mesh key={index} position={[x, 0.52, z]} renderOrder={5}>
+          <sphereGeometry args={[1.15, 12, 8]} />
+          <meshBasicMaterial color="#fbbf24" transparent opacity={auditMode ? 0.9 : 0.58} />
+        </mesh>
+      ))}
+      {showLabel && (
+        <Html
+          position={[labelPoint[0], 1.35, labelPoint[1]]}
+          center
+          distanceFactor={cameraMode === 'walk' ? 22 : 180}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div className="walk-link-world-label">
+            <span className="walk-link-world-label-dot" aria-hidden="true" />
+            <span>{route.name || 'Modelled roadside walking link'}</span>
+            <strong>MODELLED · FIELD VERIFY</strong>
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+};
+
+const ModeledWalkLinks: React.FC<{
+  auditMode: boolean;
+  cameraMode: 'walk' | 'overview';
+  cameraPreset: string;
+}> = ({ auditMode, cameraMode, cameraPreset }) => {
+  const showLabel = auditMode || cameraMode === 'walk' ||
+    ['corridor', 'oraclehub', 'kadubeesanahalli'].includes(cameraPreset);
+
+  return (
+    <group name="ModeledMissingFootpathLinks">
+      {MODELLED_MISSING_WALK_LINKS.map((route) => (
+        <ModeledWalkLink
+          key={route.sourceWayIds[0]}
+          route={route}
+          auditMode={auditMode}
+          cameraMode={cameraMode}
+          showLabel={showLabel}
+        />
+      ))}
+    </group>
+  );
+};
+
 export const Footpaths: React.FC<FootpathsProps> = ({
   auditMode,
   isNight = false,
+  cameraMode = 'overview',
+  cameraPreset = 'overview',
   showModeledNetwork = true
 }) => {
   // ── Procedural Real-World Footpath Segments along the Two Corridors ──
@@ -450,6 +546,11 @@ export const Footpaths: React.FC<FootpathsProps> = ({
 
   return (
     <group name="MarathahalliFootpathNetwork">
+      <ModeledWalkLinks
+        auditMode={auditMode}
+        cameraMode={cameraMode}
+        cameraPreset={cameraPreset}
+      />
       {segments.map((seg) => {
         if (seg.sourcePath) {
           return <SourceMappedFootpathAuditSegment key={seg.id} segment={seg} auditMode={auditMode} />;

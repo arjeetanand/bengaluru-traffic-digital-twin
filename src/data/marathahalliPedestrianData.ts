@@ -15,6 +15,13 @@ export interface SourceWalkRoute {
   width: number;
   elevation: number;
   connectedToGrade: boolean;
+  /**
+   * Optional truth level for a route that is not itself a mapped footway.
+   * Source routes omit this field and remain source-backed by default.
+   */
+  truthLevel?: 'SOURCE' | 'MODELLED';
+  name?: string;
+  evidenceWayIds?: readonly string[];
 }
 
 export const SOURCE_GROUND_WALK_ROUTES: readonly SourceWalkRoute[] = [
@@ -114,6 +121,82 @@ export const SOURCE_ELEVATED_WALK_ROUTES: readonly SourceWalkRoute[] = [
     width: 2.6,
     elevation: VARTHUR_VIADUCT_DECK_TOP_Y + 0.16,
     connectedToGrade: false
+  }
+] as const;
+
+/**
+ * Explicitly modelled pedestrian links across gaps in the OSM footway graph.
+ *
+ * The points follow source road ways 203057627, 985390127 and 1055883831,
+ * but these are not tagged as footways in the snapshot. The links therefore
+ * make the missing roadside walking experience visible and traversable while
+ * preserving the distinction between mapped sidewalk and a field-verification
+ * scenario. Endpoints deliberately coincide with mapped footway vertices so
+ * the navigation graph can connect the three source clusters without a
+ * teleport.
+ */
+export const MODELLED_MISSING_WALK_LINKS: readonly SourceWalkRoute[] = [
+  {
+    sourceWayIds: ['modelled/walk-link/kadubeesanahalli-oracle'],
+    points: [
+      [-655.3, -1897.3],
+      [-653.1, -1898.6],
+      [-609.2, -1824.6],
+      [-561.8, -1748],
+      [-557.8, -1741.2],
+      [-554.6, -1736.2],
+      [-542.6, -1715.1],
+      [-541.3, -1712.9],
+      [-537.2, -1706.2],
+      [-519.9, -1678.2],
+      [-513.8, -1667.5],
+      [-508.8, -1659.1],
+      [-482.6, -1615.1],
+      [-477, -1604.6],
+      [-469.1, -1591.4],
+      [-462.7, -1578.8],
+      [-456.3, -1566.3],
+      [-446.1, -1546.5],
+      [-432.9, -1520.6],
+      [-428.1, -1508.9],
+      [-410.5, -1465.6],
+      [-409, -1461.9],
+      [-405.7, -1452.5],
+      [-396.3, -1425.2],
+      [-394.2, -1419],
+      [-379.5, -1376.3],
+      [-368.8, -1345.1],
+      [-361.4, -1347.2]
+    ],
+    width: 2.2,
+    elevation: 0,
+    connectedToGrade: true,
+    truthLevel: 'MODELLED',
+    name: 'Kadubeesanahalli underpass → Oracle approach',
+    evidenceWayIds: ['way/203057627']
+  },
+  {
+    sourceWayIds: ['modelled/walk-link/oracle-main-corridor'],
+    points: [
+      [-361.4, -1347.2],
+      [-368.8, -1345.1],
+      [-360.7, -1321.5],
+      [-341.5, -1270.6],
+      [-328.2, -1228],
+      [-322.4, -1217.6],
+      [-308.8, -1177.7],
+      [-309.4, -1169.6],
+      [-278.8, -1082.7],
+      [-255, -1009.8],
+      [-249.2, -991.4],
+      [-255.3, -988.8]
+    ],
+    width: 2.2,
+    elevation: 0,
+    connectedToGrade: true,
+    truthLevel: 'MODELLED',
+    name: 'Oracle approach → main Marathahalli footway',
+    evidenceWayIds: ['way/203057627', 'way/985390127', 'way/1055883831']
   }
 ] as const;
 

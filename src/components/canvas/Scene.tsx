@@ -216,6 +216,8 @@ export const Scene: React.FC<SceneProps> = ({
           <Footpaths
             auditMode={footpathAuditMode}
             isNight={isNight}
+            cameraMode={cameraMode}
+            cameraPreset={cameraPreset}
             showModeledNetwork={!isSourceGeometryFocusView}
           />
 

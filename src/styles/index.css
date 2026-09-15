@@ -1723,6 +1723,37 @@ input:focus-visible {
   animation: scenarioPulse 1.5s ease-in-out infinite;
 }
 
+.walk-link-world-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: max-content;
+  padding: 5px 8px;
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.62);
+  background: rgba(24, 16, 4, 0.9);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.36), 0 0 18px rgba(245, 158, 11, 0.14);
+  font: 700 9px/1.2 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.walk-link-world-label strong {
+  color: #fb923c;
+  font-size: 8px;
+}
+
+.walk-link-world-label-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 9px rgba(251, 191, 36, 0.95);
+  animation: scenarioPulse 1.5s ease-in-out infinite;
+}
+
 @keyframes scenarioPulse {
   0%, 100% { opacity: 0.55; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.1); }

@@ -23,6 +23,7 @@ The demo map is source-backed rather than an invented city block: the committed 
   - Current OSM **Namma Metro Phase 2A** through-track ways are retained when they cross the clip boundary. The twin-track viaduct, moving train and regularly spaced supports are generated from that source alignment; OSM does not publish a survey of individual pier foundations, so support spacing remains explicitly modelled.
   - The 41 OSM tree nodes remain source markers; a deterministic roadside/median planting layer adds visual green coverage for the demo and is labelled as planned/modelled rather than a surveyed tree inventory.
   - The mapped ORR bend is reused by the underpass walls, portals, lane markings, traffic splines, and navigation anchors. The metro deck follows its own current OSM Phase 2A track ways rather than assuming it is the road centreline.
+  - Person mode preserves the source footway graph and adds two amber `MODELLED · FIELD VERIFY` roadside links where the snapshot has disconnected clusters: Kadubeesanahalli underpass → Oracle approach → main Marathahalli footway. Their endpoints attach to mapped footway vertices; the route follows source service-road geometry but is not claimed to be a surveyed sidewalk.
 - **Scenario control room & corridor planning slice**:
   - Open `SCENARIOS` for a dark, keyboard-friendly control room with six declarative interventions: lane closure, approach closure, flooding, signal timing, tech-park demand, and BMTC bus priority.
   - Run a seeded baseline/counterfactual comparison with average travel time, delay, throughput, maximum queue, congestion ratio, emissions, and named spillover targets. The results are explicitly labelled modelled estimates.
@@ -109,10 +110,13 @@ The demo map is source-backed rather than an invented city block: the committed 
    ```bash
    npm run data:validate
    npm run metro:validate
+   npm run metro:placement:validate
+   npm run pedestrian:validate
+   npm run crossover:validate
    npm run corridor:validate
    npm run scenario:validate
    ```
-   `metro:validate` confirms both source Namma Metro ways and reports conservative proximity warnings without treating the modelled fallback pier grid as surveyed. The current scenario milestone is a deterministic browser-side modelled engine. A SUMO/TraCI/libsumo adapter is intentionally not claimed until the network conversion, route legality, microscopic state stream, and calibration contracts are implemented.
+   `metro:validate` confirms both source Namma Metro ways and reports conservative proximity warnings without treating the modelled fallback pier grid as surveyed. `metro:placement:validate` verifies XML lineage, reverse track pairing, crossover road/footway context, and support provenance. `pedestrian:validate` verifies the two modelled missing-link endpoints attach to distinct source footway components; `crossover:validate` checks the U-turn replay, source road ribbons, lane margins, and person anchor. The current scenario milestone is a deterministic browser-side modelled engine. A SUMO/TraCI/libsumo adapter is intentionally not claimed until the network conversion, route legality, microscopic state stream, and calibration contracts are implemented.
 
 See [`docs/simulation-architecture.md`](docs/simulation-architecture.md) for the current state boundary and the planned SUMO → TraCI → React/Three.js pipeline.
 

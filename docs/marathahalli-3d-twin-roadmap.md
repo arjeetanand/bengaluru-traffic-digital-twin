@@ -65,7 +65,9 @@ any external API key.
 Use the same source-aligned stationing for road ribbons, lane paths, markings,
 footways, crossings, traffic, camera anchors, and structure placement. Compare
 the exact source vertices at the crossover, underpass, metro bend, ROB, and
-Spice Garden approach before adding facade polish.
+Spice Garden approach before adding facade polish. When the source footway
+graph is disconnected, show the gap as an amber modelled link and preserve the
+source-road evidence used to draw it.
 
 ### Demo gate C — movement and inspection
 
@@ -87,6 +89,9 @@ Run:
 ```sh
 npm run data:compile
 npm run data:validate
+npm run metro:placement:validate
+npm run pedestrian:validate
+npm run crossover:validate
 npm run corridor:validate
 npm run scenario:validate
 npm run build

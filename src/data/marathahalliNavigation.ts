@@ -15,6 +15,7 @@ import {
   SOURCE_ELEVATED_WALK_ROUTES,
   SOURCE_GROUND_WALK_ROUTES,
   SOURCE_BRIDGE_PIER_POINTS,
+  MODELLED_MISSING_WALK_LINKS,
   SourceWalkRoute
 } from './marathahalliPedestrianData';
 
@@ -407,7 +408,8 @@ const SOURCE_SKYWALK_ROUTES: readonly SourceWalkRoute[] = [
 const SOURCE_WALK_ROUTES_FALLBACK: readonly SourceWalkRoute[] = [
   ...SOURCE_GROUND_WALK_ROUTES,
   ...SOURCE_ELEVATED_WALK_ROUTES,
-  ...SOURCE_SKYWALK_ROUTES
+  ...SOURCE_SKYWALK_ROUTES,
+  ...MODELLED_MISSING_WALK_LINKS
 ];
 
 let registeredSourceWalkRoutes: readonly SourceWalkRoute[] = SOURCE_WALK_ROUTES_FALLBACK;
@@ -503,7 +505,11 @@ export function registerSnapshotWalkRoutes(footways: readonly OSMPolylineFeature
     });
 
   if (snapshotRoutes.length > 0) {
-    registeredSourceWalkRoutes = [...snapshotRoutes, ...SOURCE_SKYWALK_ROUTES];
+    registeredSourceWalkRoutes = [
+      ...snapshotRoutes,
+      ...SOURCE_SKYWALK_ROUTES,
+      ...MODELLED_MISSING_WALK_LINKS
+    ];
     sourceWalkRouteConnections = buildSourceWalkRouteConnections(registeredSourceWalkRoutes);
   }
 }

@@ -42,6 +42,15 @@ plan-view proximity warnings for roads, buildings, and footways. The regular
 fallback pier grid remains explicitly modelled until surveyed/BMRCL structural
 data is available.
 
+Person-mode continuity is also explicit. The source snapshot currently has
+separate footway components around the Kadubeesanahalli underpass, Oracle
+approach, and main Marathahalli corridor. Two modelled roadside links follow
+the source service-road ways between those clusters and terminate exactly on
+mapped footway vertices. They are rendered amber and labelled `MODELLED ·
+FIELD VERIFY`; they are navigation aids and inspection scenarios, not claims
+that OSM maps a continuous sidewalk there. `npm run pedestrian:validate`
+checks those endpoint attachments and source-road evidence.
+
 ## SUMO integration boundary
 
 The intended microscopic path is:
@@ -76,6 +85,9 @@ not an implied live simulation.
 npm run data:compile
 npm run data:validate
 npm run metro:validate
+npm run metro:placement:validate
+npm run pedestrian:validate
+npm run crossover:validate
 npm run corridor:validate
 npm run scenario:validate
 npm run build
