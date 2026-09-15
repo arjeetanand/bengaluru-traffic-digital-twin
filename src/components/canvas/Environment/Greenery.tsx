@@ -261,7 +261,10 @@ const TREE_CORRIDORS: TreeCorridor[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 type TreeEntry = [number, number, number, number, number, number];
 
-const PERSON_CANOPY_CLEAR_RADIUS = 34;
+// Keep the street-level eye clear only of the canopy it is actually inside.
+// The previous 34 m bubble removed an entire block of trees around a person,
+// making the mapped roadside planting disappear from the inspection view.
+const PERSON_CANOPY_CLEAR_RADIUS = 10;
 
 // The HAL/Varthur corridor bends around the junction and its source geometry
 // is not representable by one fixed z offset. Reuse the same source-derived

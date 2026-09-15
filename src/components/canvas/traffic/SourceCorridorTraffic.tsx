@@ -18,6 +18,11 @@ import {
 } from '../../../data/marathahalliDemo';
 import { getOrrUnderpassElevation } from '../../../data/RealRoadData';
 import { loadMarathahalliSnapshot } from '../../../services/marathahalliSnapshot';
+import {
+  allocateFleet,
+  getPublishedModelledSignalState,
+  MODELLED_TRAFFIC_STEP_SECONDS
+} from './TrafficSystem';
 
 interface SourceCorridorTrafficProps {
   simSpeedMultiplier: number;
@@ -36,18 +41,23 @@ interface SourceRoute {
   // Lane offsets are authored in the source way's local frame. Reverse-flow
   // routes mirror the offset so both directions stay on their LHT carriageway.
   laneOffset: number;
+  controlledBy: 'NS' | 'EW' | 'FREE';
+  stopProgress: number | null;
+  trafficWeight: number;
 }
 
 interface SourceVehicleAgent {
   id: number;
   type: VehicleType;
   routeIdx: number;
-  t: number;
+  progress: number;
   direction: 1 | -1;
   speed: number;
+  maxSpeed: number;
   meshIdx: number;
   lateralOffset: number;
   lengthMeters: number;
+  isIdling: boolean;
 }
 
 const SOURCE_ROAD_HIGHWAYS = new Set([
@@ -96,6 +106,125 @@ function toSourcePolylineCurve(points: THREE.Vector3[]) {
     curve.add(new THREE.LineCurve3(points[index - 1], points[index]));
   }
   return curve;
+}
+
+interface PolylineProjection {
+  distanceMeters: number;
+  progress: number;
+  tangentX: number;
+  tangentZ: number;
+}
+
+function projectPointToPolyline(
+  geometry: [number, number][],
+  target: [number, number]
+): PolylineProjection {
+  let totalLength = 0;
+  for (let index = 1; index < geometry.length; index += 1) {
+    totalLength += Math.hypot(
+      geometry[index][0] - geometry[index - 1][0],
+      geometry[index][1] - geometry[index - 1][1]
+    );
+  }
+
+  let distanceAlong = 0;
+  let closest: PolylineProjection = {
+    distanceMeters: Number.POSITIVE_INFINITY,
+    progress: 0,
+    tangentX: 1,
+    tangentZ: 0
+  };
+
+  for (let index = 1; index < geometry.length; index += 1) {
+    const [startX, startZ] = geometry[index - 1];
+    const [endX, endZ] = geometry[index];
+    const deltaX = endX - startX;
+    const deltaZ = endZ - startZ;
+    const segmentLength = Math.hypot(deltaX, deltaZ);
+    if (segmentLength < 0.001) continue;
+
+    const segmentLengthSquared = segmentLength * segmentLength;
+    const projectedT = Math.max(
+      0,
+      Math.min(
+        1,
+        ((target[0] - startX) * deltaX + (target[1] - startZ) * deltaZ)
+          / segmentLengthSquared
+      )
+    );
+    const projectedX = startX + deltaX * projectedT;
+    const projectedZ = startZ + deltaZ * projectedT;
+    const distanceMeters = Math.hypot(target[0] - projectedX, target[1] - projectedZ);
+
+    if (distanceMeters < closest.distanceMeters) {
+      closest = {
+        distanceMeters,
+        progress: (distanceAlong + segmentLength * projectedT) / Math.max(totalLength, 0.001),
+        tangentX: deltaX / segmentLength,
+        tangentZ: deltaZ / segmentLength
+      };
+    }
+    distanceAlong += segmentLength;
+  }
+
+  return closest;
+}
+
+const SOURCE_SIGNAL_CENTER: [number, number] = [-10.7, 12.7];
+const SOURCE_SIGNAL_CLUSTER_RADIUS_METERS = 110;
+const SOURCE_SIGNAL_MATCH_RADIUS_METERS = 58;
+
+function getSourceSignalControl(
+  feature: OSMPolylineFeature,
+  snapshot: MarathahalliDemoSnapshot,
+  direction: 1 | -1
+) {
+  const name = feature.name || feature.tags.name || '';
+  const isGradeRoute = !isSourceElevatedRoad(feature)
+    && feature.tags.tunnel !== 'yes'
+    && !/underpass/i.test(name);
+  if (!isGradeRoute) {
+    return { controlledBy: 'FREE' as const, stopProgress: null };
+  }
+
+  let closestSignal: PolylineProjection | null = null;
+  (snapshot.signals || []).forEach((signal) => {
+    const distanceToCluster = Math.hypot(
+      signal.position[0] - SOURCE_SIGNAL_CENTER[0],
+      signal.position[1] - SOURCE_SIGNAL_CENTER[1]
+    );
+    if (distanceToCluster > SOURCE_SIGNAL_CLUSTER_RADIUS_METERS) return;
+
+    const projection = projectPointToPolyline(feature.geometry, signal.position);
+    if (!closestSignal || projection.distanceMeters < closestSignal.distanceMeters) {
+      closestSignal = projection;
+    }
+  });
+
+  if (!closestSignal || closestSignal.distanceMeters > SOURCE_SIGNAL_MATCH_RADIUS_METERS) {
+    return { controlledBy: 'FREE' as const, stopProgress: null };
+  }
+
+  const controlledBy = Math.abs(closestSignal.tangentX) >= Math.abs(closestSignal.tangentZ)
+    ? 'EW' as const
+    : 'NS' as const;
+  const stopProgress = direction === 1
+    ? closestSignal.progress
+    : 1 - closestSignal.progress;
+
+  // A route that starts at the signal is an exit, not an approach. Only
+  // approaches with a meaningful travel distance before the stop bar are
+  // phase-gated.
+  return stopProgress > 0.025
+    ? { controlledBy, stopProgress }
+    : { controlledBy: 'FREE' as const, stopProgress: null };
+}
+
+function getSourceTrafficWeight(feature: OSMPolylineFeature, length: number) {
+  const name = feature.name || feature.tags.name || '';
+  const rankFactor = 0.75 + getRoadRank(feature) * 0.28;
+  const namedCorridorFactor = ROUTE_NAME_HINT.test(name) ? 1.35 : 1;
+  return Math.max(1, length * rankFactor * namedCorridorFactor);
 }
 
 /**
@@ -177,13 +306,16 @@ function buildSourceRoutes(snapshot: MarathahalliDemoSnapshot): SourceRoute[] {
         (index - (laneCount - 1) / 2) * 3.1
       ));
       const directions: (1 | -1)[] = preferredDirection ? [preferredDirection] : [1, -1];
+      const length = curve.getLength();
 
       return directions.flatMap((direction) => laneOffsets.map((offset) => ({
         id: `${feature.id}:${direction}:${offset.toFixed(2)}`,
         curve,
-        length: curve.getLength(),
+        length,
         preferredDirection: direction,
-        laneOffset: direction === 1 ? offset : -offset
+        laneOffset: direction === 1 ? offset : -offset,
+        ...getSourceSignalControl(feature, snapshot, direction),
+        trafficWeight: getSourceTrafficWeight(feature, length)
       })));
     })
     .filter((route) => route.length >= 45);
@@ -246,24 +378,31 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
   }), [isNight]);
 
   const { counts, agents } = useMemo(() => {
-    const total = Math.max(0, Math.min(SIMULATION_CONFIG.maxVehicleCount, vehicleTotalCount));
-    const carCount = Math.round(total * SIMULATION_CONFIG.vehicleDistribution.car);
-    const twoWheelerCount = Math.round(total * SIMULATION_CONFIG.vehicleDistribution.twoWheeler);
-    const autoCount = Math.round(total * SIMULATION_CONFIG.vehicleDistribution.auto);
-    const busCount = total - carCount - twoWheelerCount - autoCount;
+    const allocation = allocateFleet(vehicleTotalCount);
     const list: SourceVehicleAgent[] = [];
-    let randomState = (0x534f5552 ^ (vehicleTotalCount * 2654435761)) >>> 0;
+    let randomState = (0x534f5552 ^ Math.imul(allocation.total, 2654435761)) >>> 0;
     let idCounter = 0;
     let carIdx = 0;
     let autoIdx = 0;
     let busIdx = 0;
     let twIdx = 0;
+    const totalRouteWeight = routes.reduce((sum, route) => sum + route.trafficWeight, 0);
     const nextRandom = () => {
       randomState = (randomState + 0x6d2b79f5) >>> 0;
       let value = randomState;
       value = Math.imul(value ^ (value >>> 15), value | 1);
       value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
       return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    };
+
+    const chooseRoute = () => {
+      if (!routes.length) return -1;
+      let threshold = nextRandom() * totalRouteWeight;
+      for (let index = 0; index < routes.length; index += 1) {
+        threshold -= routes[index].trafficWeight;
+        if (threshold <= 0) return index;
+      }
+      return routes.length - 1;
     };
 
     const spawn = (
@@ -275,28 +414,54 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
     ) => {
       for (let index = 0; index < count; index += 1) {
         if (!routes.length) break;
-        const routeIdx = Math.floor(nextRandom() * routes.length);
+        const routeIdx = chooseRoute();
+        if (routeIdx < 0) break;
         list.push({
           id: idCounter++,
           type,
           routeIdx,
-          t: 0.04 + nextRandom() * 0.9,
+          progress: nextRandom(),
           direction: routes[routeIdx].preferredDirection,
           speed: maxSpeed * (0.68 + nextRandom() * 0.18),
+          maxSpeed,
           meshIdx: nextMeshIndex(),
-          lateralOffset: routes[routeIdx].laneOffset + (nextRandom() - 0.5) * 0.22,
-          lengthMeters
+          lateralOffset: routes[routeIdx].laneOffset + (nextRandom() - 0.5) * 0.18,
+          lengthMeters,
+          isIdling: false
         });
       }
     };
 
-    spawn('twoWheeler', twoWheelerCount, SIMULATION_CONFIG.baseSpeeds.twoWheeler, 2.0, () => twIdx++);
-    spawn('car', carCount, SIMULATION_CONFIG.baseSpeeds.car, 4.4, () => carIdx++);
-    spawn('auto', autoCount, SIMULATION_CONFIG.baseSpeeds.auto, 2.8, () => autoIdx++);
-    spawn('bus', busCount, SIMULATION_CONFIG.baseSpeeds.bus, 10.6, () => busIdx++);
+    spawn('twoWheeler', allocation.twoWheeler, SIMULATION_CONFIG.baseSpeeds.twoWheeler, 2.0, () => twIdx++);
+    spawn('car', allocation.car, SIMULATION_CONFIG.baseSpeeds.car, 4.4, () => carIdx++);
+    spawn('auto', allocation.auto, SIMULATION_CONFIG.baseSpeeds.auto, 2.8, () => autoIdx++);
+    spawn('bus', allocation.bus, SIMULATION_CONFIG.baseSpeeds.bus, 10.6, () => busIdx++);
+
+    // Keep the initial fleet readable and collision-free. Agents still use a
+    // seeded order for visual variety, but their longitudinal positions are
+    // projected into deterministic slots on each source-backed lane.
+    const agentsByRoute = Array.from({ length: routes.length }, () => [] as SourceVehicleAgent[]);
+    list.forEach((agent) => agentsByRoute[agent.routeIdx].push(agent));
+    agentsByRoute.forEach((routeAgents) => {
+      routeAgents.sort((a, b) => a.progress - b.progress || a.id - b.id);
+      const routeCount = routeAgents.length;
+      if (!routeCount) return;
+      routeAgents.forEach((agent, index) => {
+        const nominalProgress = 0.06 + ((index + 0.5) / routeCount) * 0.88;
+        const slotWidth = 0.88 / routeCount;
+        const jitter = (nextRandom() - 0.5) * Math.min(0.022, slotWidth * 0.14);
+        agent.progress = Math.max(0.035, Math.min(0.965, nominalProgress + jitter));
+      });
+    });
 
     return {
-      counts: { car: carIdx, twoWheeler: twIdx, auto: autoIdx, bus: busIdx },
+      counts: {
+        car: carIdx,
+        twoWheeler: twIdx,
+        auto: autoIdx,
+        bus: busIdx,
+        total: list.length
+      },
       agents: list
     };
   }, [routes, vehicleTotalCount]);

@@ -210,6 +210,31 @@ export const Scene: React.FC<SceneProps> = ({
           shadow-bias={-0.0003}
         />
 
+        {/* The crossover is a dense, multi-level inspection scene. These
+            restrained, local fill lights are presentation aids only: they
+            lift the source road/footway and modelled U-turn envelope out of
+            the metro shadow so a reviewer can read lane ownership, curb
+            clearance, and moving vehicles in both bird and person views. */}
+        {isCrossoverFocusView && (
+          <group
+            name="CrossoverInspectionLighting"
+            userData={{ status: 'modelled inspection lighting', sourceGeometry: 'unchanged' }}
+          >
+            <pointLight
+              position={[-8, 18, 14]}
+              intensity={isNight ? 9 : 3.2}
+              distance={92}
+              color={isNight ? '#93c5fd' : '#dbeafe'}
+            />
+            <pointLight
+              position={[14, 7, -8]}
+              intensity={isNight ? 6 : 2.1}
+              distance={58}
+              color={isNight ? '#fbbf24' : '#fde68a'}
+            />
+          </group>
+        )}
+
         {/* Night Junction Accent Moonlight / Sky Ambient */}
         {isNight && (
           <directionalLight

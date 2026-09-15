@@ -51,9 +51,12 @@ const METRO_U_GIRDER_FLOOR_THICKNESS = 0.34;
 const METRO_U_GIRDER_BOTTOM_Y = 10.05;
 const METRO_U_GIRDER_TOP_Y = 11.53;
 const METRO_SPAN_JOINT_DEPTH = 0.12;
-const METRO_SPAN_JOINT_HEIGHT = 1.28;
+const METRO_SPAN_JOINT_HEIGHT = 1.42;
 const METRO_PIER_CAPITAL_HEIGHT = 0.58;
 const METRO_PIER_CAPITAL_OVERLAP = 0.16;
+const METRO_PIER_CAPITAL_SHOULDER_WIDTH = 2.6;
+const METRO_PIER_CAPITAL_SHOULDER_DEPTH = 1.64;
+const METRO_PIER_CAPITAL_SHOULDER_HEIGHT = 0.24;
 const METRO_BEARING_PAIR_SPACING = 1.32;
 const METRO_PIER_CAP_HEIGHT = 0.72;
 const METRO_PIER_CAP_DEPTH = 2.0;
@@ -64,7 +67,11 @@ const METRO_PIER_BUILDING_BUFFER = 0.65;
 const METRO_MIN_SOURCE_PIER_SPACING = 8;
 const METRO_BEARING_BASE_HEIGHT = 0.08;
 const METRO_BEARING_PAD_HEIGHT = 0.14;
+const METRO_BEARING_TOP_PLATE_HEIGHT = 0.04;
 const METRO_BEARING_TO_DECK_CLEARANCE = 0.06;
+const METRO_SUPPORT_DIAPHRAGM_HEIGHT = 0.18;
+const METRO_SUPPORT_DIAPHRAGM_DEPTH = 0.42;
+const METRO_PIER_CAP_UNDERSIDE_HEIGHT = 0.12;
 // This is a modeled comparison datum for the mapped road viaduct crossing.
 // It is not Namma Metro evidence and does not turn the local OSM layer tags
 // into a surveyed vertical section.
@@ -98,6 +105,7 @@ interface MetroPierFrame {
   angle: number;
   progress: number;
   sourceBacked: boolean;
+  stationRole: 'source support projection' | 'modelled regular station' | 'modelled crossover boundary';
   sourceSupportId?: string;
   sourceSupportOffset?: number;
 }
@@ -243,8 +251,10 @@ type ProfilePoint = [number, number];
 // the miter flare into surrounding buildings.
 function getMiterNormal(points: LocalPoint[], index: number): LocalPoint {
   const current = points[index];
-  const previous = points[Math.max(0, index - 1)] || current;
-  const next = points[Math.min(points.length - 1, index + 1)] || current;
+  const hasIncoming = index > 0;
+  const hasOutgoing = index < points.length - 1;
+  const previous = hasIncoming ? points[index - 1] : current;
+  const next = hasOutgoing ? points[index + 1] : current;
   const incomingLength = distanceBetween(previous, current) || 1;
   const outgoingLength = distanceBetween(current, next) || 1;
   const incomingTangent: LocalPoint = [
@@ -257,6 +267,8 @@ function getMiterNormal(points: LocalPoint[], index: number): LocalPoint {
   ];
   const incomingNormal: LocalPoint = [incomingTangent[1], -incomingTangent[0]];
   const outgoingNormal: LocalPoint = [outgoingTangent[1], -outgoingTangent[0]];
+  if (!hasIncoming && hasOutgoing) return outgoingNormal;
+  if (hasIncoming && !hasOutgoing) return incomingNormal;
   let normalX = incomingNormal[0] + outgoingNormal[0];
   let normalZ = incomingNormal[1] + outgoingNormal[1];
   const normalLength = Math.hypot(normalX, normalZ);
@@ -538,6 +550,42 @@ function nearestCenterlineFrame(trackData: MetroTrackData, point: LocalPoint) {
   };
 }
 
+function centerlineFrameAtDistance(
+  trackData: MetroTrackData,
+  distance: number,
+  stationRole: MetroPierFrame['stationRole']
+): MetroPierFrame {
+  const centerlineLength = trackData.centerCurve.getLength();
+  const clampedDistance = Math.max(0, Math.min(centerlineLength, distance));
+  const progress = centerlineLength > 0 ? clampedDistance / centerlineLength : 0;
+  const point = trackData.centerCurve.getPointAt(progress);
+  const tangent = trackData.centerCurve.getTangentAt(progress).normalize();
+  return {
+    point: [point.x, point.z],
+    angle: Math.atan2(tangent.x, tangent.z),
+    progress,
+    sourceBacked: false,
+    stationRole
+  };
+}
+
+function modelledCrossoverBoundaryFrames(
+  trackData: MetroTrackData,
+  junctionBoundaries: number[]
+) {
+  const length = trackData.centerCurve.getLength();
+  const frames: MetroPierFrame[] = [];
+  for (let index = 0; index + 1 < junctionBoundaries.length; index += 2) {
+    const startDistance = Math.max(14, junctionBoundaries[index] - METRO_JUNCTION_PIER_SETBACK);
+    const endDistance = Math.min(length - 14, junctionBoundaries[index + 1] + METRO_JUNCTION_PIER_SETBACK);
+    frames.push(
+      centerlineFrameAtDistance(trackData, startDistance, 'modelled crossover boundary'),
+      centerlineFrameAtDistance(trackData, endDistance, 'modelled crossover boundary')
+    );
+  }
+  return frames;
+}
+
 function isJunctionClearZone([x, z]: LocalPoint) {
   return Math.abs(z) < METRO_JUNCTION_CLEAR_HALF_LENGTH
     && Math.abs(x) < METRO_JUNCTION_CLEAR_HALF_WIDTH;
@@ -653,19 +701,26 @@ function sourcePierFrames(
   sourceBuildings: OSMPolylineFeature[],
   junctionBoundaries: number[]
 ): MetroPierFrame[] {
+  const boundaryFrames = modelledCrossoverBoundaryFrames(trackData, junctionBoundaries)
+    .filter(({ point }) => !isJunctionClearZone(point) && !isInsideSourceBuilding(point, sourceBuildings));
   if (sourceSupports.length) {
-    return deduplicatePierFrames(sourceSupports
+    const sourceFrames = sourceSupports
       .map((support) => {
         const frame = nearestCenterlineFrame(trackData, support.position);
         return {
           ...frame,
           sourceBacked: true,
+          stationRole: 'source support projection' as const,
           sourceSupportId: support.id
         };
       })
       .filter(({ point }) => (
         !isJunctionClearZone(point) && !isInsideSourceBuilding(point, sourceBuildings)
-      )));
+      ));
+    // Even when a future extract adds explicit metro support nodes, the clear
+    // box remains a renderer contract. Boundary supports keep that modelled
+    // opening legible without reclassifying any nearby source pier.
+    return deduplicatePierFrames([...sourceFrames, ...boundaryFrames]);
   }
 
   // The current extract has no explicitly metro-tagged supports. Keep a
@@ -678,29 +733,9 @@ function sourcePierFrames(
     candidateDistances.push(distance);
   }
 
-  // Put the first modelled pier just outside each side of the mapped clear
-  // box. This makes the crossover a deliberate span opening rather than an
-  // accidental hole caused by the phase of a regular 28 m station grid.
-  for (let index = 0; index + 1 < junctionBoundaries.length; index += 2) {
-    candidateDistances.push(
-      Math.max(14, junctionBoundaries[index] - METRO_JUNCTION_PIER_SETBACK),
-      Math.min(length - 14, junctionBoundaries[index + 1] + METRO_JUNCTION_PIER_SETBACK)
-    );
-  }
-
   const frames = candidateDistances
     .sort((left, right) => left - right)
-    .map((distance) => {
-      const progress = distance / length;
-      const point = trackData.centerCurve.getPointAt(progress);
-      const tangent = trackData.centerCurve.getTangentAt(progress).normalize();
-      return {
-        point: [point.x, point.z] as LocalPoint,
-        angle: Math.atan2(tangent.x, tangent.z),
-        progress,
-        sourceBacked: false
-      };
-    })
+    .map((distance) => centerlineFrameAtDistance(trackData, distance, 'modelled regular station'))
     // Keep the junction's below-grade carriageway and its mapped pedestrian
     // crossing open. The source alignment still spans this clear zone; only
     // the support station is skipped because this fallback has no pier nodes.
@@ -712,7 +747,10 @@ function sourcePierFrames(
   // impossible collision. Road/median proximity is intentionally not a
   // rejection rule because an elevated metro pier may legitimately occupy a
   // carriageway median and OSM has no surveyed pier setback data here.
-  return deduplicatePierFrames(frames.filter(({ point }) => !isInsideSourceBuilding(point, sourceBuildings)));
+  return deduplicatePierFrames([
+    ...frames,
+    ...boundaryFrames
+  ].filter(({ point }) => !isInsideSourceBuilding(point, sourceBuildings)));
 }
 
 function createSleeperGeometry(
@@ -861,10 +899,13 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
     () => (trackData
       ? createTransverseBoxGeometry(
         pierFrames,
-        Math.max(0.8, trackData.trackSeparation - METRO_U_GIRDER_WIDTH),
-        0.16,
+        Math.max(
+          METRO_DECK_WIDTH - 0.46,
+          trackData.trackSeparation + METRO_U_GIRDER_WIDTH - 0.36
+        ),
+        METRO_SUPPORT_DIAPHRAGM_HEIGHT,
         METRO_U_GIRDER_BOTTOM_Y + 0.03,
-        0.42
+        METRO_SUPPORT_DIAPHRAGM_DEPTH
       )
       : null),
     [pierFrames, trackData]
@@ -965,6 +1006,11 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
   const junctionOpeningSpan = junctionBoundaryDistances.length >= 2
     ? junctionBoundaryDistances[1] - junctionBoundaryDistances[0] + METRO_JUNCTION_PIER_SETBACK * 2
     : 0;
+  const sourcePierCount = pierFrames.filter(({ sourceBacked }) => sourceBacked).length;
+  const modelledPierCount = pierFrames.length - sourcePierCount;
+  const modelledCrossoverBoundaryCount = pierFrames.filter(({ stationRole }) => (
+    stationRole === 'modelled crossover boundary'
+  )).length;
 
   return (
     <group
@@ -981,12 +1027,14 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
         sourceElevationEvidence: 'none; OSM layer=2 is relative topology, not metre elevation or clearance',
         alignment: 'OSM mainline ways way/1551136768 and way/1551136770; siding way/1551136769 excluded',
         elevation: 'modelled display elevation; not survey-derived',
-        structure: 'modelled twin precast U-girders, octagonal tapered RCC pier, flared capital, precast crosshead, four bearings per support, and span joints; 28 m candidate stationing',
+        structure: 'modelled twin precast U-girders, octagonal tapered RCC pier, flared capital shoulder, precast crosshead, four layered bearings per support, and span joints; 28 m candidate stationing',
+        verticalStack: `modelled grade → octagonal plinth → tapered shaft → flared capital shoulder → crosshead → four bearing stacks → twin U-girders; no survey-derived elevations`,
         minimumSoffit: `${METRO_MIN_SOFFIT_Y.toFixed(2)} m model baseline; not surveyed clearance`,
         roadClearance: `${modelledGradeClearance.toFixed(2)} m above local grade and ${modelledRoadDeckClearance.toFixed(2)} m above the modeled road-viaduct comparison datum; ${roadClearanceContract}; modelled only`,
         supportEvidence: sourceMetroSupportFeatures.length
-          ? 'OSM explicit Namma Metro pier supports, projected onto the source centerline'
-          : 'none in extract; modelled regular pier grid, with generic ORR bridge piers excluded',
+          ? `OSM explicit Namma Metro pier supports, projected onto the source centerline; ${modelledCrossoverBoundaryCount} modelled crossover boundary support(s)`
+          : `none in extract; ${modelledPierCount} modelled support station(s), including ${modelledCrossoverBoundaryCount} crossover boundary support(s); generic ORR bridge piers excluded`,
+        supportStationing: `${sourcePierCount} source-projected + ${modelledPierCount} modelled support station(s); modelled stationing only where OSM has no foundation locations`,
         supportPlacement: `modelled source-footprint exclusion radius ${(METRO_PIER_BASE_RADIUS + METRO_PIER_BUILDING_BUFFER).toFixed(2)} m; junction clear box ±${METRO_JUNCTION_CLEAR_HALF_WIDTH} m x ±${METRO_JUNCTION_CLEAR_HALF_LENGTH} m`,
         crossoverOpening: junctionOpeningSpan > 0
           ? `${junctionOpeningSpan.toFixed(1)} m modelled no-pier span along source alignment; boundary piers set back ${METRO_JUNCTION_PIER_SETBACK.toFixed(1)} m`
@@ -994,16 +1042,17 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
         spanJoints: `${pierFrames.length} modelled span joint locations follow support stationing; span segmentation is not present in OSM`,
         gauge: trackData.gaugeSourceBacked ? 'OSM gauge=1435' : 'modelled fallback gauge',
         trackCentreSpacing: `OSM paired-way median ${trackData.trackSeparation.toFixed(2)} m; target about ${METRO_TARGET_TRACK_CENTRE_SPACING.toFixed(2)} m`,
-        bearings: `modelled four bearing stacks ${bearingStackHeight.toFixed(2)} m high below the twin U-girders at source-derived track centres`,
+        bearings: `modelled four layered bearing stacks ${bearingStackHeight.toFixed(2)} m high below the twin U-girders at source-derived track centres`,
         thirdRail: trackData.thirdRailSourceBacked
           ? 'OSM voltage=750 frequency=0'
           : 'not rendered without source electrical evidence'
       }}
     >
-      {pierFrames.map(({ point, angle, sourceBacked, sourceSupportId, sourceSupportOffset }, index) => {
+      {pierFrames.map(({ point, angle, sourceBacked, stationRole, sourceSupportId, sourceSupportOffset }, index) => {
         const pierCapBottom = pierCapTop - METRO_PIER_CAP_HEIGHT;
         const columnBase = METRO_PIER_BASE_TOP_Y;
         const capitalBottom = pierCapBottom - METRO_PIER_CAPITAL_HEIGHT + METRO_PIER_CAPITAL_OVERLAP;
+        const capitalTop = capitalBottom + METRO_PIER_CAPITAL_HEIGHT;
         const columnTop = capitalBottom + 0.08;
         const columnHeight = Math.max(0.1, columnTop - columnBase);
         return (
@@ -1017,7 +1066,10 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
                 : 'modelled support station on source-aligned centerline',
               supportProvenance: sourceBacked
                 ? 'OSM explicit Namma Metro support'
-                : 'modelled support on source-aligned centerline; no ORR support reuse',
+                : stationRole === 'modelled crossover boundary'
+                  ? 'modelled crossover boundary support on source-aligned centerline; no ORR support reuse'
+                  : 'modelled support on source-aligned centerline; no ORR support reuse',
+              stationRole,
               sourceSupportId: sourceSupportId || 'none',
               sourceSupportOffset: sourceSupportOffset === undefined
                 ? 'n/a'
@@ -1027,33 +1079,41 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
           >
             {/* A shallow octagonal RCC plinth keeps the support legible without
                 creating a cage or a visual roadblock at the junction. */}
-            <mesh position={[0, 0.24, 0]} castShadow receiveShadow>
+            <mesh name={`MetroPierPlinth_Modelled_${index}`} position={[0, 0.24, 0]} castShadow receiveShadow>
               <cylinderGeometry args={[METRO_PIER_BASE_RADIUS, METRO_PIER_BASE_RADIUS + 0.12, 0.36, 8]} />
               <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
             </mesh>
-            <mesh position={[0, columnBase + columnHeight / 2, 0]} castShadow receiveShadow>
+            <mesh name={`MetroPierShaft_Modelled_${index}`} position={[0, columnBase + columnHeight / 2, 0]} castShadow receiveShadow>
               <cylinderGeometry args={[METRO_PIER_SHAFT_RADIUS, METRO_PIER_SHAFT_RADIUS + 0.1, columnHeight, 8]} />
               <meshStandardMaterial color={concreteMaterial} roughness={0.86} metalness={0.04} />
             </mesh>
             {/* A flared capital is the cast-in-place transition into the
                 precast cap, not a second column. */}
-            <mesh position={[0, capitalBottom + METRO_PIER_CAPITAL_HEIGHT / 2, 0]} castShadow receiveShadow>
+            <mesh name={`MetroPierCapital_Modelled_${index}`} position={[0, capitalBottom + METRO_PIER_CAPITAL_HEIGHT / 2, 0]} castShadow receiveShadow>
               <cylinderGeometry args={[METRO_PIER_SHAFT_RADIUS + 0.22, METRO_PIER_SHAFT_RADIUS + 0.02, METRO_PIER_CAPITAL_HEIGHT, 8]} />
               <meshStandardMaterial color={concreteMaterial} roughness={0.86} metalness={0.04} />
+            </mesh>
+            <mesh name={`MetroPierCapitalShoulder_Modelled_${index}`} position={[0, capitalTop - METRO_PIER_CAPITAL_SHOULDER_HEIGHT / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[METRO_PIER_CAPITAL_SHOULDER_WIDTH, METRO_PIER_CAPITAL_SHOULDER_HEIGHT, METRO_PIER_CAPITAL_SHOULDER_DEPTH]} />
+              <meshStandardMaterial color={shadowMaterial} roughness={0.84} metalness={0.04} />
             </mesh>
             {/* Modelled precast pier cap: its long axis is perpendicular to
                 the source ways because the parent group carries the source
                 tangent rotation. */}
-            <mesh position={[0, pierCapTop - METRO_PIER_CAP_HEIGHT / 2, 0]} castShadow receiveShadow>
+            <mesh name={`MetroPierCap_Modelled_${index}`} position={[0, pierCapTop - METRO_PIER_CAP_HEIGHT / 2, 0]} castShadow receiveShadow>
               <boxGeometry args={[pierCapWidth, METRO_PIER_CAP_HEIGHT, METRO_PIER_CAP_DEPTH]} />
               <meshStandardMaterial color={concreteMaterial} roughness={0.86} metalness={0.04} />
             </mesh>
-            <mesh position={[0, pierCapTop - 0.07, 0]} castShadow receiveShadow>
+            <mesh name={`MetroPierCapTopPlate_Modelled_${index}`} position={[0, pierCapTop - 0.07, 0]} castShadow receiveShadow>
               <boxGeometry args={[pierCapWidth + 0.12, 0.14, METRO_PIER_CAP_DEPTH + 0.1]} />
               <meshStandardMaterial color={shadowMaterial} roughness={0.84} metalness={0.04} />
             </mesh>
+            <mesh name={`MetroPierCapSoffit_Modelled_${index}`} position={[0, pierCapBottom + METRO_PIER_CAP_UNDERSIDE_HEIGHT / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[pierCapWidth + 0.12, METRO_PIER_CAP_UNDERSIDE_HEIGHT, METRO_PIER_CAP_DEPTH + 0.1]} />
+              <meshStandardMaterial color={shadowMaterial} roughness={0.9} metalness={0.03} />
+            </mesh>
             {bearingPositions.map((offset, bearingIndex) => (
-              <group key={`metro-bearing-${index}-${bearingIndex}`} position={[offset, pierCapTop, 0]}>
+              <group key={`metro-bearing-${index}-${bearingIndex}`} position={[offset, pierCapTop, 0]} userData={{ modelStatus: 'modelled layered bearing stack', sourceEvidence: 'bearing locations derived from source track separation; not surveyed' }}>
                 <mesh position={[0, METRO_BEARING_BASE_HEIGHT / 2, 0]} castShadow receiveShadow>
                   <boxGeometry args={[0.92, METRO_BEARING_BASE_HEIGHT, 1.12]} />
                   <meshStandardMaterial color="#334155" roughness={0.72} metalness={0.16} />
@@ -1061,6 +1121,10 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
                 <mesh position={[0, METRO_BEARING_BASE_HEIGHT + METRO_BEARING_PAD_HEIGHT / 2, 0]} castShadow receiveShadow>
                   <boxGeometry args={[0.76, METRO_BEARING_PAD_HEIGHT, 0.9]} />
                   <meshStandardMaterial color="#1e293b" roughness={0.58} metalness={0.24} />
+                </mesh>
+                <mesh position={[0, METRO_BEARING_BASE_HEIGHT + METRO_BEARING_PAD_HEIGHT - METRO_BEARING_TOP_PLATE_HEIGHT / 2, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.86, METRO_BEARING_TOP_PLATE_HEIGHT, 1.02]} />
+                  <meshStandardMaterial color={isNight ? '#94a3b8' : '#475569'} roughness={0.42} metalness={0.62} />
                 </mesh>
               </group>
             ))}
@@ -1080,7 +1144,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
         </mesh>
       )}
       {underdeckRibGeometry && (
-        <mesh name="MetroPierDiaphragms_Modelled" geometry={underdeckRibGeometry} castShadow receiveShadow>
+        <mesh name="MetroTwinDeckSupportDiaphragms_ModelledAtSupports" geometry={underdeckRibGeometry} castShadow receiveShadow userData={{ modelStatus: 'modelled transverse support diaphragms spanning the twin U-girder envelope', sourceEvidence: 'support stationing follows source-aligned frames; diaphragm dimensions are renderer assumptions' }}>
           <meshStandardMaterial
             color={shadowMaterial}
             emissive={soffitEmissive}
@@ -1102,7 +1166,7 @@ export const MetroViaduct: React.FC<MetroViaductProps> = ({ isNight }) => {
         </mesh>
       )}
       {spanJointGeometry && (
-        <mesh name="MetroSpanJoints_ModelledAtSupports" geometry={spanJointGeometry} castShadow>
+        <mesh name="MetroSpanJoints_ModelledAtSupports" geometry={spanJointGeometry} castShadow userData={{ modelStatus: 'modelled span joint / end diaphragm at each support station', sourceEvidence: 'OSM supplies plan alignment only; span segmentation is not present in the extract' }}>
           <meshStandardMaterial
             color={isNight ? '#475569' : '#64748b'}
             roughness={0.92}

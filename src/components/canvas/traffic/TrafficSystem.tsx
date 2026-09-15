@@ -51,6 +51,41 @@ interface FleetCounts {
   total: number;
 }
 
+/**
+ * Both traffic layers advance from the same fixed model clock. The render
+ * frame rate only determines how many completed wall-clock ticks are due; it
+ * never changes the modelled time step or the vehicle integration delta.
+ */
+export const MODELLED_TRAFFIC_STEP_SECONDS = 1 / 30;
+const MODELLED_TRAFFIC_MAX_FRAME_DELTA_SECONDS = 0.25;
+
+export interface PublishedModelledSignalState {
+  phase: SignalStatus['phase'];
+  nsColor: SignalStatus['nsColor'];
+  ewColor: SignalStatus['ewColor'];
+}
+
+// Scene intentionally keeps the signal hook at the app boundary. Publishing
+// its current phase here lets the source-corridor layer use the exact same
+// phase without adding a second timer or changing the Scene contract.
+let publishedModelledSignalState: PublishedModelledSignalState = {
+  phase: 'NS_GREEN',
+  nsColor: 'green',
+  ewColor: 'red'
+};
+
+export function publishModelledSignalState(signalStatus: SignalStatus) {
+  publishedModelledSignalState = {
+    phase: signalStatus.phase,
+    nsColor: signalStatus.nsColor,
+    ewColor: signalStatus.ewColor
+  };
+}
+
+export function getPublishedModelledSignalState() {
+  return publishedModelledSignalState;
+}
+
 const VEHICLE_TYPE_SHARES = [
   { type: 'car' as const, share: SIMULATION_CONFIG.vehicleDistribution.car },
   { type: 'twoWheeler' as const, share: SIMULATION_CONFIG.vehicleDistribution.twoWheeler },
@@ -63,7 +98,7 @@ const VEHICLE_TYPE_SHARES = [
  * negative remainder. Largest-remainder allocation keeps the configured
  * total exact, including for the small crossover/junction detail slice.
  */
-function allocateFleet(requestedCount: number): FleetCounts {
+export function allocateFleet(requestedCount: number): FleetCounts {
   const total = Number.isFinite(requestedCount)
     ? Math.max(0, Math.min(SIMULATION_CONFIG.maxVehicleCount, Math.floor(requestedCount)))
     : 0;
@@ -103,6 +138,10 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
   const autosMeshRef = useRef<THREE.InstancedMesh>(null);
   const busesMeshRef = useRef<THREE.InstancedMesh>(null);
   const twoWheelersMeshRef = useRef<THREE.InstancedMesh>(null);
+
+  useEffect(() => {
+    publishModelledSignalState(signalStatus);
+  }, [signalStatus.ewColor, signalStatus.nsColor, signalStatus.phase]);
 
   // ── Geometries ──
   const carGeom = useMemo(() => createCarGeometry(), []);
@@ -404,7 +443,7 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     let busIdx = 0;
     let twIdx = 0;
     let spawnOrdinal = 0;
-    let randomState = (0x4d415241 ^ (vehicleTotalCount * 2654435761)) >>> 0;
+    let randomState = (0x4d415241 ^ Math.imul(allocation.total, 2654435761)) >>> 0;
     const nextRandom = () => {
       randomState = (randomState + 0x6d2b79f5) >>> 0;
       let value = randomState;
@@ -427,13 +466,15 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
           ? spawnLaneIndices[spawnOrdinal % spawnLaneIndices.length]
           : spawnLaneIndices[Math.floor(nextRandom() * spawnLaneIndices.length)];
         spawnOrdinal += 1;
-        const t = 0.04 + nextRandom() * 0.88; // leave a small entry buffer at both ends
         list.push({
           id: idCounter++,
           type,
           laneIdx,
-          t,
-          speed: maxSpeed * 0.8,
+          // The final lane pass below turns this deterministic seed into
+          // non-overlapping headways. The random value here only varies
+          // cruise state, never vehicle identity or fleet count.
+          t: nextRandom(),
+          speed: maxSpeed * (0.72 + nextRandom() * 0.18),
           maxSpeed,
           meshIdx: getIdx(),
           lengthMeters,
@@ -446,6 +487,23 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     spawnType('car', allocation.car, SIMULATION_CONFIG.baseSpeeds.car, 4.4, () => carIdx++);
     spawnType('auto', allocation.auto, SIMULATION_CONFIG.baseSpeeds.auto, 2.8, () => autoIdx++);
     spawnType('bus', allocation.bus, SIMULATION_CONFIG.baseSpeeds.bus, 10.6, () => busIdx++);
+
+    // Seed every lane as an ordered platoon. Random positions are useful for
+    // variety but put a car inside its leader on the first rendered frame;
+    // deterministic slots keep the model visually credible from the start.
+    const agentsByLane = Array.from({ length: lanes.length }, () => [] as VehicleAgent[]);
+    list.forEach((agent) => agentsByLane[agent.laneIdx].push(agent));
+    agentsByLane.forEach((laneAgents) => {
+      laneAgents.sort((a, b) => a.t - b.t || a.id - b.id);
+      const laneCount = laneAgents.length;
+      if (!laneCount) return;
+      laneAgents.forEach((agent, index) => {
+        const nominalProgress = 0.06 + ((index + 0.5) / laneCount) * 0.88;
+        const slotWidth = 0.88 / laneCount;
+        const jitter = (nextRandom() - 0.5) * Math.min(0.025, slotWidth * 0.16);
+        agent.t = Math.max(0.035, Math.min(0.965, nominalProgress + jitter));
+      });
+    });
 
     return {
       counts: {
@@ -504,146 +562,169 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     }
   }, [counts]);
 
-  // ── Reusable Math Objects for 60fps Loop ──
+  // ── Reusable Math Objects for the fixed model loop ──
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const tangent = useMemo(() => new THREE.Vector3(), []);
   const simulationAccumulator = useRef(0);
 
   // ── Fixed-step Physics & Simulation Loop ──
-  // Vehicle transforms are still uploaded every simulation step, but the
-  // expensive lane grouping/sorting/spline sampling is capped at 30 Hz. This
-  // leaves the renderer and controls responsive while preserving sim speed.
+  // Vehicle transforms are uploaded at 30 model ticks per wall-clock second.
+  // A speed multiplier changes the amount of model time represented by each
+  // tick, never the integration delta derived from an arbitrary render frame.
   useFrame((_, delta) => {
-    // Clamp delta to prevent simulation exploding during tab switch
-    simulationAccumulator.current += Math.min(delta, 0.1);
-    const simulationStep = 1 / 30;
-    if (simulationAccumulator.current < simulationStep) return;
+    if (!agents.length || !lanes.length) return;
 
-    const dt = Math.min(simulationAccumulator.current, 0.1) * simSpeedMultiplier;
-    simulationAccumulator.current = 0;
+    // Clamp a long render pause, then consume whole wall-clock ticks. This
+    // prevents tab switching from producing an enormous vehicle jump while
+    // keeping the result independent of whether the canvas renders at 30,
+    // 60, or 120 Hz.
+    simulationAccumulator.current += Math.max(
+      0,
+      Math.min(delta, MODELLED_TRAFFIC_MAX_FRAME_DELTA_SECONDS)
+    );
+    const speedMultiplier = Number.isFinite(simSpeedMultiplier)
+      ? Math.max(0, simSpeedMultiplier)
+      : 1;
+    const congestionSpeedFactor = Number.isFinite(congestionRatio)
+      ? Math.max(0.28, Math.min(1.05, congestionRatio))
+      : 0.62;
+    let advancedTick = false;
 
-    // Determine current signal allowances
-    const nsCanPass = signalStatus.nsColor === 'green';
-    const ewCanPass = signalStatus.ewColor === 'green';
+    while (simulationAccumulator.current >= MODELLED_TRAFFIC_STEP_SECONDS) {
+      simulationAccumulator.current -= MODELLED_TRAFFIC_STEP_SECONDS;
+      const dt = MODELLED_TRAFFIC_STEP_SECONDS * speedMultiplier;
+      advancedTick = true;
 
-    // Group agents by lane to compute inter-vehicle queues efficiently
-    const laneVehicles: VehicleAgent[][] = Array.from({ length: lanes.length }, () => []);
-    for (let i = 0; i < agents.length; i++) {
-      laneVehicles[agents[i].laneIdx].push(agents[i]);
-    }
+      // Determine current signal allowances. Amber is treated as closed so a
+      // vehicle already approaching the stop line does not enter the box.
+      const nsCanPass = signalStatus.nsColor === 'green';
+      const ewCanPass = signalStatus.ewColor === 'green';
 
-    for (let l = 0; l < lanes.length; l++) {
-      const lane = lanes[l];
-      const vehList = laneVehicles[l];
-      if (vehList.length === 0) continue;
+      // Group agents by lane to compute a real leader gap. The lane list is
+      // sorted from exit/front to entry/rear, so every follower sees exactly
+      // one vehicle ahead in its own lane.
+      const laneVehicles: VehicleAgent[][] = Array.from({ length: lanes.length }, () => []);
+      for (let i = 0; i < agents.length; i += 1) {
+        laneVehicles[agents[i].laneIdx].push(agents[i]);
+      }
 
-      // Sort vehicles in lane by t (descending: furthest along the road first)
-      vehList.sort((a, b) => b.t - a.t);
+      for (let l = 0; l < lanes.length; l += 1) {
+        const lane = lanes[l];
+        const vehList = laneVehicles[l];
+        if (vehList.length === 0) continue;
 
-      const isSignalRedForLane =
-        (lane.controlledBy === 'NS' && !nsCanPass) ||
-        (lane.controlledBy === 'EW' && !ewCanPass);
+        vehList.sort((a, b) => b.t - a.t || b.id - a.id);
+        const isSignalClosedForLane =
+          (lane.controlledBy === 'NS' && !nsCanPass) ||
+          (lane.controlledBy === 'EW' && !ewCanPass);
 
-      for (let v = 0; v < vehList.length; v++) {
-        const veh = vehList[v];
-        let desiredSpeed = veh.maxSpeed * Math.max(0.25, Math.min(1.2, congestionRatio));
+        for (let v = 0; v < vehList.length; v += 1) {
+          const veh = vehList[v];
+          const vehAhead = v > 0 ? vehList[v - 1] : undefined;
+          const baseDesiredSpeed = veh.maxSpeed * congestionSpeedFactor;
+          let desiredSpeed = baseDesiredSpeed;
+          let maximumAdvanceMeters = Number.POSITIVE_INFINITY;
 
-        // 1. Signal Stop Check
-        if (isSignalRedForLane) {
-          const distToStopMeters = (lane.stopT - veh.t) * lane.length;
-          // If vehicle is approaching stop bar within 45m
-          if (distToStopMeters > 0 && distToStopMeters < 45) {
-            // Smoothly decelerate to 0 at stop bar
-            const decelRatio = Math.max(0, (distToStopMeters - 2) / 40);
-            desiredSpeed = Math.min(desiredSpeed, desiredSpeed * decelRatio);
-            if (distToStopMeters <= 3.0) {
-              desiredSpeed = 0;
-            }
-          }
-        }
+          if (vehAhead) {
+            let gapMeters = (vehAhead.t - veh.t) * lane.length;
+            if (gapMeters <= 0 && lane.closedLoop) gapMeters += lane.length;
+            gapMeters = Math.max(0, gapMeters);
 
-        // 2. Queueing & Inter-Vehicle Gap Check
-        // If there is a vehicle ahead in this lane
-        if (v > 0) {
-          const vehAhead = vehList[v - 1];
-          let gapMeters = (vehAhead.t - veh.t) * lane.length;
-          if (gapMeters < 0 && lane.closedLoop) gapMeters += lane.length; // wrap-around only for closed circuits
+            // Center-to-center spacing accounts for both vehicle bodies. The
+            // speed term provides a modest time headway without making the
+            // Bengaluru lane look unnaturally empty.
+            const minimumGapMeters =
+              (veh.lengthMeters + vehAhead.lengthMeters) * 0.5 + 2.2 + veh.speed * 0.42;
+            maximumAdvanceMeters = Math.max(
+              0,
+              gapMeters - ((veh.lengthMeters + vehAhead.lengthMeters) * 0.5 + 2.2)
+            );
 
-          const minSafeGap = veh.lengthMeters + 3.0; // tight Indian traffic queue gap
-          if (gapMeters < 35) {
-            if (gapMeters <= minSafeGap) {
+            if (gapMeters <= minimumGapMeters) {
               desiredSpeed = 0;
             } else {
-              const gapFactor = (gapMeters - minSafeGap) / (35 - minSafeGap);
-              desiredSpeed = Math.min(desiredSpeed, vehAhead.speed * 0.95 + desiredSpeed * gapFactor * 0.05);
+              const gapRecoverySpeed = vehAhead.speed + (gapMeters - minimumGapMeters) * 0.8;
+              desiredSpeed = Math.min(desiredSpeed, Math.max(0, gapRecoverySpeed));
             }
           }
-        }
 
-        // Apply smooth acceleration/braking
-        const accelRate = desiredSpeed < veh.speed ? 24.0 : 8.0;
-        veh.speed += (desiredSpeed - veh.speed) * Math.min(1.0, accelRate * dt);
-        if (veh.speed < 0.05) veh.speed = 0;
-
-        veh.isIdling = veh.speed === 0;
-
-        // Advance position along spline
-        const advanceT = (veh.speed * dt) / lane.length;
-        veh.t += advanceT;
-        if (veh.t > 1.0) {
-          if (lane.closedLoop) {
-            // A high simulation multiplier can advance more than one lap in a
-            // fixed step; modulo keeps closed circuits bounded and stable.
-            veh.t %= 1.0;
-          } else {
-            // Open corridor lanes respawn at their signed entry instead of
-            // teleporting from an exit back through the middle of the map.
-            veh.t = 0.02 + (veh.id % 5) * 0.008;
-            veh.speed = veh.maxSpeed * 0.55;
+          if (isSignalClosedForLane) {
+            // Stop the vehicle's front bumper short of the source/authored
+            // stop bar. Vehicles past the bar are allowed to clear it.
+            const stopCenterT = lane.stopT
+              - (veh.lengthMeters * 0.5 + 1.2) / lane.length;
+            const distanceToStopMeters = (stopCenterT - veh.t) * lane.length;
+            if (distanceToStopMeters > 0 && distanceToStopMeters < 72) {
+              const comfortableSpeed = Math.sqrt(2 * 7.5 * distanceToStopMeters);
+              desiredSpeed = Math.min(desiredSpeed, comfortableSpeed);
+              maximumAdvanceMeters = Math.min(maximumAdvanceMeters, distanceToStopMeters);
+            }
           }
-        }
 
-        // Calculate 3D position and tangent
-        lane.spline.getPointAt(veh.t, pos);
-        lane.spline.getTangentAt(veh.t, tangent).normalize();
+          const acceleration = desiredSpeed < veh.speed ? 7.5 : 3.4;
+          const speedDelta = Math.max(
+            -acceleration * dt,
+            Math.min(acceleration * dt, desiredSpeed - veh.speed)
+          );
+          veh.speed = Math.max(0, Math.min(veh.maxSpeed * 1.05, veh.speed + speedDelta));
 
-        dummy.position.copy(pos);
+          const plannedAdvanceMeters = veh.speed * dt;
+          const advanceMeters = Math.min(
+            plannedAdvanceMeters,
+            Number.isFinite(maximumAdvanceMeters) ? maximumAdvanceMeters : plannedAdvanceMeters
+          );
+          if (advanceMeters < plannedAdvanceMeters && dt > 0) {
+            veh.speed = advanceMeters / dt;
+          }
+          veh.isIdling = veh.speed <= 0.15 || advanceMeters <= 0.01;
 
-        // ── Per-vehicle-type wheel radius Y-offset so tires sit ON the road surface ──
-        // Car: wheel radius 0.32m, Two-Wheeler: 0.30m, Auto: 0.26m, Bus: 0.50m
-        switch (veh.type) {
-          case 'car':        dummy.position.y += 0.32; break;
-          case 'twoWheeler': dummy.position.y += 0.30; break;
-          case 'auto':       dummy.position.y += 0.26; break;
-          case 'bus':        dummy.position.y += 0.50; break;
-        }
+          // Advance after the leader/stop calculation so a follower cannot
+          // tunnel through a queue during a 60× modelled tick.
+          veh.t += advanceMeters / lane.length;
+          if (veh.t >= 1) {
+            if (lane.closedLoop) {
+              veh.t %= 1;
+            } else {
+              // Open detail lanes represent a continuous source demand. A
+              // deterministic entry reset keeps the fleet count constant;
+              // the next tick's leader pass re-establishes the entry headway.
+              veh.t = 0.02 + (veh.id % 5) * 0.006;
+              veh.speed = Math.min(veh.speed, veh.maxSpeed * 0.5);
+            }
+          }
 
-        // Orient vehicle along spline tangent direction
-        dummy.lookAt(dummy.position.x + tangent.x, dummy.position.y + tangent.y, dummy.position.z + tangent.z);
-        dummy.rotateY(Math.PI);
+          lane.spline.getPointAt(veh.t, pos);
+          lane.spline.getTangentAt(veh.t, tangent).normalize();
+          dummy.position.copy(pos);
 
-        dummy.updateMatrix();
+          // Wheel-radius offsets keep each model seated on its lane datum.
+          switch (veh.type) {
+            case 'car':        dummy.position.y += 0.32; break;
+            case 'twoWheeler': dummy.position.y += 0.30; break;
+            case 'auto':       dummy.position.y += 0.26; break;
+            case 'bus':        dummy.position.y += 0.50; break;
+          }
 
-        // Write transformation matrix to appropriate InstancedMesh
-        switch (veh.type) {
-          case 'car':
-            carsMeshRef.current?.setMatrixAt(veh.meshIdx, dummy.matrix);
-            break;
-          case 'twoWheeler':
-            twoWheelersMeshRef.current?.setMatrixAt(veh.meshIdx, dummy.matrix);
-            break;
-          case 'auto':
-            autosMeshRef.current?.setMatrixAt(veh.meshIdx, dummy.matrix);
-            break;
-          case 'bus':
-            busesMeshRef.current?.setMatrixAt(veh.meshIdx, dummy.matrix);
-            break;
+          dummy.lookAt(
+            dummy.position.x + tangent.x,
+            dummy.position.y + tangent.y,
+            dummy.position.z + tangent.z
+          );
+          dummy.rotateY(Math.PI);
+          dummy.updateMatrix();
+
+          switch (veh.type) {
+            case 'car': carsMeshRef.current?.setMatrixAt(veh.meshIdx, dummy.matrix); break;
+            case 'twoWheeler': twoWheelersMeshRef.current?.setMatrixAt(veh.meshIdx, dummy.matrix); break;
+            case 'auto': autosMeshRef.current?.setMatrixAt(veh.meshIdx, dummy.matrix); break;
+            case 'bus': busesMeshRef.current?.setMatrixAt(veh.meshIdx, dummy.matrix); break;
+          }
         }
       }
     }
 
-    // Flag instanced buffers for GPU upload
+    if (!advancedTick) return;
     if (carsMeshRef.current) carsMeshRef.current.instanceMatrix.needsUpdate = true;
     if (twoWheelersMeshRef.current) twoWheelersMeshRef.current.instanceMatrix.needsUpdate = true;
     if (autosMeshRef.current) autosMeshRef.current.instanceMatrix.needsUpdate = true;
@@ -654,12 +735,16 @@ export const TrafficSystem: React.FC<TrafficSystemProps> = ({
     trafficSource: 'MODELLED',
     vehicleCountBasis: 'CONFIGURED ALLOCATION',
     vehicleCount: counts.total,
+    simulationClock: 'DETERMINISTIC FIXED 30 HZ · SPEED MULTIPLIER PER TICK',
+    countMeaning: 'ACTIVE MODELLED VEHICLES · NOT A VEHICLE SENSOR COUNT',
+    queueModel: 'SIGNAL PHASE + LEADER GAP + VEHICLE-SPECIFIC HEADWAY',
     scope: scenarioOnly ? 'CROSSOVER JUNCTION DETAIL' : 'JUNCTION DETAIL',
     routePolicy: scenarioOnly
       ? 'HIGHLIGHTED U-TURN SCENARIO ROUTES ONLY'
       : 'U-TURN SCENARIO ROUTES EXCLUDED',
+    signalPhase: signalStatus.phase,
     legalStatus: scenarioOnly ? 'MODELLED ONLY · OSM TURN STATUS UNRESOLVED' : 'MODELLED JUNCTION FLOW'
-  }), [counts.total, scenarioOnly]);
+  }), [counts.total, scenarioOnly, signalStatus.phase]);
 
   return (
     <group name="TrafficSystem">
