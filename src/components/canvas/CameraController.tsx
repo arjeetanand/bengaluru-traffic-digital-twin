@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { MapControls } from '@react-three/drei';
+import type { MapControls as MapControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { CameraMode, CameraPreset } from '../../types';
 import { cameraControlBus } from '../../services/cameraControlBus';
@@ -41,6 +41,19 @@ const OVERVIEW_MAX_POLAR = Math.PI * 0.48;
 const OVERVIEW_MIN_DISTANCE = 12;
 const OVERVIEW_MAX_DISTANCE = 4500;
 
+// Keep the overview camera's gestures explicit so a dependency upgrade cannot
+// silently fall back to OrbitControls' left-drag orbit convention.
+const MAP_MOUSE_BUTTONS = {
+  LEFT: THREE.MOUSE.PAN,
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.ROTATE
+} as const;
+
+const MAP_TOUCHES = {
+  ONE: THREE.TOUCH.PAN,
+  TWO: THREE.TOUCH.DOLLY_ROTATE
+} as const;
+
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 const easeInOutCubic = (value: number) => (
@@ -53,7 +66,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   cameraMode,
   simSpeedMultiplier
 }) => {
-  const controlsRef = useRef<OrbitControlsImpl>(null);
+  const controlsRef = useRef<MapControlsImpl>(null);
   const { camera, gl } = useThree();
 
   // Keep the initial camera seed stable for the lifetime of this controller.
@@ -202,7 +215,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
     isTransitioning.current = true;
     controls.autoRotate = false;
-    // OrbitControls keeps its own spherical deltas. Pausing it during the
+    // MapControls keeps its own spherical deltas. Pausing it during the
     // flight prevents a previous drag from fighting the transition.
     controls.enabled = false;
     const dampingWasEnabled = controls.enableDamping;
@@ -391,7 +404,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     };
   }, []);
 
-  // Person mode uses a first-person drag gesture instead of OrbitControls'
+  // Person mode uses a first-person drag gesture instead of MapControls'
   // orbit-around-target gesture. This keeps the eye fixed at street height
   // while still allowing mouse, trackpad, and touch look-around navigation.
   useEffect(() => {
@@ -499,14 +512,14 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       walkFovTarget.current = WALK_FOV_DEFAULT;
     }
 
-    // OrbitControls' auto-rotation is imperative state. Turn it off at the
+    // MapControls' auto-rotation is imperative state. Turn it off at the
     // mode boundary as well as in the frame loop so a person-mode switch can
     // never inherit a cinematic orbit for a frame.
     if (cameraMode !== 'overview' && controlsRef.current) {
       controlsRef.current.autoRotate = false;
     }
 
-    // OrbitControls owns the camera after mount. Seed its spherical state from
+    // MapControls owns the camera after mount. Seed its spherical state from
     // the selected preset so the first frame is aimed at the junction instead
     // of using the camera's default -Z orientation.
     if (!hasInitializedCamera.current && controlsRef.current) {
@@ -695,7 +708,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       }
     }
 
-    // 3. Smooth preset transitions. OrbitControls is paused while this runs,
+    // 3. Smooth preset transitions. MapControls is paused while this runs,
     // so its previous spherical drag state cannot overwrite the flight path.
     if (isTransitioning.current) {
       transitionElapsed.current = Math.min(
@@ -757,12 +770,12 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       controls.autoRotate = false;
     }
 
-    // Ensure orbit controls updates every settled frame for smooth damping.
+    // Ensure map controls update every settled frame for smooth damping.
     // Person mode leaves the imperative control disabled; calling update()
     // directly still keeps its spherical cache in sync with our look target.
     controls.update();
 
-    // OrbitControls can pan outside the modeled corridor. Keep both the camera
+    // MapControls can pan outside the modeled corridor. Keep both the camera
     // and its target inside the bounded local overview envelope. The final
     // camera.lookAt() matters because clamping a world coordinate after the
     // control update must not leave a stale quaternion for the next frame.
@@ -793,7 +806,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   });
 
   return (
-    <OrbitControls
+    <MapControls
       ref={controlsRef}
       enableDamping
       dampingFactor={0.075}
@@ -804,6 +817,11 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       zoomToCursor={cameraMode === 'overview'}
       enablePan={cameraMode === 'overview'}
       panSpeed={0.72}
+      // Match Google Maps-style desktop/touch behavior: left-drag/one-finger
+      // pans the map, wheel zooms, and right-drag rotates the 3D view.
+      mouseButtons={MAP_MOUSE_BUTTONS}
+      touches={MAP_TOUCHES}
+      screenSpacePanning={false}
       // Keep a useful map hemisphere: near-nadir is allowed for roof/metro
       // inspection, but the orbit cannot flip underneath the terrain.
       minPolarAngle={cameraMode === 'walk' ? 0.15 : OVERVIEW_MIN_POLAR}
