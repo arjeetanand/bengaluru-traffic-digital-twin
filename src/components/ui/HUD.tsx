@@ -23,6 +23,8 @@ import { CorridorJourneyBar } from './CorridorJourneyBar';
 import { GoogleMapsStoreDrawer } from './GoogleMapsStoreDrawer';
 import { GoogleMapsStore } from '../../data/GoogleMapsStoreRegistry';
 import { FOOTPATH_AUDIT_SUMMARY } from '../../data/footpathAudit';
+import { AccuracyLegend } from './AccuracyLegend';
+import { SketchfabAssetDrawer } from './SketchfabAssetDrawer';
 
 interface HUDProps {
   flowData: TrafficFlowData;
@@ -42,6 +44,8 @@ interface HUDProps {
   onDismissNotice: () => void;
   isScenarioRoomOpen: boolean;
   onOpenScenarioRoom: () => void;
+  isSketchfabLabOpen: boolean;
+  onToggleSketchfabLab: () => void;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -61,7 +65,9 @@ export const HUD: React.FC<HUDProps> = ({
   onOpenJunctionDetail,
   onDismissNotice,
   isScenarioRoomOpen,
-  onOpenScenarioRoom
+  onOpenScenarioRoom,
+  isSketchfabLabOpen,
+  onToggleSketchfabLab
 }) => {
   // Determine health color
   const healthColor =
@@ -311,6 +317,8 @@ export const HUD: React.FC<HUDProps> = ({
         <NavigationWidget cameraMode={mode.cameraMode} />
       </div>
 
+      <AccuracyLegend cameraMode={mode.cameraMode} />
+
       <div className="source-attribution" aria-label="Map data attribution">
         OSM SNAPSHOT • © OpenStreetMap contributors • ODbL • API LAYERS OPTIONAL
       </div>
@@ -327,6 +335,8 @@ export const HUD: React.FC<HUDProps> = ({
           onToggleStoreDrawer={onToggleStoreDrawer}
           isScenarioRoomOpen={isScenarioRoomOpen}
           onOpenScenarioRoom={onOpenScenarioRoom}
+          isSketchfabLabOpen={isSketchfabLabOpen}
+          onToggleSketchfabLab={onToggleSketchfabLab}
         />
       </footer>
 
@@ -336,6 +346,11 @@ export const HUD: React.FC<HUDProps> = ({
         onClose={onToggleStoreDrawer}
         selectedStoreId={selectedStoreId}
         onSelectStore={onSelectStore}
+      />
+
+      <SketchfabAssetDrawer
+        isOpen={isSketchfabLabOpen}
+        onClose={onToggleSketchfabLab}
       />
     </div>
   );

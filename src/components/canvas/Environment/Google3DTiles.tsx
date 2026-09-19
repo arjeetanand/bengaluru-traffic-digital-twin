@@ -245,13 +245,14 @@ export const Google3DTiles: React.FC<Google3DTilesProps> = ({ apiKey, onError })
       tilesRef.current = tiles;
       scene.add(tiles.group);
 
+      const activeTiles = tiles;
       return () => {
         disposed = true;
         if (startupTimer !== null) clearTimeout(startupTimer);
-        tiles.removeEventListener('load-root-tileset', applyAppCoordinateFrame);
-        tiles.removeEventListener('tile-visibility-change', updateAttribution);
-        tiles.removeEventListener('load-tileset', updateAttribution);
-        tiles.removeEventListener('load-error', handleLoadError);
+        activeTiles.removeEventListener('load-root-tileset', applyAppCoordinateFrame);
+        activeTiles.removeEventListener('tile-visibility-change', updateAttribution);
+        activeTiles.removeEventListener('load-tileset', updateAttribution);
+        activeTiles.removeEventListener('load-error', handleLoadError);
         disposeRenderer();
       };
     } catch (error) {

@@ -1,0 +1,240 @@
+.accuracy-legend {
+  --accuracy-cyan: #38bdf8;
+  --accuracy-text: #e2e8f0;
+  --accuracy-muted: #94a3b8;
+  --accuracy-dim: #64748b;
+  position: fixed;
+  top: 150px;
+  right: 20px;
+  z-index: 16;
+  width: min(304px, calc(100vw - 40px));
+  pointer-events: auto;
+  color: var(--accuracy-text);
+  font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+}
+
+.accuracy-legend__details {
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(8, 18, 34, 0.97), rgba(15, 23, 42, 0.92));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.accuracy-legend__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 10px 8px 12px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.accuracy-legend__summary::-webkit-details-marker {
+  display: none;
+}
+
+.accuracy-legend__summary:hover {
+  background: rgba(56, 189, 248, 0.07);
+}
+
+.accuracy-legend__summary:focus-visible {
+  outline: 2px solid var(--accuracy-cyan);
+  outline-offset: -3px;
+}
+
+.accuracy-legend__summary-icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(56, 189, 248, 0.36);
+  border-radius: 7px;
+  color: var(--accuracy-cyan);
+  background: rgba(14, 165, 233, 0.12);
+}
+
+.accuracy-legend__summary-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.accuracy-legend__eyebrow,
+.accuracy-legend__mode,
+.accuracy-legend__item-label,
+.accuracy-legend__mode-note-label {
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.accuracy-legend__eyebrow {
+  color: #7dd3fc;
+  font-size: 8px;
+  line-height: 1.2;
+}
+
+.accuracy-legend__title {
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accuracy-legend__mode {
+  margin-left: auto;
+  padding: 4px 6px;
+  border: 1px solid rgba(167, 243, 208, 0.25);
+  border-radius: 4px;
+  color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.08);
+  font-size: 7px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.accuracy-legend__chevron {
+  flex: 0 0 auto;
+  color: var(--accuracy-dim);
+  transition: transform 160ms ease, color 160ms ease;
+}
+
+.accuracy-legend__details[open] .accuracy-legend__chevron {
+  color: var(--accuracy-cyan);
+  transform: rotate(180deg);
+}
+
+.accuracy-legend__body {
+  padding: 0 12px 12px;
+  user-select: text;
+}
+
+.accuracy-legend__intro {
+  padding: 10px 0 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--accuracy-muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.accuracy-legend__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accuracy-legend__item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 2px solid var(--accuracy-item-color);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.accuracy-legend__item-icon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 5px;
+  color: var(--accuracy-item-color);
+  background: color-mix(in srgb, var(--accuracy-item-color) 13%, transparent);
+}
+
+.accuracy-legend__item-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.accuracy-legend__item-label {
+  color: var(--accuracy-item-color);
+  font-size: 8px;
+  line-height: 1.25;
+}
+
+.accuracy-legend__item-description {
+  color: #cbd5e1;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.accuracy-legend__item--source {
+  --accuracy-item-color: #38bdf8;
+}
+
+.accuracy-legend__item--modelled {
+  --accuracy-item-color: #fbbf24;
+}
+
+.accuracy-legend__item--verify {
+  --accuracy-item-color: #fb923c;
+}
+
+.accuracy-legend__item--provider {
+  --accuracy-item-color: #c084fc;
+}
+
+.accuracy-legend__mode-note {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--accuracy-muted);
+  font-size: 8.5px;
+  line-height: 1.5;
+}
+
+.accuracy-legend__mode-note-label {
+  display: block;
+  margin-bottom: 3px;
+  color: #a7f3d0;
+  font-size: 7px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accuracy-legend__chevron {
+    transition: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .accuracy-legend {
+    top: 74px;
+    right: 10px;
+    width: min(304px, calc(100vw - 20px));
+  }
+
+  .accuracy-legend__details {
+    max-height: min(420px, calc(100vh - 94px));
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 520px) {
+  .accuracy-legend {
+    top: 70px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+  }
+
+  .accuracy-legend__body {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+}

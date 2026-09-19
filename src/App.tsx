@@ -54,6 +54,7 @@ export const App: React.FC = () => {
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const [isJunctionModalOpen, setIsJunctionModalOpen] = useState(false);
   const [isScenarioRoomOpen, setIsScenarioRoomOpen] = useState(false);
+  const [isSketchfabLabOpen, setIsSketchfabLabOpen] = useState(false);
   const [viewMode, setViewMode] = useState<SimulationViewMode>('explore');
   const [selectedScenarioId, setSelectedScenarioId] = useState(DEFAULT_SCENARIO_ID);
   const [scenarioRun, setScenarioRun] = useState<ScenarioRun | null>(null);
@@ -225,6 +226,10 @@ export const App: React.FC = () => {
     setViewMode('simulate');
   }, []);
 
+  const handleToggleSketchfabLab = useCallback(() => {
+    setIsSketchfabLabOpen((previous) => !previous);
+  }, []);
+
   const handleSelectScenario = useCallback((scenarioId: string) => {
     setSelectedScenarioId(scenarioId);
     setScenarioRun(null);
@@ -265,15 +270,18 @@ export const App: React.FC = () => {
   }, [scenarioRun, setTime]);
 
   useEffect(() => {
-    if (!isScenarioRoomOpen) return undefined;
+    if (!isScenarioRoomOpen && !isSketchfabLabOpen) return undefined;
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsScenarioRoomOpen(false);
+      if (event.key === 'Escape') {
+        setIsScenarioRoomOpen(false);
+        setIsSketchfabLabOpen(false);
+      }
     };
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [isScenarioRoomOpen]);
+  }, [isScenarioRoomOpen, isSketchfabLabOpen]);
 
   useEffect(() => {
     if (isScenarioRoomOpen) scenarioRoomRef.current?.focus();
@@ -318,6 +326,8 @@ export const App: React.FC = () => {
         onDismissNotice={() => setNotice(undefined)}
         isScenarioRoomOpen={isScenarioRoomOpen}
         onOpenScenarioRoom={handleOpenScenarioRoom}
+        isSketchfabLabOpen={isSketchfabLabOpen}
+        onToggleSketchfabLab={handleToggleSketchfabLab}
       />
 
       {/* ── Junction Telemetry & Detail Modal ── */}
