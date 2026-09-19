@@ -79,7 +79,7 @@ export const HUD: React.FC<HUDProps> = ({
   const isPersonView = mode.cameraMode === 'walk';
   const inspectionContext = isPersonView
     ? 'PERSON INSPECTION · 1.7M EYE · ROAD + FOOTPATH'
-    : 'BIRD INSPECTION · ORBIT · JUNCTION + METRO';
+    : 'BIRD INSPECTION · MAP · JUNCTION + METRO';
   const trafficCountProvenance = flowData.isDemo
     ? 'OSM SNAPSHOT · MODELLED FLEET · 30 HZ'
     : 'TOMTOM FLOW INPUT · MODELLED FLEET';
@@ -294,14 +294,14 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ── 3D Camera Controls Movement Guide Pill ── */}
       <div
         className="camera-hint-pill"
-        aria-label={`Inspection context: ${inspectionContext}. ${isPersonView ? 'Walk the mapped road and footpath at eye level.' : 'Orbit the complete junction, metro, and surrounding corridor.'}`}
+        aria-label={`Inspection context: ${inspectionContext}. ${isPersonView ? 'Walk the mapped road and footpath at eye level.' : 'Drag to pan the map, scroll to zoom, and right-drag to rotate the 3D view.'}`}
       >
         <span className="hint-tag">CONTROLS</span>
-        <span className="camera-mode-label">{isPersonView ? 'PERSON · 1.7M EYE · ROAD + FOOTPATH' : 'BIRD · ORBIT · JUNCTION + METRO'}</span>
+        <span className="camera-mode-label">{isPersonView ? 'PERSON · 1.7M EYE · ROAD + FOOTPATH' : 'BIRD · MAP · JUNCTION + METRO'}</span>
         <span className="hint-divider">•</span>
         <span><b>WASD:</b> {mode.cameraMode === 'walk' ? 'Walk' : 'Glide'}</span>
         <span className="hint-divider">•</span>
-        <span><b>Drag:</b> {mode.cameraMode === 'walk' ? 'Look around' : 'Orbit 360°'}</span>
+        <span><b>Drag:</b> {mode.cameraMode === 'walk' ? 'Look around' : 'Pan map'}</span>
         <span className="hint-divider">•</span>
         <span><b>Arrows:</b> Turn / Tilt</span>
         <span className="hint-divider">•</span>
@@ -310,6 +310,12 @@ export const HUD: React.FC<HUDProps> = ({
         <span><b>Shift:</b> Sprint</span>
         <span className="hint-divider">•</span>
         <span><b>Scroll:</b> Zoom</span>
+        {!isPersonView && (
+          <>
+            <span className="hint-divider">•</span>
+            <span><b>Right-drag:</b> Rotate</span>
+          </>
+        )}
       </div>
 
       {/* ── Floating Interactive Navigation Controller ── */}

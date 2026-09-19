@@ -101,7 +101,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
           className={`group-item ${mode.cameraMode === 'overview' ? 'active' : ''}`}
           aria-pressed={mode.cameraMode === 'overview'}
           onClick={() => onUpdateMode({ cameraMode: 'overview' })}
-          title="Bird's-eye mode: orbit and survey the full corridor"
+          title="Map mode: drag to pan, scroll to zoom, and right-drag to rotate the full corridor"
         >
           <MapPin size={13} />
           <span>BIRD VIEW</span>

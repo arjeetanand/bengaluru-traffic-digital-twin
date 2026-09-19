@@ -154,6 +154,7 @@ export const Scene: React.FC<SceneProps> = ({
         shadows={CANVAS_SHADOWS}
         camera={CANVAS_CAMERA}
         gl={canvasGl}
+        style={{ touchAction: 'none' }}
       >
         {/* Background & Subtle Fog */}
         <color attach="background" args={[fogColor]} />
@@ -180,7 +181,7 @@ export const Scene: React.FC<SceneProps> = ({
           />
         )}
 
-        {/* Camera Rig & OrbitControls. Keep this node unkeyed and mounted
+        {/* Camera Rig & MapControls. Keep this node unkeyed and mounted
             across preset/mode changes so its target refs can lerp. */}
         <CameraController
           isCinematic={isCinematic}
