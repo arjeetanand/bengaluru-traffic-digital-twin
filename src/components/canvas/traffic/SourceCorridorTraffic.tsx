@@ -20,7 +20,6 @@ import { getOrrUnderpassElevation } from '../../../data/RealRoadData';
 import { loadMarathahalliSnapshot } from '../../../services/marathahalliSnapshot';
 import {
   allocateFleet,
-  getPublishedModelledSignalState,
   MODELLED_TRAFFIC_STEP_SECONDS
 } from './TrafficSystem';
 
@@ -188,18 +187,18 @@ function getSourceSignalControl(
   }
 
   let closestSignal: PolylineProjection | null = null;
-  (snapshot.signals || []).forEach((signal) => {
+  for (const signal of snapshot.signals || []) {
     const distanceToCluster = Math.hypot(
       signal.position[0] - SOURCE_SIGNAL_CENTER[0],
       signal.position[1] - SOURCE_SIGNAL_CENTER[1]
     );
-    if (distanceToCluster > SOURCE_SIGNAL_CLUSTER_RADIUS_METERS) return;
+    if (distanceToCluster > SOURCE_SIGNAL_CLUSTER_RADIUS_METERS) continue;
 
     const projection = projectPointToPolyline(feature.geometry, signal.position);
     if (!closestSignal || projection.distanceMeters < closestSignal.distanceMeters) {
       closestSignal = projection;
     }
-  });
+  }
 
   if (!closestSignal || closestSignal.distanceMeters > SOURCE_SIGNAL_MATCH_RADIUS_METERS) {
     return { controlledBy: 'FREE' as const, stopProgress: null };
@@ -497,7 +496,7 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
   useFrame((_, delta) => {
     if (!routes.length || !agents.length) return;
     simulationAccumulator.current += Math.min(delta, 0.1);
-    const step = 1 / 30;
+    const step = MODELLED_TRAFFIC_STEP_SECONDS;
     if (simulationAccumulator.current < step) return;
     const dt = Math.min(simulationAccumulator.current, 0.1) * simSpeedMultiplier;
     simulationAccumulator.current = 0;
@@ -506,10 +505,10 @@ export const SourceCorridorTraffic: React.FC<SourceCorridorTrafficProps> = ({
 
     for (const agent of agents) {
       const route = routes[agent.routeIdx];
-      const progress = agent.direction === 1 ? agent.t : 1 - agent.t;
-      agent.t += (agent.speed * congestionSpeedFactor * dt) / route.length;
-      if (agent.t > 1) {
-        agent.t = 0.02 + (agent.id % 7) * 0.006;
+      const progress = agent.direction === 1 ? agent.progress : 1 - agent.progress;
+      agent.progress += (agent.speed * congestionSpeedFactor * dt) / route.length;
+      if (agent.progress > 1) {
+        agent.progress = 0.02 + (agent.id % 7) * 0.006;
         // A source route never reverses at the endpoint. Bidirectional ways
         // already have a separate route for each legal travel direction.
         agent.direction = route.preferredDirection;

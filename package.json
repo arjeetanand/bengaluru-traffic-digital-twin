@@ -13,7 +13,8 @@
     "crossover:validate": "node scripts/validate-crossover-geometry.mjs",
     "corridor:validate": "node src/data/validate-bellandur-marathahalli-corridor.mjs",
     "scenario:validate": "node scripts/validate-scenario-engine.mjs",
-    "build": "npm run data:compile && npm run data:validate && npm run metro:validate && npm run metro:placement:validate && npm run pedestrian:validate && npm run crossover:validate && npm run corridor:validate && npm run scenario:validate && tsc && vite build",
+    "sketchfab:validate": "node scripts/validate-sketchfab-assets.mjs",
+    "build": "npm run data:compile && npm run data:validate && npm run metro:validate && npm run metro:placement:validate && npm run pedestrian:validate && npm run crossover:validate && npm run corridor:validate && npm run scenario:validate && npm run sketchfab:validate && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

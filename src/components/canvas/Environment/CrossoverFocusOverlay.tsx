@@ -1035,26 +1035,6 @@ const DirectionMarkers: React.FC<{
   );
 };
 
-const SourceVertexMarkers: React.FC<{
-  connector: UTurnConnector;
-}> = ({ connector }) => (
-  <group
-    name="OSMSourceCrossoverVertices"
-    userData={{
-      source: 'OSM relation/18922642',
-      status: 'source vertex anchors',
-      sourceWayIds: connector.sourceWayIds
-    }}
-  >
-    {connector.points.map(([x, _y, z], index) => (
-      <mesh key={`source-crossover-vertex-${index}`} position={[x, 0.38, z]} renderOrder={9}>
-        <sphereGeometry args={[index === 5 || index === 6 ? 0.18 : 0.11, 8, 6]} />
-        <meshBasicMaterial color={index === 5 || index === 6 ? '#fbbf24' : '#22d3ee'} transparent opacity={0.9} depthWrite={false} />
-      </mesh>
-    ))}
-  </group>
-);
-
 /**
  * Focus aid for the crossover preset. The highlighted paths are generated
  * from U_TURN_CONNECTORS, the same source-linked points consumed by
@@ -1067,7 +1047,6 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
   cameraMode = 'overview'
 }) => {
   const northSourceCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.north.points), []);
-  const southSourceCurve = useMemo(() => createConnectorCurve(U_TURN_CONNECTORS.south.points), []);
   const northCurve = useMemo(() => createModelledReplayCurve(U_TURN_CONNECTORS.north.points), []);
   const southCurve = useMemo(() => createModelledReplayCurve(U_TURN_CONNECTORS.south.points), []);
   const northSurfaceGeometry = useMemo(
@@ -1406,8 +1385,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           <tubeGeometry args={[southCurve, 96, 0.1, 8, false]} />
           <meshBasicMaterial color={accent} transparent opacity={0.92} depthWrite={false} />
         </mesh>
-        <DirectionMarkers id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} color={accent} />
-        <DirectionMarkers id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} color={accent} />
+        <DirectionMarkers id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} color={accent} laneOffset={-MODELLED_REPLAY_LANE_OFFSET} />
+        <DirectionMarkers id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} color={accent} laneOffset={MODELLED_REPLAY_LANE_OFFSET} />
 
         <FocusLabel
           position={northLabelPosition}
@@ -1429,8 +1408,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
           title="TURN REPLAY"
           detail="YIELD → SWEEP → EXIT · MODELLED · NOT COUNTED"
         />
-        <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} isNight={isNight} cameraMode={cameraMode} conflictRef={replayConflictRef} />
-        <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} isNight={isNight} cameraMode={cameraMode} conflictRef={replayConflictRef} />
+        <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} laneOffset={-MODELLED_REPLAY_LANE_OFFSET} isNight={isNight} cameraMode={cameraMode} conflictRef={replayConflictRef} />
+        <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} laneOffset={MODELLED_REPLAY_LANE_OFFSET} isNight={isNight} cameraMode={cameraMode} conflictRef={replayConflictRef} />
         </group>
       )}
 
@@ -1484,8 +1463,8 @@ export const CrossoverFocusOverlay: React.FC<CrossoverFocusOverlayProps> = ({
               <meshBasicMaterial color={accent} transparent opacity={0.3} depthWrite={false} />
             </mesh>
           ))}
-          <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} isNight={isNight} cameraMode="walk" conflictRef={replayConflictRef} />
-          <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} isNight={isNight} cameraMode="walk" conflictRef={replayConflictRef} />
+          <CrossoverTurnGuide id="north" connector={U_TURN_CONNECTORS.north} curve={northCurve} laneOffset={-MODELLED_REPLAY_LANE_OFFSET} isNight={isNight} cameraMode="walk" conflictRef={replayConflictRef} />
+          <CrossoverTurnGuide id="south" connector={U_TURN_CONNECTORS.south} curve={southCurve} laneOffset={MODELLED_REPLAY_LANE_OFFSET} isNight={isNight} cameraMode="walk" conflictRef={replayConflictRef} />
         </>
       )}
     </group>

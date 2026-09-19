@@ -1,0 +1,672 @@
+.sketchfab-drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  pointer-events: none;
+}
+
+.sketchfab-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  background: rgba(2, 6, 23, 0.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.sketchfab-asset-drawer {
+  --sketchfab-bg: rgba(5, 11, 23, 0.985);
+  --sketchfab-surface: rgba(12, 23, 41, 0.86);
+  --sketchfab-surface-strong: rgba(15, 30, 51, 0.96);
+  --sketchfab-line: rgba(148, 163, 184, 0.18);
+  --sketchfab-line-strong: rgba(56, 189, 248, 0.42);
+  --sketchfab-text: #edf7ff;
+  --sketchfab-muted: #9eafc1;
+  --sketchfab-dim: #647890;
+  --sketchfab-cyan: #58d7ff;
+  --sketchfab-cyan-soft: rgba(56, 189, 248, 0.11);
+  --sketchfab-amber: #f8c25c;
+  --sketchfab-green: #7ee6ac;
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  width: min(510px, 100vw);
+  height: 100%;
+  pointer-events: auto;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--sketchfab-text);
+  border-left: 1px solid rgba(88, 215, 255, 0.36);
+  background:
+    radial-gradient(circle at 94% 0%, rgba(56, 189, 248, 0.15), transparent 29%),
+    linear-gradient(180deg, rgba(8, 20, 36, 0.99), var(--sketchfab-bg) 42%);
+  box-shadow: -24px 0 70px rgba(0, 0, 0, 0.52), inset 1px 0 0 rgba(255, 255, 255, 0.04);
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  animation: sketchfab-drawer-enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.sketchfab-asset-drawer::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: 30px 30px;
+  content: '';
+}
+
+.sketchfab-drawer__header,
+.sketchfab-drawer__content {
+  position: relative;
+  z-index: 1;
+}
+
+.sketchfab-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 22px 19px;
+  border-bottom: 1px solid var(--sketchfab-line);
+  background: linear-gradient(110deg, rgba(4, 12, 25, 0.78), rgba(13, 31, 51, 0.66));
+}
+
+.sketchfab-drawer__heading-group {
+  min-width: 0;
+}
+
+.sketchfab-drawer__eyebrow,
+.sketchfab-drawer__section-kicker,
+.sketchfab-drawer__uid,
+.sketchfab-drawer__category-badge,
+.sketchfab-drawer__state,
+.sketchfab-drawer__registry-status,
+.sketchfab-drawer__credit-row > span,
+.sketchfab-asset-card__topline,
+.sketchfab-asset-card__creator {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.sketchfab-drawer__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sketchfab-cyan);
+}
+
+.sketchfab-drawer__eyebrow-count {
+  margin-left: 3px;
+  color: var(--sketchfab-dim);
+}
+
+.sketchfab-drawer__signal,
+.sketchfab-drawer__state-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 11px currentColor;
+}
+
+.sketchfab-drawer__signal {
+  animation: sketchfab-pulse 2.2s ease-in-out infinite;
+}
+
+.sketchfab-drawer__header h2,
+.sketchfab-drawer__section-heading h3 {
+  margin: 0;
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+
+.sketchfab-drawer__header h2 {
+  margin-top: 11px;
+  color: var(--sketchfab-text);
+  font-size: clamp(20px, 4vw, 27px);
+  line-height: 1.12;
+}
+
+.sketchfab-drawer__header p {
+  max-width: 360px;
+  margin: 8px 0 0;
+  color: var(--sketchfab-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.sketchfab-drawer__close {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--sketchfab-muted);
+  cursor: pointer;
+  border: 1px solid var(--sketchfab-line);
+  border-radius: 5px;
+  background: rgba(148, 163, 184, 0.07);
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.sketchfab-drawer__close:hover,
+.sketchfab-drawer__close:focus-visible {
+  color: var(--sketchfab-text);
+  border-color: var(--sketchfab-line-strong);
+  outline: none;
+  background: var(--sketchfab-cyan-soft);
+  transform: translateY(-1px);
+}
+
+.sketchfab-drawer__content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 17px;
+  min-height: 0;
+  padding: 18px 18px 22px;
+  overflow-y: auto;
+  scrollbar-color: rgba(88, 215, 255, 0.44) transparent;
+  scrollbar-width: thin;
+}
+
+.sketchfab-drawer__preview,
+.sketchfab-drawer__registry,
+.sketchfab-drawer__attribution {
+  position: relative;
+  border: 1px solid var(--sketchfab-line);
+  border-radius: 7px;
+  background: linear-gradient(150deg, rgba(17, 34, 57, 0.88), rgba(8, 17, 33, 0.85));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.sketchfab-drawer__preview {
+  overflow: hidden;
+}
+
+.sketchfab-drawer__section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 13px;
+  padding: 15px 15px 13px;
+}
+
+.sketchfab-drawer__section-heading--registry {
+  padding-bottom: 11px;
+}
+
+.sketchfab-drawer__section-heading--compact {
+  align-items: center;
+  padding-bottom: 11px;
+}
+
+.sketchfab-drawer__section-heading > svg {
+  color: var(--sketchfab-cyan);
+}
+
+.sketchfab-drawer__section-kicker {
+  display: block;
+  color: var(--sketchfab-dim);
+}
+
+.sketchfab-drawer__section-heading h3 {
+  margin-top: 6px;
+  color: var(--sketchfab-text);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.sketchfab-drawer__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding-top: 3px;
+  white-space: nowrap;
+}
+
+.sketchfab-drawer__state--loading {
+  color: var(--sketchfab-amber);
+}
+
+.sketchfab-drawer__state--ready {
+  color: var(--sketchfab-green);
+}
+
+.sketchfab-drawer__state--error {
+  color: var(--sketchfab-amber);
+}
+
+.sketchfab-drawer__embed-frame {
+  position: relative;
+  min-height: 262px;
+  margin: 0 12px;
+  overflow: hidden;
+  border: 1px solid rgba(88, 215, 255, 0.2);
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, rgba(56, 189, 248, 0.06), transparent 48%),
+    #020712;
+}
+
+.sketchfab-drawer__embed-frame::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  border-radius: inherit;
+  content: '';
+}
+
+.sketchfab-drawer__embed {
+  display: block;
+  width: 100%;
+  height: 262px;
+  border: 0;
+  background: #020712;
+}
+
+.sketchfab-drawer__embed-fallback {
+  display: flex;
+  min-height: 262px;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 24px;
+  text-align: center;
+  flex-direction: column;
+}
+
+.sketchfab-drawer__fallback-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 13px;
+  place-items: center;
+  color: var(--sketchfab-cyan);
+  border: 1px solid var(--sketchfab-line-strong);
+  border-radius: 50%;
+  background: var(--sketchfab-cyan-soft);
+}
+
+.sketchfab-drawer__embed-fallback strong {
+  color: var(--sketchfab-text);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+.sketchfab-drawer__embed-fallback p {
+  max-width: 310px;
+  margin: 8px 0 17px;
+  color: var(--sketchfab-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.sketchfab-drawer__primary-link,
+.sketchfab-drawer__credit-row a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sketchfab-cyan);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.sketchfab-drawer__primary-link {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--sketchfab-line-strong);
+  border-radius: 4px;
+  background: var(--sketchfab-cyan-soft);
+  transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.sketchfab-drawer__primary-link:hover,
+.sketchfab-drawer__primary-link:focus-visible,
+.sketchfab-drawer__credit-row a:hover,
+.sketchfab-drawer__credit-row a:focus-visible {
+  color: #b8efff;
+  border-color: var(--sketchfab-cyan);
+  outline: none;
+}
+
+.sketchfab-drawer__primary-link:hover,
+.sketchfab-drawer__primary-link:focus-visible {
+  background: rgba(56, 189, 248, 0.19);
+}
+
+.sketchfab-drawer__preview-meta {
+  padding: 13px 15px 15px;
+}
+
+.sketchfab-drawer__preview-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sketchfab-drawer__category-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 6px;
+  color: var(--sketchfab-cyan);
+  border: 1px solid rgba(88, 215, 255, 0.27);
+  border-radius: 3px;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.sketchfab-asset-card--vehicle,
+.sketchfab-drawer__category-badge.sketchfab-asset-card--vehicle {
+  color: #f8c25c;
+  border-color: rgba(248, 194, 92, 0.35);
+  background: rgba(248, 194, 92, 0.08);
+}
+
+.sketchfab-asset-card--transit,
+.sketchfab-drawer__category-badge.sketchfab-asset-card--transit {
+  color: #a98cff;
+  border-color: rgba(169, 140, 255, 0.35);
+  background: rgba(169, 140, 255, 0.08);
+}
+
+.sketchfab-drawer__uid {
+  overflow: hidden;
+  color: var(--sketchfab-dim);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sketchfab-drawer__preview-meta p {
+  margin: 10px 0 11px;
+  color: var(--sketchfab-muted);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.sketchfab-drawer__usage-note {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: var(--sketchfab-amber);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.sketchfab-drawer__usage-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.sketchfab-drawer__preview-link {
+  margin-top: 13px;
+}
+
+.sketchfab-drawer__registry {
+  padding-bottom: 13px;
+}
+
+.sketchfab-drawer__registry-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 3px;
+  color: var(--sketchfab-dim);
+  white-space: nowrap;
+}
+
+.sketchfab-drawer__registry-status svg {
+  color: var(--sketchfab-cyan);
+}
+
+.sketchfab-drawer__cards {
+  display: grid;
+  gap: 7px;
+  padding: 0 11px;
+}
+
+.sketchfab-asset-card {
+  display: flex;
+  width: 100%;
+  min-height: 65px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 11px;
+  color: var(--sketchfab-text);
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 5px;
+  background: rgba(5, 14, 28, 0.66);
+  font: inherit;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.sketchfab-asset-card:hover,
+.sketchfab-asset-card:focus-visible,
+.sketchfab-asset-card.is-selected {
+  border-color: var(--sketchfab-line-strong);
+  outline: none;
+  background: linear-gradient(100deg, rgba(19, 58, 83, 0.72), rgba(9, 25, 44, 0.84));
+  box-shadow: 0 0 0 1px rgba(88, 215, 255, 0.04), 0 7px 18px rgba(0, 0, 0, 0.15);
+  transform: translateX(-2px);
+}
+
+.sketchfab-asset-card.is-selected {
+  box-shadow: inset 3px 0 0 var(--sketchfab-cyan), 0 7px 18px rgba(0, 0, 0, 0.15);
+}
+
+.sketchfab-asset-card__index {
+  display: inline-grid;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--sketchfab-cyan);
+  border: 1px solid rgba(88, 215, 255, 0.23);
+  border-radius: 3px;
+  background: rgba(56, 189, 248, 0.07);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sketchfab-asset-card__index.sketchfab-asset-card--vehicle {
+  color: var(--sketchfab-amber);
+  border-color: rgba(248, 194, 92, 0.32);
+  background: rgba(248, 194, 92, 0.07);
+}
+
+.sketchfab-asset-card__index.sketchfab-asset-card--transit {
+  color: #a98cff;
+  border-color: rgba(169, 140, 255, 0.32);
+  background: rgba(169, 140, 255, 0.07);
+}
+
+.sketchfab-asset-card__copy {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 3px;
+}
+
+.sketchfab-asset-card__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--sketchfab-dim);
+  font-size: 8px;
+}
+
+.sketchfab-asset-card__topline svg {
+  color: var(--sketchfab-cyan);
+}
+
+.sketchfab-asset-card__copy strong {
+  overflow: hidden;
+  color: var(--sketchfab-text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sketchfab-asset-card.is-selected .sketchfab-asset-card__copy strong {
+  color: #b9f0ff;
+}
+
+.sketchfab-asset-card__creator {
+  overflow: hidden;
+  color: var(--sketchfab-dim);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sketchfab-asset-card__chevron {
+  flex: 0 0 auto;
+  color: var(--sketchfab-dim);
+  font-family: Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+  transition: color 140ms ease, transform 140ms ease;
+}
+
+.sketchfab-asset-card:hover .sketchfab-asset-card__chevron,
+.sketchfab-asset-card:focus-visible .sketchfab-asset-card__chevron,
+.sketchfab-asset-card.is-selected .sketchfab-asset-card__chevron {
+  color: var(--sketchfab-cyan);
+  transform: translateX(2px);
+}
+
+.sketchfab-drawer__attribution {
+  padding-bottom: 13px;
+}
+
+.sketchfab-drawer__section-heading--compact h3 {
+  margin-top: 5px;
+}
+
+.sketchfab-drawer__credit-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 31px;
+  padding: 0 15px;
+  border-top: 1px solid rgba(148, 163, 184, 0.09);
+}
+
+.sketchfab-drawer__credit-row > span {
+  color: var(--sketchfab-dim);
+}
+
+.sketchfab-drawer__credit-row strong,
+.sketchfab-drawer__credit-row a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sketchfab-drawer__credit-row strong {
+  color: var(--sketchfab-text);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.sketchfab-drawer__credit-row a {
+  justify-self: start;
+}
+
+.sketchfab-drawer__disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 0 2px;
+  color: var(--sketchfab-dim);
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.sketchfab-drawer__disclaimer svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--sketchfab-cyan);
+}
+
+@keyframes sketchfab-drawer-enter {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sketchfab-pulse {
+  0%, 100% {
+    opacity: 0.62;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@media (max-width: 580px) {
+  .sketchfab-asset-drawer {
+    width: 100vw;
+  }
+
+  .sketchfab-drawer__header {
+    padding: 18px 16px 16px;
+  }
+
+  .sketchfab-drawer__content {
+    padding: 14px 12px 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sketchfab-asset-drawer,
+  .sketchfab-drawer__signal,
+  .sketchfab-drawer__close,
+  .sketchfab-asset-card,
+  .sketchfab-asset-card__chevron,
+  .sketchfab-drawer__primary-link,
+  .sketchfab-drawer__credit-row a {
+    animation: none;
+    transition: none;
+  }
+}

@@ -13,7 +13,8 @@ import {
   Footprints,
   Building2,
   MapPin,
-  Layers3
+  Layers3,
+  Box
 } from 'lucide-react';
 import { SimulationMode } from '../../types';
 
@@ -27,6 +28,8 @@ interface ControlsBarProps {
   onToggleStoreDrawer?: () => void;
   isScenarioRoomOpen: boolean;
   onOpenScenarioRoom: () => void;
+  isSketchfabLabOpen: boolean;
+  onToggleSketchfabLab: () => void;
 }
 
 export const ControlsBar: React.FC<ControlsBarProps> = ({
@@ -38,7 +41,9 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
   isStoreDrawerOpen,
   onToggleStoreDrawer,
   isScenarioRoomOpen,
-  onOpenScenarioRoom
+  onOpenScenarioRoom,
+  isSketchfabLabOpen,
+  onToggleSketchfabLab
 }) => {
   const [showMoreControls, setShowMoreControls] = useState(false);
 
@@ -68,6 +73,17 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
       >
         <Layers3 size={15} />
         <span>SCENARIOS</span>
+      </button>
+
+      <button
+        type="button"
+        className={`control-btn sketchfab-lab-toggle ${isSketchfabLabOpen ? 'active' : ''}`}
+        onClick={onToggleSketchfabLab}
+        aria-pressed={isSketchfabLabOpen}
+        title="Open the attributed Sketchfab reference asset lab"
+      >
+        <Box size={15} />
+        <span>ASSET LAB</span>
       </button>
 
       {/* ── Person / Bird's-eye inspection mode ── */}
