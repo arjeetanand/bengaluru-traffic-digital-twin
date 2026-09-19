@@ -7,6 +7,7 @@
     "dev": "vite",
     "data:compile": "node scripts/compile-marathahalli-osm.mjs",
     "data:validate": "node scripts/validate-marathahalli-demo.mjs",
+    "building:validate": "node scripts/validate-building-road-clearance.mjs",
     "metro:validate": "node scripts/validate-metro-geometry.mjs",
     "metro:placement:validate": "node scripts/validate-metro-placement.mjs",
     "pedestrian:validate": "node scripts/validate-pedestrian-continuity.mjs",
@@ -14,7 +15,7 @@
     "corridor:validate": "node src/data/validate-bellandur-marathahalli-corridor.mjs",
     "scenario:validate": "node scripts/validate-scenario-engine.mjs",
     "sketchfab:validate": "node scripts/validate-sketchfab-assets.mjs",
-    "build": "npm run data:compile && npm run data:validate && npm run metro:validate && npm run metro:placement:validate && npm run pedestrian:validate && npm run crossover:validate && npm run corridor:validate && npm run scenario:validate && npm run sketchfab:validate && tsc && vite build",
+    "build": "npm run data:compile && npm run data:validate && npm run building:validate && npm run metro:validate && npm run metro:placement:validate && npm run pedestrian:validate && npm run crossover:validate && npm run corridor:validate && npm run scenario:validate && npm run sketchfab:validate && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -8,6 +8,12 @@ interface EastCorridorBuildingsProps {
 }
 
 export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ isNight }) => {
+  // The source 4th Cross Road ribbon runs immediately east of this authored
+  // row. Keep a narrow frontage setback instead of letting the showcase box
+  // consume the source carriageway.
+  const outletRowWidth = 22;
+  const outletFrontX = -outletRowWidth / 2 - 0.2;
+
   // ── High-Resolution Canvas Brand Textures for Outlet Row & Nalli Silks ──
   const outletTextures = useMemo(() => {
     const makeTexture = (brand: string, subtitle: string, bg: string, textCol: string) => {
@@ -59,12 +65,12 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
       <group position={[48, 0, -115]} name="FactoryOutletsRow">
         {/* Continuous 3-Story Commercial Outlet Complex */}
         <mesh position={[0, 7.5, 0]} castShadow receiveShadow>
-          <boxGeometry args={[28, 15, 88]} />
+          <boxGeometry args={[outletRowWidth, 15, 88]} />
           <meshStandardMaterial color="#1e293b" roughness={0.6} />
         </mesh>
 
         {/* Display Glazing along Service Road (-X facing ORR) */}
-        <mesh position={[-14.1, 4.0, 0]}>
+        <mesh position={[outletFrontX, 4.0, 0]}>
           <boxGeometry args={[0.1, 7.0, 82]} />
           <meshStandardMaterial
             color={isNight ? '#fef08a' : '#ffffff'}
@@ -76,7 +82,7 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
         </mesh>
 
         {/* Nike Factory Store Section (z = -28) */}
-        <group position={[-14.2, 11, -28]}>
+        <group position={[outletFrontX, 11, -28]}>
           <mesh>
             <boxGeometry args={[0.2, 3.4, 18]} />
             <meshStandardMaterial color="#18181b" />
@@ -92,7 +98,7 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
         </group>
 
         {/* Adidas Factory Outlet Section (z = -6) */}
-        <group position={[-14.2, 11, -6]}>
+        <group position={[outletFrontX, 11, -6]}>
           <mesh>
             <boxGeometry args={[0.2, 3.4, 18]} />
             <meshStandardMaterial color="#0f172a" />
@@ -108,7 +114,7 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
         </group>
 
         {/* Puma Outlet Section (z = +16) */}
-        <group position={[-14.2, 11, 16]}>
+        <group position={[outletFrontX, 11, 16]}>
           <mesh>
             <boxGeometry args={[0.2, 3.4, 18]} />
             <meshStandardMaterial color="#b91c1c" />
@@ -124,7 +130,7 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
         </group>
 
         {/* Reebok & FirstCry Outlet Section (z = +36) */}
-        <group position={[-14.2, 11, 36]}>
+        <group position={[outletFrontX, 11, 36]}>
           <mesh>
             <boxGeometry args={[0.2, 3.4, 16]} />
             <meshStandardMaterial color="#1e3a8a" />
@@ -144,11 +150,16 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
       {/* 2. BRAND FACTORY / KLM FASHION MALL (Vanshee Towers, Z = 58, X = 48)  */}
       {/* Hyper-Realistic 4-Storey Retail Mall with Fashion Displays & Signage  */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <BrandFactoryMall
-        isNight={isNight}
-        position={[48, 0, 58]}
-        rotationY={-Math.PI / 2}
-      />
+      {/* The source 1st Main Road ribbon runs along the west edge of this
+          inspection parcel. Keep the camera/source target at [48, 58], while
+          placing the authored display mass east of that road envelope. */}
+      <group position={[52.5, 0, 58]} scale={[0.4, 1, 0.4]} name="BrandFactoryMallSourceFit">
+        <BrandFactoryMall
+          isNight={isNight}
+          position={[0, 0, 0]}
+          rotationY={-Math.PI / 2}
+        />
+      </group>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {/* 3. KALAMANDIR PALATIAL WEDDING SILK PALACE (Real OSM: Z = 332.5, X = 46)*/}
@@ -156,42 +167,46 @@ export const EastCorridorBuildings: React.FC<EastCorridorBuildingsProps> = ({ is
       {/* ═════════════════════════════════════════════════════════════════════ */}
       <KalamandirPalace
         isNight={isNight}
-        position={[46, 0, 332.5]}
-        rotationY={-Math.PI / 2 - 0.2}
+        position={[46, 0, 330.4]}
+        rotationY={-Math.PI / 2 + 0.14}
       />
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* 4. NALLI SILKS & HERITAGE SHOWROOM (Real OSM: Z = 354, X = 49)        */}
+      {/* 4. NALLI SILKS & HERITAGE SHOWROOM (source anchor X = 48.9, Z = 347.8) */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[49, 0, 354]} name="NalliSilksShowroom">
-        <mesh position={[0, 10, 0]} castShadow receiveShadow>
-          <boxGeometry args={[28, 20, 32]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.6} />
-        </mesh>
-        <mesh position={[-14.1, 6, 0]}>
-          <boxGeometry args={[0.1, 10, 26]} />
-          <meshStandardMaterial
-            color={isNight ? '#fef08a' : '#ffffff'}
-            emissive={isNight ? '#ca8a04' : '#000000'}
-            emissiveIntensity={isNight ? 1.8 : 0}
-            roughness={0.1}
-            metalness={0.7}
-          />
-        </mesh>
-        {/* Nalli Saree Front Signboard */}
-        <group position={[-14.2, 16, 0]}>
-          <mesh>
-            <boxGeometry args={[0.2, 4.0, 24]} />
-            <meshStandardMaterial color="#4a044e" />
+      <group position={[48.9, 0, 347.8]} rotation={[0, 0.12, 0]} name="NalliSilksShowroom">
+        {/* The compiled source footprint is offset from its named POI anchor;
+            retain that anchor while keeping the modeled mass on the parcel. */}
+        <group position={[1.2, 0, -1.4]}>
+          <mesh position={[0, 10, 0]} castShadow receiveShadow>
+            <boxGeometry args={[15, 20, 14]} />
+            <meshStandardMaterial color="#1e293b" roughness={0.6} />
           </mesh>
-          <mesh position={[-0.12, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[23.5, 3.7]} />
+          <mesh position={[-7.6, 6, 0]}>
+            <boxGeometry args={[0.1, 10, 12]} />
             <meshStandardMaterial
-              map={outletTextures.nalli}
-              emissive="#fde047"
-              emissiveIntensity={isNight ? 3.0 : 0.8}
+              color={isNight ? '#fef08a' : '#ffffff'}
+              emissive={isNight ? '#ca8a04' : '#000000'}
+              emissiveIntensity={isNight ? 1.8 : 0}
+              roughness={0.1}
+              metalness={0.7}
             />
           </mesh>
+          {/* Nalli Saree Front Signboard */}
+          <group position={[-7.7, 16, 0]}>
+            <mesh>
+              <boxGeometry args={[0.2, 4.0, 11.5]} />
+              <meshStandardMaterial color="#4a044e" />
+            </mesh>
+            <mesh position={[-0.12, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+              <planeGeometry args={[11.2, 3.7]} />
+              <meshStandardMaterial
+                map={outletTextures.nalli}
+                emissive="#fde047"
+                emissiveIntensity={isNight ? 3.0 : 0.8}
+              />
+            </mesh>
+          </group>
         </group>
       </group>
     </group>

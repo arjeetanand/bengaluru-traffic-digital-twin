@@ -169,6 +169,10 @@ const SOURCE_BUILDING_CONTEXT_CELL_SIZE = 110;
 const SOURCE_BUILDING_REPRESENTATIVES_PER_CELL = 3;
 const SOURCE_BUILDING_OUTLINE_COVERAGE_MIN_LIMIT = 800;
 const SOURCE_BUILDING_MAX_RENDER_HEIGHT = 32;
+const SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN = 0.8;
+const SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE = 80;
+const SOURCE_BUILDING_ROAD_CLEARANCE_QUERY_PADDING = 96;
+const SOURCE_BUILDING_ROAD_CLEARANCE_MAX_PASSES = 4;
 
 function createLineGeometry(positions: number[]) {
   const geometry = new THREE.BufferGeometry();
@@ -357,6 +361,426 @@ function distanceToSourceRoad(point: [number, number], roads: readonly SourceRoa
   return nearest;
 }
 
+interface SourceRoadClearanceSegment {
+  start: [number, number];
+  end: [number, number];
+  halfWidth: number;
+  roadId: string;
+}
+
+interface SourceRoadClearanceIndex {
+  cells: Map<string, SourceRoadClearanceSegment[]>;
+  roadCount: number;
+  segmentCount: number;
+  excludedStructureRoadCount: number;
+}
+
+type SourceBuildingClearanceStatus = 'raw' | 'adjusted' | 'suppressed';
+
+interface SourceBuildingRenderFeature {
+  feature: OSMPolylineFeature;
+  geometry: [number, number][];
+  clearance: {
+    status: SourceBuildingClearanceStatus;
+    rawMinimumMetres: number;
+    renderedMinimumMetres: number;
+    roadIds: string[];
+  };
+}
+
+function isGradeSourceRoadForBuildingClearance(feature: OSMPolylineFeature) {
+  // Bridge/viaduct and tunnel/underpass ways can overlap a building in plan
+  // while remaining vertically separated. They are source evidence, not
+  // grade-level building blockers.
+  const layer = Number(feature.tags.layer);
+  return !isSourceBridgeFeature(feature)
+    && !isSourceUnderpass(feature)
+    && !(Number.isFinite(layer) && layer > 0);
+}
+
+function createSourceRoadClearanceIndex(features: readonly OSMPolylineFeature[]): SourceRoadClearanceIndex {
+  const cells = new Map<string, SourceRoadClearanceSegment[]>();
+  let roadCount = 0;
+  let segmentCount = 0;
+  let excludedStructureRoadCount = 0;
+
+  for (const feature of features) {
+    if (!isGradeSourceRoadForBuildingClearance(feature)) {
+      excludedStructureRoadCount += 1;
+      continue;
+    }
+    if (feature.geometry.length < 2) continue;
+    roadCount += 1;
+    const halfWidth = getRoadRibbonWidth(feature) / 2;
+
+    for (let index = 1; index < feature.geometry.length; index += 1) {
+      const start = feature.geometry[index - 1];
+      const end = feature.geometry[index];
+      if (Math.hypot(end[0] - start[0], end[1] - start[1]) < 0.2) continue;
+
+      const segment = { start, end, halfWidth, roadId: feature.id };
+      segmentCount += 1;
+      const padding = halfWidth + SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN;
+      const minX = Math.floor((Math.min(start[0], end[0]) - padding) / SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE);
+      const maxX = Math.floor((Math.max(start[0], end[0]) + padding) / SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE);
+      const minZ = Math.floor((Math.min(start[1], end[1]) - padding) / SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE);
+      const maxZ = Math.floor((Math.max(start[1], end[1]) + padding) / SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE);
+      for (let cellX = minX; cellX <= maxX; cellX += 1) {
+        for (let cellZ = minZ; cellZ <= maxZ; cellZ += 1) {
+          const key = `${cellX}:${cellZ}`;
+          const bucket = cells.get(key) || [];
+          bucket.push(segment);
+          cells.set(key, bucket);
+        }
+      }
+    }
+  }
+
+  return { cells, roadCount, segmentCount, excludedStructureRoadCount };
+}
+
+function getOpenBuildingFootprint(feature: OSMPolylineFeature) {
+  const points = feature.geometry.map(([x, z]) => [x, z] as [number, number]);
+  if (points.length > 1) {
+    const first = points[0];
+    const last = points[points.length - 1];
+    if (Math.hypot(first[0] - last[0], first[1] - last[1]) < 0.001) points.pop();
+  }
+  return points;
+}
+
+function getFootprintBounds(points: readonly [number, number][]) {
+  return points.reduce((bounds, [x, z]) => ({
+    minX: Math.min(bounds.minX, x),
+    maxX: Math.max(bounds.maxX, x),
+    minZ: Math.min(bounds.minZ, z),
+    maxZ: Math.max(bounds.maxZ, z)
+  }), {
+    minX: Number.POSITIVE_INFINITY,
+    maxX: Number.NEGATIVE_INFINITY,
+    minZ: Number.POSITIVE_INFINITY,
+    maxZ: Number.NEGATIVE_INFINITY
+  });
+}
+
+function getClearanceSegmentsForFootprint(
+  points: readonly [number, number][],
+  index: SourceRoadClearanceIndex
+) {
+  const bounds = getFootprintBounds(points);
+  const padding = SOURCE_BUILDING_ROAD_CLEARANCE_QUERY_PADDING;
+  const candidates = new Set<SourceRoadClearanceSegment>();
+  const minX = Math.floor((bounds.minX - padding) / SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE);
+  const maxX = Math.floor((bounds.maxX + padding) / SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE);
+  const minZ = Math.floor((bounds.minZ - padding) / SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE);
+  const maxZ = Math.floor((bounds.maxZ + padding) / SOURCE_BUILDING_ROAD_CLEARANCE_CELL_SIZE);
+
+  for (let cellX = minX; cellX <= maxX; cellX += 1) {
+    for (let cellZ = minZ; cellZ <= maxZ; cellZ += 1) {
+      for (const segment of index.cells.get(`${cellX}:${cellZ}`) || []) candidates.add(segment);
+    }
+  }
+  return [...candidates].sort((left, right) => left.roadId.localeCompare(right.roadId));
+}
+
+function getClosestPointOnSegment(
+  point: [number, number],
+  start: [number, number],
+  end: [number, number]
+) {
+  const dx = end[0] - start[0];
+  const dz = end[1] - start[1];
+  const lengthSquared = dx * dx + dz * dz;
+  const progress = lengthSquared < 0.01
+    ? 0
+    : Math.max(0, Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dz) / lengthSquared));
+  return [start[0] + dx * progress, start[1] + dz * progress] as [number, number];
+}
+
+function getSegmentPairDistance(
+  leftStart: [number, number],
+  leftEnd: [number, number],
+  rightStart: [number, number],
+  rightEnd: [number, number],
+  buildingCentroid?: [number, number]
+) {
+  const denominator = (
+    (leftEnd[0] - leftStart[0]) * (rightEnd[1] - rightStart[1])
+    - (leftEnd[1] - leftStart[1]) * (rightEnd[0] - rightStart[0])
+  );
+  if (Math.abs(denominator) >= 0.0001) {
+    const leftProgress = (
+      (rightStart[0] - leftStart[0]) * (rightEnd[1] - rightStart[1])
+      - (rightStart[1] - leftStart[1]) * (rightEnd[0] - rightStart[0])
+    ) / denominator;
+    const rightProgress = (
+      (rightStart[0] - leftStart[0]) * (leftEnd[1] - leftStart[1])
+      - (rightStart[1] - leftStart[1]) * (leftEnd[0] - leftStart[0])
+    ) / denominator;
+    if (leftProgress >= 0 && leftProgress <= 1 && rightProgress >= 0 && rightProgress <= 1) {
+      const point = [
+        leftStart[0] + (leftEnd[0] - leftStart[0]) * leftProgress,
+        leftStart[1] + (leftEnd[1] - leftStart[1]) * leftProgress
+      ] as [number, number];
+      return { buildingPoint: buildingCentroid || point, roadPoint: point, distance: 0 };
+    }
+  }
+
+  const leftRoadPoint = getClosestPointOnSegment(leftStart, rightStart, rightEnd);
+  const rightRoadPoint = getClosestPointOnSegment(leftEnd, rightStart, rightEnd);
+  const leftBuildingPoint = getClosestPointOnSegment(rightStart, leftStart, leftEnd);
+  const rightBuildingPoint = getClosestPointOnSegment(rightEnd, leftStart, leftEnd);
+  const options: Array<{
+    buildingPoint: [number, number];
+    roadPoint: [number, number];
+    distance: number;
+  }> = [
+    { buildingPoint: leftStart, roadPoint: leftRoadPoint, distance: 0 },
+    { buildingPoint: leftEnd, roadPoint: rightRoadPoint, distance: 0 },
+    { buildingPoint: leftBuildingPoint, roadPoint: rightStart, distance: 0 },
+    { buildingPoint: rightBuildingPoint, roadPoint: rightEnd, distance: 0 }
+  ];
+  return options.reduce((best, option) => {
+    const distance = Math.hypot(
+      option.buildingPoint[0] - option.roadPoint[0],
+      option.buildingPoint[1] - option.roadPoint[1]
+    );
+    return distance < best.distance ? { ...option, distance } : best;
+  }, { ...options[0], distance: Number.POSITIVE_INFINITY });
+}
+
+function isPointInsideFootprint(point: [number, number], points: readonly [number, number][]) {
+  let inside = false;
+  for (let index = 0, previousIndex = points.length - 1; index < points.length; previousIndex = index++) {
+    const current = points[index];
+    const previous = points[previousIndex];
+    const crossesRay = (current[1] > point[1]) !== (previous[1] > point[1]);
+    if (!crossesRay) continue;
+    const intersectionX = (previous[0] - current[0]) * (point[1] - current[1])
+      / (previous[1] - current[1]) + current[0];
+    if (point[0] < intersectionX) inside = !inside;
+  }
+  return inside;
+}
+
+function getFootprintCentroid(points: readonly [number, number][]) {
+  const [sumX, sumZ] = points.reduce(
+    ([x, z], [pointX, pointZ]) => [x + pointX, z + pointZ],
+    [0, 0]
+  );
+  return [sumX / points.length, sumZ / points.length] as [number, number];
+}
+
+function getFootprintRoadContact(
+  points: readonly [number, number][],
+  segment: SourceRoadClearanceSegment
+) {
+  // Some mapped service/access ways are fully contained by a large parcel
+  // polygon, so no road endpoint crosses the footprint boundary. Treat that
+  // case as a real contact as well; otherwise the display massing could keep
+  // the road hidden inside the building even though the boundary test passes.
+  if (isPointInsideFootprint(segment.start, points) || isPointInsideFootprint(segment.end, points)) {
+    return {
+      buildingPoint: getFootprintCentroid(points),
+      roadPoint: isPointInsideFootprint(segment.start, points) ? segment.start : segment.end,
+      distance: 0,
+      clearance: -segment.halfWidth
+    };
+  }
+
+  let nearest = {
+    buildingPoint: points[0],
+    roadPoint: segment.start,
+    distance: Number.POSITIVE_INFINITY
+  };
+  const buildingCentroid = getFootprintCentroid(points);
+  for (let index = 0; index < points.length; index += 1) {
+    const pair = getSegmentPairDistance(
+      points[index],
+      points[(index + 1) % points.length],
+      segment.start,
+      segment.end,
+      buildingCentroid
+    );
+    if (pair.distance < nearest.distance) nearest = pair;
+  }
+  return { ...nearest, clearance: nearest.distance - segment.halfWidth };
+}
+
+function getBuildingClearanceDirection(
+  feature: OSMPolylineFeature,
+  buildingPoint: [number, number],
+  roadPoint: [number, number],
+  roadStart: [number, number],
+  roadEnd: [number, number]
+) {
+  let directionX = buildingPoint[0] - roadPoint[0];
+  let directionZ = buildingPoint[1] - roadPoint[1];
+  let length = Math.hypot(directionX, directionZ);
+  if (length < 0.001) {
+    const roadLength = Math.hypot(roadEnd[0] - roadStart[0], roadEnd[1] - roadStart[1]);
+    const normalX = roadLength >= 0.001 ? -(roadEnd[1] - roadStart[1]) / roadLength : 1;
+    const normalZ = roadLength >= 0.001 ? (roadEnd[0] - roadStart[0]) / roadLength : 0;
+    const sign = getStableFeatureJitter(feature.id) >= 0.5 ? 1 : -1;
+    directionX = normalX * sign;
+    directionZ = normalZ * sign;
+    length = 1;
+  }
+  return [directionX / length, directionZ / length] as [number, number];
+}
+
+function getMinimumBuildingRoadClearance(
+  points: readonly [number, number][],
+  segments: readonly SourceRoadClearanceSegment[]
+) {
+  return Math.min(...segments.map((segment) => getFootprintRoadContact(points, segment).clearance));
+}
+
+function translateBuildingFootprint(
+  points: readonly [number, number][],
+  direction: [number, number],
+  distance: number
+) {
+  return points.map(([x, z]) => [
+    x + direction[0] * distance,
+    z + direction[1] * distance
+  ] as [number, number]);
+}
+
+function scaleBuildingFootprint(points: readonly [number, number][], scale: number) {
+  const center = getFootprintCentroid(points);
+  return points.map(([x, z]) => [
+    center[0] + (x - center[0]) * scale,
+    center[1] + (z - center[1]) * scale
+  ] as [number, number]);
+}
+
+function getBuildingClearanceFallback(
+  feature: OSMPolylineFeature,
+  rawPoints: readonly [number, number][],
+  segments: readonly SourceRoadClearanceSegment[]
+) {
+  const diagonal = Math.SQRT1_2;
+  const directions: Array<[number, number]> = [
+    [1, 0], [-1, 0], [0, 1], [0, -1],
+    [diagonal, diagonal], [diagonal, -diagonal], [-diagonal, diagonal], [-diagonal, -diagonal]
+  ];
+
+  for (const segment of segments) {
+    const contact = getFootprintRoadContact(rawPoints, segment);
+    directions.push(getBuildingClearanceDirection(
+      feature,
+      contact.buildingPoint,
+      contact.roadPoint,
+      segment.start,
+      segment.end
+    ));
+  }
+
+  const scales = [1, 0.88, 0.72, 0.56, 0.42, 0.3];
+  const distances = [1, 2, 4, 8, 12, 18, 26, 36, 50, 68];
+  let bestPoints: [number, number][] | null = null;
+  let bestCost = Number.POSITIVE_INFINITY;
+
+  for (const scale of scales) {
+    const base = scaleBuildingFootprint(rawPoints, scale);
+    if (getMinimumBuildingRoadClearance(base, segments) >= SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN) {
+      return base;
+    }
+
+    for (const direction of directions) {
+      for (const distance of distances) {
+        const candidate = translateBuildingFootprint(base, direction, distance);
+        const clearance = getMinimumBuildingRoadClearance(candidate, segments);
+        if (clearance < SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN) continue;
+
+        const cost = distance + (1 - scale) * 18;
+        if (cost < bestCost) {
+          bestPoints = candidate;
+          bestCost = cost;
+        }
+      }
+    }
+    if (bestPoints) return bestPoints;
+  }
+
+  return null;
+}
+
+function getBuildingRenderFeature(
+  feature: OSMPolylineFeature,
+  index: SourceRoadClearanceIndex
+): SourceBuildingRenderFeature {
+  const rawGeometry = getOpenBuildingFootprint(feature);
+  if (rawGeometry.length < 3 || index.segmentCount === 0) {
+    return {
+      feature,
+      geometry: rawGeometry,
+      clearance: { status: 'raw', rawMinimumMetres: Number.POSITIVE_INFINITY, renderedMinimumMetres: Number.POSITIVE_INFINITY, roadIds: [] }
+    };
+  }
+
+  const candidates = getClearanceSegmentsForFootprint(rawGeometry, index);
+  if (candidates.length === 0) {
+    return {
+      feature,
+      geometry: rawGeometry,
+      clearance: { status: 'raw', rawMinimumMetres: Number.POSITIVE_INFINITY, renderedMinimumMetres: Number.POSITIVE_INFINITY, roadIds: [] }
+    };
+  }
+
+  const rawContacts = candidates.map((segment) => getFootprintRoadContact(rawGeometry, segment));
+  const rawMinimumMetres = Math.min(...rawContacts.map((contact) => contact.clearance));
+  const points = rawGeometry.map(([x, z]) => [x, z] as [number, number]);
+  const roadIds = new Set<string>();
+
+  for (let pass = 0; pass < SOURCE_BUILDING_ROAD_CLEARANCE_MAX_PASSES; pass += 1) {
+    const contact = candidates
+      .map((segment) => ({ segment, contact: getFootprintRoadContact(points, segment) }))
+      .sort((left, right) => left.contact.clearance - right.contact.clearance || left.segment.roadId.localeCompare(right.segment.roadId))[0];
+    if (!contact || contact.contact.clearance >= SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN) break;
+
+    roadIds.add(contact.segment.roadId);
+    const direction = getBuildingClearanceDirection(
+      feature,
+      contact.contact.buildingPoint,
+      contact.contact.roadPoint,
+      contact.segment.start,
+      contact.segment.end
+    );
+    const minimumProjection = Math.min(...points.map(([x, z]) => (
+      (x - contact.contact.roadPoint[0]) * direction[0]
+      + (z - contact.contact.roadPoint[1]) * direction[1]
+    )));
+    const requiredShift = Math.max(
+      SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN - contact.contact.clearance,
+      contact.segment.halfWidth + SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN - minimumProjection
+    );
+    const shift = Math.max(0.12, requiredShift);
+    for (const point of points) {
+      point[0] += direction[0] * shift;
+      point[1] += direction[1] * shift;
+    }
+  }
+
+  let renderedMinimumMetres = getMinimumBuildingRoadClearance(points, candidates);
+  if (renderedMinimumMetres < SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN) {
+    const fallback = getBuildingClearanceFallback(feature, rawGeometry, candidates);
+    if (fallback) {
+      points.splice(0, points.length, ...fallback);
+      renderedMinimumMetres = getMinimumBuildingRoadClearance(points, candidates);
+    }
+  }
+  const status: SourceBuildingClearanceStatus = renderedMinimumMetres >= SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN
+    ? (rawMinimumMetres < SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN ? 'adjusted' : 'raw')
+    : 'suppressed';
+  return {
+    feature,
+    geometry: status === 'suppressed' ? [] : points,
+    clearance: { status, rawMinimumMetres, renderedMinimumMetres, roadIds: [...roadIds] }
+  };
+}
+
 function getBuildingFootprintArea(feature: OSMPolylineFeature) {
   if (feature.geometry.length < 3) return 1;
   let twiceArea = 0;
@@ -502,15 +926,15 @@ function getRenderableBuildingHeight(feature: OSMPolylineFeature) {
   return Math.min(SOURCE_BUILDING_MAX_RENDER_HEIGHT, Math.max(3.5, baseHeight + areaLift + jitter));
 }
 
-function createBuildingExtrusion(feature: OSMPolylineFeature) {
-  if (feature.geometry.length < 3) return null;
+function createBuildingExtrusion(feature: OSMPolylineFeature, footprint = feature.geometry) {
+  if (footprint.length < 3) return null;
   try {
     const shape = new THREE.Shape();
     // ExtrudeGeometry grows along +Z. Negating source northing before the
     // -90° X rotation keeps both northing and building height positive.
-    shape.moveTo(feature.geometry[0][0], -feature.geometry[0][1]);
-    for (let index = 1; index < feature.geometry.length; index += 1) {
-      shape.lineTo(feature.geometry[index][0], -feature.geometry[index][1]);
+    shape.moveTo(footprint[0][0], -footprint[0][1]);
+    for (let index = 1; index < footprint.length; index += 1) {
+      shape.lineTo(footprint[index][0], -footprint[index][1]);
     }
     shape.closePath();
 
@@ -528,9 +952,10 @@ function createBuildingExtrusion(feature: OSMPolylineFeature) {
   }
 }
 
-function mergeBuildingGeometries(features: OSMPolylineFeature[]) {
+function mergeBuildingGeometries(features: readonly SourceBuildingRenderFeature[]) {
   const geometries = features
-    .map(createBuildingExtrusion)
+    .filter((feature) => feature.clearance.status !== 'suppressed')
+    .map((feature) => createBuildingExtrusion(feature.feature, feature.geometry))
     .filter((geometry): geometry is THREE.ExtrudeGeometry => Boolean(geometry));
   if (!geometries.length) return null;
 
@@ -547,31 +972,53 @@ function mergeBuildingGeometries(features: OSMPolylineFeature[]) {
 interface SourceBuildingGeometryBatch {
   source: OSMHeightSource;
   count: number;
+  renderedCount: number;
+  clearanceAdjustedCount: number;
+  clearanceSuppressedCount: number;
   heightEvidence: string;
   geometry: THREE.BufferGeometry;
 }
 
 function createBuildingGeometry(features: OSMPolylineFeature[], limit: number) {
-  return mergeBuildingGeometries(selectBuildingFeatures(features, limit));
+  return mergeBuildingGeometries(createRawBuildingRenderFeatures(selectBuildingFeatures(features, limit)));
 }
 
-function createBuildingGeometryBatches(features: OSMPolylineFeature[]): SourceBuildingGeometryBatch[] {
+function createRawBuildingRenderFeatures(features: readonly OSMPolylineFeature[]) {
+  return features.map((feature) => ({
+    feature,
+    geometry: getOpenBuildingFootprint(feature),
+    clearance: {
+      status: 'raw' as const,
+      rawMinimumMetres: Number.POSITIVE_INFINITY,
+      renderedMinimumMetres: Number.POSITIVE_INFINITY,
+      roadIds: []
+    }
+  }));
+}
+
+function createBuildingGeometryBatches(
+  features: readonly SourceBuildingRenderFeature[]
+): SourceBuildingGeometryBatch[] {
   const byProvenance = new Map<OSMHeightSource, OSMPolylineFeature[]>();
   for (const source of ['osm:height', 'osm:building:levels', 'modelled:fallback'] as OSMHeightSource[]) {
     byProvenance.set(source, []);
   }
-  for (const feature of features) {
-    byProvenance.get(getBuildingHeightSource(feature))?.push(feature);
+  for (const renderFeature of features) {
+    byProvenance.get(getBuildingHeightSource(renderFeature.feature))?.push(renderFeature.feature);
   }
 
   return (['osm:height', 'osm:building:levels', 'modelled:fallback'] as OSMHeightSource[])
     .flatMap((source) => {
       const sourceFeatures = byProvenance.get(source) || [];
-      const geometry = mergeBuildingGeometries(sourceFeatures);
+      const sourceRenderFeatures = features.filter((feature) => getBuildingHeightSource(feature.feature) === source);
+      const geometry = mergeBuildingGeometries(sourceRenderFeatures);
       return geometry
         ? [{
           source,
           count: sourceFeatures.length,
+          renderedCount: sourceRenderFeatures.filter((feature) => feature.clearance.status !== 'suppressed').length,
+          clearanceAdjustedCount: sourceRenderFeatures.filter((feature) => feature.clearance.status === 'adjusted').length,
+          clearanceSuppressedCount: sourceRenderFeatures.filter((feature) => feature.clearance.status === 'suppressed').length,
           heightEvidence: source === 'modelled:fallback'
             ? 'missing OSM height/levels · deterministic use/area estimate'
             : source,
@@ -581,13 +1028,13 @@ function createBuildingGeometryBatches(features: OSMPolylineFeature[]): SourceBu
     });
 }
 
-function createBuildingOutlineGeometry(features: OSMPolylineFeature[]) {
+function createBuildingOutlineGeometry(features: readonly SourceBuildingRenderFeature[]) {
   const positions: number[] = [];
-  for (const feature of features) {
-    if (feature.geometry.length < 2) continue;
-    for (let index = 1; index <= feature.geometry.length; index += 1) {
-      const previous = feature.geometry[index - 1];
-      const current = feature.geometry[index % feature.geometry.length];
+  for (const renderFeature of features) {
+    if (renderFeature.clearance.status === 'suppressed' || renderFeature.geometry.length < 2) continue;
+    for (let index = 1; index <= renderFeature.geometry.length; index += 1) {
+      const previous = renderFeature.geometry[index - 1];
+      const current = renderFeature.geometry[index % renderFeature.geometry.length];
       positions.push(previous[0], 0.2, previous[1], current[0], 0.2, current[1]);
     }
   }
@@ -942,17 +1389,27 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       : null),
     [snapshot]
   );
+  const buildingRoadClearanceIndex = useMemo(
+    () => createSourceRoadClearanceIndex(snapshot?.roads || []),
+    [snapshot]
+  );
   const selectedBuildingFeatures = useMemo(
     () => (snapshot && showBuildings
       ? selectBuildingFeatures(snapshot.buildings, buildingLimit, snapshot.roads)
       : []),
     [buildingLimit, showBuildings, snapshot]
   );
-  const buildingGeometryBatches = useMemo(
-    () => (showBuildings ? createBuildingGeometryBatches(selectedBuildingFeatures) : []),
-    [selectedBuildingFeatures, showBuildings]
+  const selectedBuildingRenderFeatures = useMemo(
+    () => (showBuildings
+      ? selectedBuildingFeatures.map((feature) => getBuildingRenderFeature(feature, buildingRoadClearanceIndex))
+      : []),
+    [buildingRoadClearanceIndex, selectedBuildingFeatures, showBuildings]
   );
-  const buildingOutlineFeatures = useMemo(
+  const buildingGeometryBatches = useMemo(
+    () => (showBuildings ? createBuildingGeometryBatches(selectedBuildingRenderFeatures) : []),
+    [selectedBuildingRenderFeatures, showBuildings]
+  );
+  const buildingOutlineSourceFeatures = useMemo(
     () => (snapshot && showBuildings
       // A single low-opacity line batch is substantially cheaper than
       // extruding every footprint. Keep the complete source plan visible once
@@ -964,9 +1421,30 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       : []),
     [buildingLimit, selectedBuildingFeatures, showBuildings, snapshot]
   );
+  const buildingOutlineRenderFeatures = useMemo(
+    () => buildingOutlineSourceFeatures.map((feature) => getBuildingRenderFeature(feature, buildingRoadClearanceIndex)),
+    [buildingOutlineSourceFeatures, buildingRoadClearanceIndex]
+  );
   const buildingOutlineGeometry = useMemo(
-    () => (showBuildings ? createBuildingOutlineGeometry(buildingOutlineFeatures) : null),
-    [buildingOutlineFeatures, showBuildings]
+    () => (showBuildings ? createBuildingOutlineGeometry(buildingOutlineRenderFeatures) : null),
+    [buildingOutlineRenderFeatures, showBuildings]
+  );
+  const buildingClearanceSummary = useMemo(
+    () => ({
+      sourceBuildingsSelected: selectedBuildingRenderFeatures.length,
+      sourceBuildingsRaw: selectedBuildingRenderFeatures.filter((feature) => feature.clearance.status === 'raw').length,
+      sourceBuildingsAdjusted: selectedBuildingRenderFeatures.filter((feature) => feature.clearance.status === 'adjusted').length,
+      sourceBuildingsSuppressed: selectedBuildingRenderFeatures.filter((feature) => feature.clearance.status === 'suppressed').length,
+      outlineBuildingsEvaluated: buildingOutlineRenderFeatures.length,
+      outlineBuildingsAdjusted: buildingOutlineRenderFeatures.filter((feature) => feature.clearance.status === 'adjusted').length,
+      outlineBuildingsSuppressed: buildingOutlineRenderFeatures.filter((feature) => feature.clearance.status === 'suppressed').length,
+      gradeRoads: buildingRoadClearanceIndex.roadCount,
+      gradeRoadSegments: buildingRoadClearanceIndex.segmentCount,
+      excludedElevatedOrTunnelRoads: buildingRoadClearanceIndex.excludedStructureRoadCount,
+      marginMetres: SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN,
+      sourceGeometryPreserved: true
+    }),
+    [buildingOutlineRenderFeatures, buildingRoadClearanceIndex, selectedBuildingRenderFeatures]
   );
   const namedAreaGeometry = useMemo(
     () => (snapshot && showBuildings ? createNamedAreaGeometry(snapshot.places) : null),
@@ -1129,7 +1607,17 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   if (!snapshot) return null;
 
   return (
-    <group name="MarathahalliOSMSnapshotLayer">
+    <group
+      name="MarathahalliOSMSnapshotLayer"
+      userData={{
+        source: 'OSM',
+        modelStatus: 'source building footprints preserved; display massings use deterministic derived road clearance',
+        sourceWayIds: 'snapshot.buildings[].id + nodeRefs[] remain authoritative',
+        sourceElevationEvidence: 'grade clearance uses only source ground-road plan geometry; elevated/layered/bridge/viaduct/tunnel/underpass ways are excluded',
+        supportEvidence: 'not applicable to source building massings',
+        roadClearance: buildingClearanceSummary
+      }}
+    >
       {buildingGeometryBatches.map((batch) => (
         <mesh
           key={`osm-building-batch-${batch.source}`}
@@ -1139,8 +1627,17 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             source: 'OSM',
             heightProvenance: batch.source,
             featureCount: batch.count,
+            renderedFeatureCount: batch.renderedCount,
             rendering: 'merged',
-            heightEvidence: batch.heightEvidence
+            heightEvidence: batch.heightEvidence,
+            sourceGeometryPreserved: true,
+            sourceGeometry: 'raw feature.geometry and nodeRefs retained; cloned display footprint only',
+            roadClearance: {
+              method: 'grade-road segment buffer',
+              adjustedFeatureCount: batch.clearanceAdjustedCount,
+              suppressedFeatureCount: batch.clearanceSuppressedCount,
+              marginMetres: SOURCE_BUILDING_ROAD_CLEARANCE_MARGIN
+            }
           }}
         >
           <meshStandardMaterial
@@ -1170,9 +1667,11 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           userData={{
             source: 'OSM',
             featureType: 'building footprint',
-            coverage: buildingOutlineFeatures.length === snapshot.buildings.length ? 'full snapshot' : 'selected LOD',
-            featureCount: buildingOutlineFeatures.length,
-            heightProvenance: 'plan geometry only; no vertical claim'
+            coverage: buildingOutlineSourceFeatures.length === snapshot.buildings.length ? 'full snapshot' : 'selected LOD',
+            featureCount: buildingOutlineRenderFeatures.length,
+            heightProvenance: 'plan geometry only; no vertical claim',
+            sourceGeometryPreserved: true,
+            roadClearance: buildingClearanceSummary
           }}
         >
           <lineBasicMaterial

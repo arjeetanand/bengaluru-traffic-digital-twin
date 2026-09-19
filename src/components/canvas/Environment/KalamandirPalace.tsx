@@ -22,9 +22,14 @@ export const KalamandirPalace: React.FC<KalamandirPalaceProps> = ({
   position = [48, 0, 115],
   rotationY = -Math.PI / 2
 }) => {
-  const width = 38;
-  const depth = 32;
+  // The source footprint is roughly 15.5 m × 15.8 m at the navigation
+  // anchor. The former 38 m × 32 m mass crossed the mapped Service Road.
+  const width = 15.5;
+  const depth = 15.8;
   const height = 32;
+  // Keep the road-facing arrival court compact: the source road has only a
+  // narrow exterior apron between its ribbon and the building footprint.
+  const frontageDepth = 0.7;
 
   // ── High-Resolution Canvas Textures ──
   // 1. Kalamandir Grand Royal Facia Signboard Texture
@@ -247,7 +252,7 @@ export const KalamandirPalace: React.FC<KalamandirPalaceProps> = ({
       </mesh>
 
       {/* Ornamental Indian Window Arches (Jharokha Motifs) */}
-      {[-10, 0, 10].map((archX, idx) => (
+      {[-4.5, 0, 4.5].map((archX, idx) => (
         <group key={`arch-${idx}`} position={[archX, height / 2 + 0.5, depth / 2 + 0.45]}>
           <mesh>
             <boxGeometry args={[0.35, height - 9, 0.2]} />
@@ -294,33 +299,33 @@ export const KalamandirPalace: React.FC<KalamandirPalaceProps> = ({
       {/* ── 5. GRAND DOUBLE-HEIGHT ENTRANCE PORTICO & MARBLE STEPS ── */}
       <group position={[0, 0, depth / 2]}>
         {/* Multi-Tiered Polished White Marble Steps */}
-        <mesh position={[0, 0.15, 3.5]} receiveShadow>
-          <boxGeometry args={[width * 0.7, 0.3, 7.0]} />
+        <mesh position={[0, 0.15, frontageDepth * 0.75]} receiveShadow>
+          <boxGeometry args={[width * 0.7, 0.3, frontageDepth * 1.5]} />
           <meshStandardMaterial color="#f8fafc" roughness={0.4} />
         </mesh>
-        <mesh position={[0, 0.45, 2.5]} receiveShadow>
-          <boxGeometry args={[width * 0.6, 0.3, 5.0]} />
+        <mesh position={[0, 0.45, frontageDepth * 0.55]} receiveShadow>
+          <boxGeometry args={[width * 0.6, 0.3, frontageDepth * 1.1]} />
           <meshStandardMaterial color="#f1f5f9" roughness={0.4} />
         </mesh>
-        <mesh position={[0, 0.75, 1.5]} receiveShadow>
-          <boxGeometry args={[width * 0.5, 0.3, 3.0]} />
+        <mesh position={[0, 0.75, frontageDepth * 0.35]} receiveShadow>
+          <boxGeometry args={[width * 0.5, 0.3, frontageDepth * 0.7]} />
           <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
         </mesh>
 
         {/* Grand Cantilevered Portico Roof Slab */}
-        <mesh position={[0, 6.2, 2.8]} castShadow>
-          <boxGeometry args={[20, 0.8, 6.5]} />
+        <mesh position={[0, 6.2, frontageDepth * 0.55]} castShadow>
+          <boxGeometry args={[width - 1.5, 0.8, frontageDepth * 1.4]} />
           <meshStandardMaterial color="#881337" roughness={0.5} />
         </mesh>
         {/* Gold Fascia Edge on Portico Roof */}
-        <mesh position={[0, 6.2, 6.1]}>
-          <boxGeometry args={[20.2, 0.6, 0.15]} />
+        <mesh position={[0, 6.2, frontageDepth * 1.25]}>
+          <boxGeometry args={[width - 1.3, 0.6, 0.15]} />
           <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} />
         </mesh>
 
         {/* Grand Carved Brass/Gold Columns Supporting Portico */}
-        {[-8, -3, 3, 8].map((colX, idx) => (
-          <group key={`portico-col-${idx}`} position={[colX, 3.1, 5.4]}>
+        {[-5.5, -1.8, 1.8, 5.5].map((colX, idx) => (
+          <group key={`portico-col-${idx}`} position={[colX, 3.1, frontageDepth * 0.85]}>
             <mesh castShadow>
               <cylinderGeometry args={[0.35, 0.45, 6.2, 16]} />
               <meshStandardMaterial color="#d97706" metalness={0.85} roughness={0.2} />
@@ -338,8 +343,8 @@ export const KalamandirPalace: React.FC<KalamandirPalaceProps> = ({
         ))}
 
         {/* Traditional Hanging Brass Lamps (Deepams) with Warm Glow */}
-        {[-5.5, 0, 5.5].map((lampX, idx) => (
-          <group key={`deepam-${idx}`} position={[lampX, 5.6, 2.8]}>
+        {[-4, 0, 4].map((lampX, idx) => (
+          <group key={`deepam-${idx}`} position={[lampX, 5.6, frontageDepth * 0.55]}>
             <mesh>
               <cylinderGeometry args={[0.02, 0.02, 0.8, 6]} />
               <meshStandardMaterial color="#78350f" />

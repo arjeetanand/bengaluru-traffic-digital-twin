@@ -12,16 +12,18 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
       {/* Real Architecture: 2003 pioneer 9-screen multiplex, red brick,       */}
       {/* slanted glass pyramid roof, curved marquee, parking forecourt         */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[-286, 0, -535]} name="InnovativeMultiplex_Real">
+      {/* The mapped service road runs along the north/east frontage. Keep the
+          authored theatre inside the source parcel with a visible setback. */}
+      <group position={[-286, 0, -552]} name="InnovativeMultiplex_Real">
         {/* Main 9-Screen Theater Auditorium Block */}
         <mesh position={[0, 11, 0]} castShadow receiveShadow>
-          <boxGeometry args={[44, 22, 52]} />
+          <boxGeometry args={[44, 22, 44]} />
           <meshStandardMaterial color="#7f1d1d" roughness={0.7} metalness={0.2} />
         </mesh>
 
         {/* Lower Cream Stucco Base / Concourse Plinth */}
         <mesh position={[0, 3.5, 0]} castShadow receiveShadow>
-          <boxGeometry args={[45.5, 7, 53.5]} />
+          <boxGeometry args={[45.5, 7, 44.5]} />
           <meshStandardMaterial color="#fef3c7" roughness={0.8} />
         </mesh>
 
@@ -50,7 +52,7 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
         <group position={[22.5, 0, 0]}>
           {/* Portico Base */}
           <mesh position={[3, 5, 0]} castShadow receiveShadow>
-            <boxGeometry args={[6, 10, 36]} />
+            <boxGeometry args={[6, 10, 30]} />
             <meshStandardMaterial color="#fef3c7" roughness={0.7} />
           </mesh>
 
@@ -116,8 +118,8 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
         {/* ── Front Paved Parking Forecourt with Ticket Booths & Bus Shelter ── */}
         <group position={[28, 0, 0]}>
           {/* Interlocking Paved Forecourt Slab */}
-          <mesh position={[5, 0.1, 0]} receiveShadow>
-            <boxGeometry args={[12, 0.2, 54]} />
+          <mesh position={[5, 0.1, -2]} receiveShadow>
+            <boxGeometry args={[12, 0.2, 42]} />
             <meshStandardMaterial color="#475569" roughness={0.9} />
           </mesh>
 
@@ -153,7 +155,7 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
           </group>
 
           {/* BMTC Multiplex Bus Stop Shelter on Roadside Frontage */}
-          <group position={[10.5, 0, 15]}>
+          <group position={[10.5, 0, 8]}>
             <mesh position={[0, 3.2, 0]} castShadow>
               <boxGeometry args={[3.8, 0.2, 12]} />
               <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.3} />
@@ -187,12 +189,12 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
       {/* ═════════════════════════════════════════════════════════════════════ */}
       <group position={[-46, 0, -135]} name="SofaAndMoreRetail">
         <mesh position={[0, 6, 0]} castShadow receiveShadow>
-          <boxGeometry args={[26, 12, 28]} />
+          <boxGeometry args={[14, 12, 24]} />
           <meshStandardMaterial color="#334155" roughness={0.6} />
         </mesh>
         {/* Large Showroom Window Glazing */}
-        <mesh position={[13.1, 4.5, 0]}>
-          <boxGeometry args={[0.1, 7.5, 24]} />
+        <mesh position={[7.1, 4.5, 0]}>
+          <boxGeometry args={[0.1, 7.5, 20]} />
           <meshStandardMaterial
             color={isNight ? '#fef08a' : '#bfdbfe'}
             emissive={isNight ? '#eab308' : '#000000'}
@@ -202,8 +204,8 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
           />
         </mesh>
         {/* Signboard */}
-        <mesh position={[13.2, 10.5, 0]}>
-          <boxGeometry args={[0.15, 1.6, 20]} />
+        <mesh position={[7.2, 10.5, 0]}>
+          <boxGeometry args={[0.15, 1.6, 16]} />
           <meshStandardMaterial color="#0284c7" emissive="#0284c7" emissiveIntensity={isNight ? 2.8 : 0.8} />
         </mesh>
       </group>
@@ -213,15 +215,15 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
       {/* Real Architecture: Modern corporate IT park, reflective curtain glass,*/}
       {/* Huber & Holly cafe on ground floor                                    */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[-50, 0, -75]} name="NovelMSRParkTechZone">
+      <group position={[-74, 0, -79]} name="NovelMSRParkTechZone">
         {/* 6-Story Corporate Glass Block */}
         <mesh position={[0, 16, 0]} castShadow receiveShadow>
-          <boxGeometry args={[32, 32, 44]} />
+          <boxGeometry args={[24, 32, 32]} />
           <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.7} />
         </mesh>
         {/* Blue Reflective Glass Curtain Facade (+X facing ORR) */}
-        <mesh position={[16.1, 16, 0]}>
-          <boxGeometry args={[0.1, 30, 40]} />
+        <mesh position={[12.1, 16, 0]}>
+          <boxGeometry args={[0.1, 30, 28]} />
           <meshStandardMaterial
             color={isNight ? '#60a5fa' : '#0284c7'}
             emissive={isNight ? '#1e40af' : '#000000'}
@@ -231,18 +233,18 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
           />
         </mesh>
         {/* Corporate Signboard: NOVEL MSR PARK */}
-        <mesh position={[16.2, 30, 0]}>
-          <boxGeometry args={[0.15, 2.2, 26]} />
+        <mesh position={[12.2, 30, 0]}>
+          <boxGeometry args={[0.15, 2.2, 22]} />
           <meshStandardMaterial color="#0ea5e9" emissive="#0284c7" emissiveIntensity={isNight ? 3.0 : 1.0} />
         </mesh>
         {/* Ground Floor Huber & Holly / Cafe Entrance */}
-        <mesh position={[16.2, 2.5, -12]}>
+        <mesh position={[12.2, 2.5, -9]}>
           <boxGeometry args={[0.2, 4.0, 12]} />
           <meshStandardMaterial color="#f43f5e" emissive="#e11d48" emissiveIntensity={isNight ? 2.5 : 0.8} />
         </mesh>
         {/* Rooftop HVAC Plant */}
         <mesh position={[0, 33, 0]}>
-          <boxGeometry args={[16, 2.5, 20]} />
+          <boxGeometry args={[12, 2.5, 16]} />
           <meshStandardMaterial color="#475569" metalness={0.8} />
         </mesh>
       </group>
@@ -250,14 +252,14 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {/* 4. TANISHQ & HAL AIRPORT ROAD JEWELLERY (Real OSM: X = -70.2, Z = -7.0) */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[-70.2, 0, -7.0]} name="SouthWestCorner_TanishqAndJewels">
+      <group position={[-73.2, 0, -12.0]} name="SouthWestCorner_TanishqAndJewels">
         <mesh position={[0, 9, 0]} castShadow receiveShadow>
-          <boxGeometry args={[26, 18, 30]} />
+          <boxGeometry args={[22, 18, 30]} />
           <meshStandardMaterial color="#1e293b" roughness={0.6} />
         </mesh>
         {/* Tanishq Gold Facade Glass Frontage */}
-        <mesh position={[13.1, 5, 0]}>
-          <boxGeometry args={[0.1, 8.5, 26]} />
+        <mesh position={[10.3, 5, 0]}>
+          <boxGeometry args={[0.1, 8.5, 24]} />
           <meshStandardMaterial
             color={isNight ? '#fef08a' : '#fffbeb'}
             emissive={isNight ? '#facc15' : '#000000'}
@@ -267,12 +269,12 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
           />
         </mesh>
         {/* Tanishq Sign */}
-        <mesh position={[13.2, 14, 0]}>
-          <boxGeometry args={[0.15, 2.4, 22]} />
+        <mesh position={[10.4, 14, 0]}>
+          <boxGeometry args={[0.15, 2.4, 20]} />
           <meshStandardMaterial color="#451a03" />
         </mesh>
-        <mesh position={[13.3, 14, 0]}>
-          <boxGeometry args={[0.05, 1.6, 20]} />
+        <mesh position={[10.5, 14, 0]}>
+          <boxGeometry args={[0.05, 1.6, 18]} />
           <meshStandardMaterial color="#f59e0b" emissive="#d97706" emissiveIntensity={isNight ? 4 : 1.5} />
         </mesh>
       </group>
@@ -427,12 +429,12 @@ export const WestCorridorBuildings: React.FC<WestCorridorBuildingsProps> = ({ is
       {/* 7. NORTH-WEST TECH TOWER (Z = +150, X = -55)                          */}
       {/* Modern High-Rise Commercial IT Park Tower                             */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <group position={[-55, 0, 150]} name="NorthWestTechTower">
+      <group position={[-50, 0, 140]} name="NorthWestTechTower">
         <mesh position={[0, 26, 0]} castShadow receiveShadow>
-          <boxGeometry args={[36, 52, 42]} />
+          <boxGeometry args={[32, 52, 42]} />
           <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.7} />
         </mesh>
-        <mesh position={[18.1, 26, 0]}>
+        <mesh position={[16.1, 26, 0]}>
           <boxGeometry args={[0.1, 48, 38]} />
           <meshStandardMaterial
             color={isNight ? '#93c5fd' : '#38bdf8'}
