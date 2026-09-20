@@ -54,6 +54,13 @@ const MAP_TOUCHES = {
   TWO: THREE.TOUCH.DOLLY_ROTATE
 } as const;
 
+interface OverviewGesture {
+  pointerId: number;
+  button: number;
+  lastX: number;
+  lastY: number;
+}
+
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 const easeInOutCubic = (value: number) => (
@@ -120,6 +127,12 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const cameraRight = useRef(new THREE.Vector3());
   const cameraDirection = useRef(new THREE.Vector3());
   const cameraOffset = useRef(new THREE.Vector3());
+  const overviewGesture = useRef<OverviewGesture | null>(null);
+  const gesturePan = useRef(new THREE.Vector3());
+  const gestureRight = useRef(new THREE.Vector3());
+  const gestureForward = useRef(new THREE.Vector3());
+  const gestureOffset = useRef(new THREE.Vector3());
+  const gestureSpherical = useRef(new THREE.Spherical());
 
   cameraPresetRef.current = cameraPreset;
   cameraModeRef.current = cameraMode;
@@ -403,6 +416,215 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       unsubscribeFlyTo();
     };
   }, []);
+
+  // MapControls normally owns these gestures, but the scene can briefly pause
+  // it while flying between source landmarks. Keeping the desktop gesture
+  // path here means the first drag/scroll after a preset change always hands
+  // control back to the user instead of being lost to a disabled control.
+  // The capture listeners also make the interaction deterministic when another
+  // canvas listener consumes the original pointer event.
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const previousCursor = canvas.style.cursor;
+    const setCursor = (dragging: boolean) => {
+      canvas.style.cursor = dragging ? 'grabbing' : 'grab';
+    };
+
+    const clampOverviewSpherical = () => {
+      const controls = controlsRef.current;
+      if (!controls) return null;
+
+      gestureOffset.current.subVectors(camera.position, controls.target);
+      gestureSpherical.current.setFromVector3(gestureOffset.current);
+      gestureSpherical.current.radius = clamp(
+        gestureSpherical.current.radius,
+        OVERVIEW_MIN_DISTANCE,
+        OVERVIEW_MAX_DISTANCE
+      );
+      gestureSpherical.current.phi = clamp(
+        gestureSpherical.current.phi,
+        OVERVIEW_MIN_POLAR,
+        OVERVIEW_MAX_POLAR
+      );
+      return controls;
+    };
+
+    const applyOverviewPan = (deltaX: number, deltaY: number) => {
+      const controls = controlsRef.current;
+      if (!controls) return;
+
+      const canvasHeight = canvas.clientHeight || canvas.getBoundingClientRect().height || 1;
+      const distance = camera.position.distanceTo(controls.target);
+      const fov = camera instanceof THREE.PerspectiveCamera
+        ? THREE.MathUtils.degToRad(camera.fov)
+        : Math.PI / 3;
+      const worldPerPixel = (2 * distance * Math.tan(fov / 2)) / canvasHeight;
+
+      gestureRight.current.setFromMatrixColumn(camera.matrixWorld, 0);
+      gestureRight.current.y = 0;
+      if (gestureRight.current.lengthSq() < 0.0001) {
+        gestureRight.current.set(1, 0, 0);
+      } else {
+        gestureRight.current.normalize();
+      }
+
+      camera.getWorldDirection(gestureForward.current);
+      gestureForward.current.y = 0;
+      if (gestureForward.current.lengthSq() < 0.0001) {
+        gestureForward.current.set(0, 0, -1);
+      } else {
+        gestureForward.current.normalize();
+      }
+
+      gesturePan.current
+        .set(0, 0, 0)
+        .addScaledVector(gestureRight.current, -deltaX * worldPerPixel * 0.72)
+        .addScaledVector(gestureForward.current, deltaY * worldPerPixel * 0.72);
+      camera.position.add(gesturePan.current);
+      controls.target.add(gesturePan.current);
+    };
+
+    const applyOverviewOrbit = (deltaX: number, deltaY: number) => {
+      const controls = clampOverviewSpherical();
+      if (!controls) return;
+
+      gestureSpherical.current.theta -= deltaX * 0.006;
+      gestureSpherical.current.phi = clamp(
+        gestureSpherical.current.phi + deltaY * 0.006,
+        OVERVIEW_MIN_POLAR,
+        OVERVIEW_MAX_POLAR
+      );
+      gestureOffset.current.setFromSpherical(gestureSpherical.current);
+      camera.position.copy(controls.target).add(gestureOffset.current);
+      camera.lookAt(controls.target);
+    };
+
+    const applyOverviewZoom = (deltaY: number) => {
+      const controls = clampOverviewSpherical();
+      if (!controls) return;
+
+      gestureSpherical.current.radius = clamp(
+        gestureSpherical.current.radius * Math.exp(deltaY * 0.001),
+        OVERVIEW_MIN_DISTANCE,
+        OVERVIEW_MAX_DISTANCE
+      );
+      gestureOffset.current.setFromSpherical(gestureSpherical.current);
+      camera.position.copy(controls.target).add(gestureOffset.current);
+      camera.lookAt(controls.target);
+    };
+
+    const releaseOverviewGesture = (pointerId?: number) => {
+      const gesture = overviewGesture.current;
+      if (!gesture || (pointerId !== undefined && gesture.pointerId !== pointerId)) return;
+
+      overviewGesture.current = null;
+      if (canvas.hasPointerCapture(gesture.pointerId)) {
+        canvas.releasePointerCapture(gesture.pointerId);
+      }
+      setCursor(false);
+
+      const controls = controlsRef.current;
+      if (controls) {
+        controls.enabled = cameraModeRef.current === 'overview' && !isTransitioning.current;
+        controls.update();
+      }
+    };
+
+    const handleOverviewPointerDown = (event: PointerEvent) => {
+      if (cameraModeRef.current !== 'overview' || event.pointerType === 'touch') return;
+      if (event.button !== 0 && event.button !== 1 && event.button !== 2) return;
+
+      const controls = controlsRef.current;
+      if (!controls) return;
+
+      cancelCameraTransition();
+      controls.enabled = false;
+      overviewGesture.current = {
+        pointerId: event.pointerId,
+        button: event.button,
+        lastX: event.clientX,
+        lastY: event.clientY
+      };
+      canvas.setPointerCapture(event.pointerId);
+      setCursor(true);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+
+    const handleOverviewPointerMove = (event: PointerEvent) => {
+      const gesture = overviewGesture.current;
+      if (
+        cameraModeRef.current !== 'overview' ||
+        !gesture ||
+        gesture.pointerId !== event.pointerId
+      ) {
+        return;
+      }
+
+      const deltaX = event.clientX - gesture.lastX;
+      const deltaY = event.clientY - gesture.lastY;
+      gesture.lastX = event.clientX;
+      gesture.lastY = event.clientY;
+
+      if (gesture.button === 0) {
+        applyOverviewPan(deltaX, deltaY);
+      } else if (gesture.button === 2) {
+        applyOverviewOrbit(deltaX, deltaY);
+      } else {
+        applyOverviewZoom(deltaY);
+      }
+
+      controlsRef.current?.update();
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+
+    const handleOverviewPointerUp = (event: PointerEvent) => {
+      if (!overviewGesture.current || overviewGesture.current.pointerId !== event.pointerId) return;
+      releaseOverviewGesture(event.pointerId);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+
+    const handleOverviewLostPointerCapture = (event: PointerEvent) => {
+      releaseOverviewGesture(event.pointerId);
+    };
+
+    const handleOverviewWheel = (event: WheelEvent) => {
+      if (cameraModeRef.current !== 'overview') return;
+
+      cancelCameraTransition();
+      const normalizedDelta = event.deltaMode === 1
+        ? event.deltaY * 16
+        : event.deltaMode === 2
+          ? event.deltaY * canvas.clientHeight
+          : event.deltaY;
+      applyOverviewZoom(normalizedDelta);
+      controlsRef.current?.update();
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+
+    canvas.style.touchAction = 'none';
+    setCursor(false);
+    canvas.addEventListener('pointerdown', handleOverviewPointerDown, { capture: true, passive: false });
+    canvas.addEventListener('pointermove', handleOverviewPointerMove, { capture: true, passive: false });
+    canvas.addEventListener('pointerup', handleOverviewPointerUp, { capture: true, passive: false });
+    canvas.addEventListener('pointercancel', handleOverviewPointerUp, { capture: true, passive: false });
+    canvas.addEventListener('lostpointercapture', handleOverviewLostPointerCapture, { capture: true });
+    canvas.addEventListener('wheel', handleOverviewWheel, { capture: true, passive: false });
+
+    return () => {
+      releaseOverviewGesture();
+      canvas.style.cursor = previousCursor;
+      canvas.removeEventListener('pointerdown', handleOverviewPointerDown, true);
+      canvas.removeEventListener('pointermove', handleOverviewPointerMove, true);
+      canvas.removeEventListener('pointerup', handleOverviewPointerUp, true);
+      canvas.removeEventListener('pointercancel', handleOverviewPointerUp, true);
+      canvas.removeEventListener('lostpointercapture', handleOverviewLostPointerCapture, true);
+      canvas.removeEventListener('wheel', handleOverviewWheel, true);
+    };
+  }, [gl]);
 
   // Person mode uses a first-person drag gesture instead of MapControls'
   // orbit-around-target gesture. This keeps the eye fixed at street height
