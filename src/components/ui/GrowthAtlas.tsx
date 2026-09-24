@@ -54,15 +54,15 @@ const preferredSurface = (park: GrowthPark) => park.mapCoverage === 'context' ||
 
 function CompanyMark({ company }: { company: GrowthCompany }) {
   const [failed, setFailed] = useState(false);
-  const domain = new URL(company.website).hostname;
+  const domain = company.website ? new URL(company.website).hostname : null;
   // Juniper's site icon now resolves to HPE, so keep the sourced tenant name's initials.
-  const hasMatchingIcon = company.name !== 'Juniper Networks';
+  const hasMatchingIcon = !!company.logoUrl || (!!domain && company.name !== 'Juniper Networks');
   return (
     <span className={`atlas-company-mark${company.logoUrl ? ' has-logo' : ''}`} aria-hidden="true">
       {company.name.slice(0, 2).toUpperCase()}
       {!failed && hasMatchingIcon && (
         <img
-          src={company.logoUrl || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
+          src={company.logoUrl || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain || '')}&sz=64`}
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}
@@ -245,7 +245,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
     const rows = [
       ['Company', 'Tech park', 'Area', 'Stage', 'Next step', 'Movement hypothesis', 'Review observation', 'Website', 'LinkedIn', 'Occupancy source'],
       ...savedCompanies.map(({ park, company }) => [
-        company.name, park.name, park.area, leadDetails[companyKey(park, company)]?.stage || 'Research', leadDetails[companyKey(park, company)]?.note || '', park.painHypothesis, reviewNotes[park.id] || '', company.website, company.linkedin || '', company.sourceUrl
+        company.name, park.name, park.area, leadDetails[companyKey(park, company)]?.stage || 'Research', leadDetails[companyKey(park, company)]?.note || '', park.painHypothesis, reviewNotes[park.id] || '', company.website || '', company.linkedin || '', company.sourceUrl
       ])
     ];
     const csv = rows.map((row) => row.map(quoteAtlasCsvCell).join(',')).join('\r\n');
@@ -359,7 +359,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
             <div className="atlas-logo-wall">
               <div className="atlas-logo-wall-head"><span>AT THIS PLACE</span><small>SOURCED COMPANIES & WORKSPACES</small></div>
               <div className="atlas-logo-grid">
-                {selected.featuredCompanies.map((company) => <a key={company.name} href={company.website} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} website`} title={company.name}>
+                {selected.featuredCompanies.map((company) => <a key={company.name} href={company.website || company.linkedin || company.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} ${company.website ? 'website' : 'company profile'}`} title={company.name}>
                   <CompanyMark company={company} /><span>{company.name}</span>
                 </a>)}
               </div>
@@ -393,7 +393,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
                     <CompanyMark company={company} />
                     <div className="atlas-company-info"><strong>{company.name}</strong><a href={company.sourceUrl} target="_blank" rel="noopener noreferrer">Location source <ArrowUpRight size={12} /></a></div>
                     <div className="atlas-company-links">
-                      <a href={company.website} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} website`} title="Website"><Globe2 size={15} /></a>
+                      {company.website && <a href={company.website} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} website`} title="Website"><Globe2 size={15} /></a>}
                       {company.linkedin && <a href={company.linkedin} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} on LinkedIn`} title="LinkedIn"><Linkedin size={15} /></a>}
                       <button type="button" onClick={() => toggleSaved(selected, company)} aria-label={`${isSaved ? 'Remove' : 'Save'} ${company.name} ${isSaved ? 'from' : 'to'} lead list`} aria-pressed={isSaved} title={isSaved ? 'Remove lead' : 'Save lead'}><Bookmark size={15} fill={isSaved ? 'currentColor' : 'none'} /></button>
                     </div>

@@ -48,6 +48,7 @@ for (const park of GROWTH_PARKS) {
   assert.ok(Number.isFinite(park.lat) && Number.isFinite(park.lng), `${park.name} needs a map anchor`);
   for (const company of park.featuredCompanies) {
     assert.ok(company.name, `${park.name} has an unnamed company`);
+    assert.ok(company.website || company.linkedin, `${company.name} needs a public company link`);
     for (const url of [company.website, company.sourceUrl, company.linkedin, company.logoUrl].filter(Boolean)) {
       assert.equal(new URL(url).protocol, 'https:', `${company.name} needs a safe public link`);
     }
