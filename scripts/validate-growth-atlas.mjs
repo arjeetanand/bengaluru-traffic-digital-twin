@@ -90,4 +90,13 @@ cameraControlBus.flyTo([1, 2, 3], [4, 5, 6]);
 cameraControlBus.onFlyTo((position, target) => { delivered = [position, target]; });
 assert.deepEqual(delivered, [[1, 2, 3], [4, 5, 6]], 'early camera focus must reach the mounted scene');
 
+let userPan = null;
+const stopUserPan = cameraControlBus.onUserPan((target) => { userPan = target; });
+cameraControlBus.emitUserPan({ x: 12, z: 34, distance: 500 });
+assert.deepEqual(userPan, { x: 12, z: 34, distance: 500 }, 'user pan must reach the atlas');
+stopUserPan();
+userPan = null;
+cameraControlBus.emitUserPan({ x: 50, z: 60, distance: 700 });
+assert.equal(userPan, null, 'unmounted atlas must not receive user pans');
+
 console.log(`Growth atlas validation passed: ${GROWTH_PARKS.length} places, ${GROWTH_PARKS.reduce((count, park) => count + park.featuredCompanies.length, 0)} sourced company entries`);

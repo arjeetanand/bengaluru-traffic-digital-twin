@@ -22,6 +22,7 @@ export type FlyToCallback = (
   position: [number, number, number],
   target: [number, number, number]
 ) => void;
+export type UserPanTarget = { x: number; z: number; distance: number };
 
 class CameraControlBus {
   public state: CameraInputState = {
@@ -40,6 +41,7 @@ class CameraControlBus {
 
   private resetListeners: Set<ResetCallback> = new Set();
   private flyToListeners: Set<FlyToCallback> = new Set();
+  private userPanListeners: Set<(target: UserPanTarget) => void> = new Set();
   private pendingFlyTo: Parameters<FlyToCallback> | null = null;
 
   public setInput(input: Partial<CameraInputState>) {
@@ -112,6 +114,21 @@ class CameraControlBus {
     return () => {
       this.flyToListeners.delete(callback);
     };
+  }
+
+  public emitUserPan(target: UserPanTarget) {
+    this.userPanListeners.forEach((callback) => {
+      try {
+        callback(target);
+      } catch (err) {
+        console.error('Error in camera user pan listener', err);
+      }
+    });
+  }
+
+  public onUserPan(callback: (target: UserPanTarget) => void): () => void {
+    this.userPanListeners.add(callback);
+    return () => { this.userPanListeners.delete(callback); };
   }
 }
 

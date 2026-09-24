@@ -133,9 +133,19 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const gestureOffset = useRef(new THREE.Vector3());
   const gestureSpherical = useRef(new THREE.Spherical());
   const overviewZoomTarget = useRef<number | null>(null);
+  const userPanActive = useRef(false);
+  const lastUserPan = useRef({ x: 0, z: 0, at: 0 });
 
   cameraPresetRef.current = cameraPreset;
   cameraModeRef.current = cameraMode;
+
+  const beginUserPan = () => {
+    if (cameraModeRef.current !== 'overview' || userPanActive.current) return;
+    const target = controlsRef.current?.target;
+    if (!target) return;
+    userPanActive.current = true;
+    lastUserPan.current = { x: target.x, z: target.z, at: performance.now() };
+  };
 
   const setWalkOrientationFromDirection = (direction: THREE.Vector3) => {
     const horizontalLength = Math.hypot(direction.x, direction.z);
@@ -192,6 +202,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     target: [number, number, number]
   ) => {
     const controls = controlsRef.current;
+    userPanActive.current = false;
     overviewZoomTarget.current = null;
     targetCamPos.current.set(...position);
     targetLookAt.current.set(...target);
@@ -540,6 +551,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       if (!controls) return;
 
       cancelCameraTransition();
+      beginUserPan();
       controls.enabled = false;
       overviewGesture.current = {
         pointerId: event.pointerId,
@@ -596,6 +608,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       if (cameraModeRef.current !== 'overview') return;
 
       if (isTransitioning.current) cancelCameraTransition();
+      beginUserPan();
       const controls = controlsRef.current;
       if (!controls) return;
       const normalizedDelta = event.deltaMode === 1
@@ -808,6 +821,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
 
     if (hasMoveInput) {
       cancelCameraTransition();
+      beginUserPan();
 
       // Person movement is relative to the persistent heading. Bird movement
       // remains relative to the current camera bearing, as expected for an
@@ -1046,6 +1060,19 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       );
       controls.target.y = Math.max(-6, Math.min(32, controls.target.y));
       camera.lookAt(controls.target);
+
+      if (userPanActive.current) {
+        const last = lastUserPan.current;
+        const now = performance.now();
+        if (now - last.at >= 180 && Math.hypot(controls.target.x - last.x, controls.target.z - last.z) >= 20) {
+          cameraControlBus.emitUserPan({
+            x: controls.target.x,
+            z: controls.target.z,
+            distance: camera.position.distanceTo(controls.target)
+          });
+          lastUserPan.current = { x: controls.target.x, z: controls.target.z, at: now };
+        }
+      }
     }
   });
 
@@ -1077,6 +1104,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       onStart={() => {
         // As soon as user touches/drags mouse or trackpad, immediately yield 100% control
         cancelCameraTransition();
+        beginUserPan();
       }}
     />
   );
