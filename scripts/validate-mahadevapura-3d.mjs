@@ -30,6 +30,11 @@ for (const [name, id, lat, lon] of [
   const expectedZ = (lat - north.origin.lat) * north.origin.metersPerDegree.lat;
   assert.ok(Math.hypot(x - expectedX, z - expectedZ) < 150, `${name} map anchor must match its source geometry`);
   assert.ok(north.roads.some((road) => road.geometry.some(([rx, rz]) => Math.hypot(rx - x, rz - z) < 300)), `${name} needs mapped approach roads`);
+  const detailRadius = id === 'way/91237236' ? 650 : 450;
+  const nearbyFootprints = north.buildings.filter((building) =>
+    Math.hypot(building.centroid[0] - x, building.centroid[1] - z) < detailRadius
+  );
+  assert.ok(nearbyFootprints.length >= 50, `${name} needs enough mapped footprints for a legible 3D campus view`);
 }
 
 console.log(`Northern 3D validation passed: ${north.buildings.length} footprints, ${north.roads.length} roads, both campuses and connector`);

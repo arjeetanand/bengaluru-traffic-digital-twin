@@ -67,7 +67,14 @@ function outlineGeometry(features: { geometry: [number, number][] }[], y: number
   return geometry;
 }
 
-function selectedBuildings(buildings: Footprint[]) {
+function selectedBuildings(buildings: Footprint[], campuses: NorthernSnapshot['campuses']) {
+  const bagmane = campuses.find((campus) => campus.id === 'way/91237236')?.centroid;
+  const ananta = buildings.find((building) => building.id === 'way/1087930060')?.centroid;
+  // ponytail: centroid catchments keep campus detail dense; use polygon distance if the OSM campus shapes change substantially.
+  const nearby = buildings.filter(({ centroid: [x, z] }) =>
+    (bagmane && (x - bagmane[0]) ** 2 + (z - bagmane[1]) ** 2 < 650 ** 2) ||
+    (ananta && (x - ananta[0]) ** 2 + (z - ananta[1]) ** 2 < 450 ** 2)
+  );
   const named = buildings.filter((building) => building.name);
   const cells = new Map<string, Footprint>();
   for (const building of buildings) {
@@ -76,13 +83,16 @@ function selectedBuildings(buildings: Footprint[]) {
     const current = cells.get(key);
     if (!current || building.geometry.length > current.geometry.length) cells.set(key, building);
   }
-  const ids = new Set(named.map((building) => building.id));
-  return [...named, ...[...cells.values()].filter((building) => !ids.has(building.id))].slice(0, 650);
+  const chosen = new Map<string, Footprint>();
+  for (const building of [...nearby, ...named, ...cells.values()]) chosen.set(building.id, building);
+  return [...chosen.values()].slice(0, 1300);
 }
 
-function massingGeometry(buildings: Footprint[]) {
+function massingGeometry(buildings: Footprint[], campuses: NorthernSnapshot['campuses']) {
   const geometries: THREE.ExtrudeGeometry[] = [];
-  for (const building of selectedBuildings(buildings)) {
+  const roofColor = new THREE.Color('#f6f7e8');
+  const wallColor = new THREE.Color('#adc5bd');
+  for (const building of selectedBuildings(buildings, campuses)) {
     if (building.geometry.length < 3) continue;
     try {
       const shape = new THREE.Shape();
@@ -91,6 +101,15 @@ function massingGeometry(buildings: Footprint[]) {
       shape.closePath();
       const geometry = new THREE.ExtrudeGeometry(shape, { depth: building.height, bevelEnabled: false, curveSegments: 1 });
       geometry.rotateX(-Math.PI / 2);
+      const normals = geometry.getAttribute('normal');
+      const colors = new Float32Array(normals.count * 3);
+      for (let index = 0; index < normals.count; index += 1) {
+        const color = normals.getY(index) > 0.5 ? roofColor : wallColor;
+        colors[index * 3] = color.r;
+        colors[index * 3 + 1] = color.g;
+        colors[index * 3 + 2] = color.b;
+      }
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
       geometries.push(geometry);
     } catch {
       // A malformed OSM footprint must not hide the rest of the city.
@@ -124,7 +143,7 @@ export const MahadevapuraSourceLayer: React.FC = () => {
   const roads = useMemo(() => snapshot ? roadGeometry(snapshot.roads) : null, [snapshot]);
   const outlines = useMemo(() => snapshot ? outlineGeometry(snapshot.buildings, 0.22) : null, [snapshot]);
   const campuses = useMemo(() => snapshot ? outlineGeometry(snapshot.campuses, 0.28) : null, [snapshot]);
-  const massings = useMemo(() => snapshot ? massingGeometry(snapshot.buildings) : null, [snapshot]);
+  const massings = useMemo(() => snapshot ? massingGeometry(snapshot.buildings, snapshot.campuses) : null, [snapshot]);
   useEffect(() => () => {
     roads?.dispose();
     outlines?.dispose();
@@ -140,7 +159,7 @@ export const MahadevapuraSourceLayer: React.FC = () => {
   return (
     <group name="MahadevapuraOSMSourceLayer" userData={{ source: 'OpenStreetMap', elevation: 'building heights use OSM tags or marked modelled fallback; roads are plan traces, not surveyed elevations' }}>
       {roads && <mesh geometry={roads} userData={{ source: 'OSM highway plan geometry', count: snapshot.roads.length }}><meshStandardMaterial color="#cdb992" roughness={1} side={THREE.DoubleSide} /></mesh>}
-      {massings && <mesh geometry={massings} userData={{ source: 'OSM building footprints', sampled: true, height: 'tagged or modelled fallback' }}><meshStandardMaterial color="#f0f2e9" roughness={0.86} metalness={0.04} side={THREE.DoubleSide} /></mesh>}
+      {massings && <mesh geometry={massings} userData={{ source: 'OSM building footprints', sampled: true, height: 'tagged or modelled fallback' }}><meshStandardMaterial vertexColors roughness={0.86} metalness={0.04} side={THREE.DoubleSide} /></mesh>}
       {outlines && <lineSegments geometry={outlines} userData={{ source: 'all OSM building plan outlines', count: snapshot.buildings.length }}><lineBasicMaterial color="#d0ded4" transparent opacity={0.4} /></lineSegments>}
       {campuses && <lineSegments geometry={campuses} userData={{ source: 'OSM campus boundary', ids: snapshot.campuses.map((campus) => campus.id) }}><lineBasicMaterial color="#d9f678" /></lineSegments>}
       {labels.map((item) => <Html key={item.id} position={[item.centroid[0], item.id === 'way/1087930060' ? 49 : 32, item.centroid[1]]} center distanceFactor={680} style={{ pointerEvents: 'none' }}><span style={{ display: 'block', whiteSpace: 'nowrap', border: '2px solid #d9f678', borderRadius: 4, background: '#172932ed', padding: '7px 10px', color: '#f7f9e8', font: '700 12px sans-serif' }}>{item.name}</span></Html>)}
