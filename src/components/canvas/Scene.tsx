@@ -29,6 +29,7 @@ import { TrafficSystem } from './traffic/TrafficSystem';
 import { SourceCorridorTraffic } from './traffic/SourceCorridorTraffic';
 import { OsmSnapshotLayer } from './Environment/OsmSnapshotLayer';
 import { MahadevapuraSourceLayer } from './Environment/MahadevapuraSourceLayer';
+import { BellandurEcospaceSourceLayer } from './Environment/BellandurEcospaceSourceLayer';
 import { CrossoverFocusOverlay } from './Environment/CrossoverFocusOverlay';
 import { ScenarioImpactOverlay } from './Environment/ScenarioImpactOverlay';
 import { CorridorAttractorLayer } from './Environment/CorridorAttractorLayer';
@@ -269,6 +270,7 @@ export const Scene: React.FC<SceneProps> = ({
             selectionRoadLimit={cleanView ? 32 : 220}
           />
           {(buildingMode !== 'google-tiles' || googleTilesFailed) && <MahadevapuraSourceLayer />}
+          {(buildingMode !== 'google-tiles' || googleTilesFailed) && <BellandurEcospaceSourceLayer />}
 
           {buildingMode !== 'google-tiles' && (
             <SourceLandmarkMassings
