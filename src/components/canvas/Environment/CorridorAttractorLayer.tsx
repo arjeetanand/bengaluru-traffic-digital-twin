@@ -27,16 +27,18 @@ const getBlockDimensions = (attractor: CorridorAttractorAnchor) => {
 function AttractorLabel({
   attractor,
   isNight,
-  distanceFactor
+  distanceFactor,
+  height
 }: {
   attractor: CorridorAttractorAnchor;
   isNight: boolean;
   distanceFactor: number;
+  height: number;
 }) {
   const accent = ATTRACTOR_PALETTE[attractor.scope];
   return (
     <Html
-      position={corridorAnchorToWorld(attractor.coordinate, 1)}
+      position={[0, height + 8, 0]}
       center
       distanceFactor={distanceFactor}
       style={{ pointerEvents: 'none' }}
@@ -138,6 +140,7 @@ export const CorridorAttractorLayer: React.FC<CorridorAttractorLayerProps> = ({
               attractor={attractor}
               isNight={isNight}
               distanceFactor={labelDistanceFactor}
+              height={dimensions.height}
             />
           </group>
         );

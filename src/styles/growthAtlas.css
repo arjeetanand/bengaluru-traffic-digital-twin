@@ -78,8 +78,11 @@ html, body, #root {
 .atlas-map-panel { --map-height: 555px; position: relative; min-width: 0; background: #14232a; color: #f4f7f2; }
 .atlas-map-canvas { position: relative; height: var(--map-height); overflow: hidden; isolation: isolate; }
 .atlas-map-canvas canvas { user-select: none; }
+.atlas-scene-loading { position: absolute; inset: 0; display: grid; place-items: center; background: #6f8a7e; color: #f8fbf7; font: 700 12px 'IBM Plex Mono', monospace; letter-spacing: .06em; }
 .atlas-map-canvas iframe { position: absolute; inset: 0; z-index: 1; display: block; width: 100%; height: 100%; border: 0; }
-.atlas-map-fallback { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 45px; background: radial-gradient(circle at 50% 47%, #304b4b, #14232a 63%); }
+.atlas-map-scroll-shield { display: none; }
+.atlas-map-gesture-toggle { display: none; }
+.atlas-map-fallback { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 45px; background: radial-gradient(circle at 50% 47%, #304b4b, #14232a 63%); }
 .atlas-map-fallback > svg { color: var(--lime); margin-bottom: 18px; }
 .atlas-map-fallback small { color: #b2c6b7; font: 700 10px 'IBM Plex Mono', monospace; letter-spacing: .14em; }
 .atlas-map-fallback strong { max-width: 620px; margin-top: 12px; font-size: clamp(26px, 3vw, 43px); line-height: 1.1; letter-spacing: -.05em; }
@@ -196,6 +199,10 @@ html, body, #root {
 }
 
 @media (max-width: 850px) {
+  .atlas-map-canvas:not(.is-interactive) iframe, .atlas-map-canvas:not(.is-interactive) canvas { pointer-events: none; }
+  .atlas-map-scroll-shield { position: absolute; inset: 0; z-index: 3; display: block; touch-action: pan-y; }
+  .atlas-map-gesture-toggle { position: absolute; z-index: 5; top: 78px; right: 10px; display: block; padding: 8px 10px; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; background: #15262a; color: #f5f9f6; font: 700 10px 'DM Sans', sans-serif; cursor: pointer; }
+  .atlas-map-gesture-toggle[aria-pressed="true"] { background: var(--lime); color: var(--ink); }
   .atlas-header { min-height: 68px; }
   .atlas-header-nav { gap: 10px; }
   .atlas-header-nav a { display: none; }

@@ -16,7 +16,6 @@ import {
 } from './services/tomtomService';
 import { getBakedDemoTrafficData } from './services/demoTrafficData';
 import { useTrafficSignals } from './components/canvas/traffic/TrafficSignals';
-import { Scene } from './components/canvas/Scene';
 import { HUD } from './components/ui/HUD';
 import { JunctionDetailModal } from './components/ui/JunctionDetailModal';
 import { GoogleMapsStore } from './data/GoogleMapsStoreRegistry';
@@ -30,6 +29,8 @@ import {
 import { useSimulationClock } from './simulation/useSimulationClock';
 import { ScenarioControlRoom } from './components/ui/ScenarioControlRoom';
 import { GrowthAtlas } from './components/ui/GrowthAtlas';
+
+const Scene = React.lazy(() => import('./components/canvas/Scene').then(({ Scene }) => ({ default: Scene })));
 
 export const App: React.FC = () => {
   // ── Simulation Controls Mode ──
@@ -298,7 +299,8 @@ export const App: React.FC = () => {
   }, [isSimulatorOpen]);
 
   const scene = (
-    <Scene
+    <React.Suspense fallback={<div className="atlas-scene-loading" role="status">Loading 3D map…</div>}>
+      <Scene
         isNight={mode.isNight}
         isRaining={mode.isRaining}
         simSpeed={mode.simSpeed}
@@ -314,7 +316,8 @@ export const App: React.FC = () => {
         scenarioVisualState={scenarioVisualState}
         onInspectJunction={() => setIsJunctionModalOpen(true)}
         cleanView={!isSimulatorOpen}
-    />
+      />
+    </React.Suspense>
   );
 
   return (

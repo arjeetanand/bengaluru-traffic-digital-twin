@@ -27,6 +27,7 @@ const streetMapUrl = (lat: number, lng: number) => {
 };
 const csvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
 const initialPark = GROWTH_PARKS.find((park) => park.id === new URLSearchParams(window.location.search).get('park')) || GROWTH_PARKS[0];
+const preferredSurface = (park: GrowthPark) => park.mapCoverage === 'context' || window.matchMedia('(max-width: 850px)').matches ? 'osm' : 'twin';
 
 function CompanyMark({ company }: { company: GrowthCompany }) {
   const [failed, setFailed] = useState(false);
@@ -48,8 +49,9 @@ function CompanyMark({ company }: { company: GrowthCompany }) {
 
 export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active, onOpenSimulator }) => {
   const [selectedId, setSelectedId] = useState(initialPark.id);
-  const [mapSurface, setMapSurface] = useState<'twin' | 'google' | 'osm'>(initialPark.mapCoverage === 'context' ? 'osm' : 'twin');
+  const [mapSurface, setMapSurface] = useState<'twin' | 'google' | 'osm'>(() => preferredSurface(initialPark));
   const [mapReady, setMapReady] = useState(false);
+  const [mapInteractive, setMapInteractive] = useState(false);
   const [query, setQuery] = useState('');
   const [service, setService] = useState('corporate shuttle');
   const [saved, setSaved] = useState<string[]>(() => {
@@ -95,7 +97,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
   const flyToPark = (park: GrowthPark) => {
     if (park.lat === undefined || park.lng === undefined) return;
     const [x, , z] = gpsTo3D(park.lat, park.lng);
-    cameraControlBus.flyTo([x + 190, 300, z + 300], [x, 10, z]);
+    cameraControlBus.flyTo([x + 320, 500, z + 500], [x, 10, z]);
   };
 
   useEffect(() => {
@@ -105,11 +107,12 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
   }, [active, selected, mapSurface]);
 
   useEffect(() => setMapReady(false), [selectedId, mapSurface]);
+  useEffect(() => setMapInteractive(false), [selectedId, mapSurface]);
 
   const selectPark = (park: GrowthPark) => {
     if (park.id === selectedId && mapSurface === 'twin') flyToPark(park);
     setSelectedId(park.id);
-    setMapSurface(park.mapCoverage === 'context' ? 'osm' : 'twin');
+    setMapSurface(preferredSurface(park));
   };
 
   const toggleSaved = (park: GrowthPark, company: GrowthCompany) => {
@@ -181,7 +184,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
 
         <section className="atlas-explorer" id="explore" aria-label="Bengaluru tech park explorer">
           <div className="atlas-map-panel">
-            <div className="atlas-map-canvas" role="region" tabIndex={mapSurface === 'twin' ? 0 : undefined} aria-describedby="atlas-map-help" aria-label={mapSurface === 'twin' ? 'Interactive 3D map of the Bellandur to Marathahalli corridor' : `${mapSurface === 'osm' ? 'Street map' : 'Google Map'} of ${selected.name}`}>
+            <div className={`atlas-map-canvas${mapInteractive ? ' is-interactive' : ''}`} role="region" tabIndex={mapSurface === 'twin' ? 0 : undefined} aria-describedby="atlas-map-help" aria-label={mapSurface === 'twin' ? 'Interactive 3D map of the Bellandur to Marathahalli corridor' : `${mapSurface === 'osm' ? 'Street map' : 'Google Map'} of ${selected.name}`}>
               {mapSurface === 'twin' ? children : mapSurface === 'osm' && selected.lat !== undefined && selected.lng !== undefined ? <iframe
                 title={`Street map of ${selected.name}`}
                 src={streetMapUrl(selected.lat, selected.lng)}
@@ -203,6 +206,8 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
                   allowFullScreen
                 />}
               </>}
+              {!mapInteractive && <div className="atlas-map-scroll-shield" aria-hidden="true" />}
+              <button className="atlas-map-gesture-toggle" type="button" aria-pressed={mapInteractive} onClick={() => setMapInteractive(!mapInteractive)}>{mapInteractive ? 'Scroll page' : 'Move map'}</button>
             </div>
             <div className="atlas-map-head">
               <div className="atlas-map-heading"><span className="atlas-live-dot" /><strong>{selected.name.toUpperCase()}</strong><small>{mapSurface === 'twin' ? 'OSM 3D TWIN · BELLANDUR → MARATHAHALLI' : mapSurface === 'osm' ? 'OPENSTREETMAP · DRAG TO EXPLORE' : 'GOOGLE MAPS · PLACE PREVIEW'}</small></div>
@@ -210,7 +215,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
                 {mapSurface !== 'twin' && selected.mapCoverage === 'corridor' && <button type="button" onClick={() => setMapSurface('twin')}>3D twin</button>}
                 {mapSurface !== 'osm' && <button type="button" onClick={() => setMapSurface('osm')}>Street map</button>}
                 {mapSurface !== 'google' && mode.googleMapsApiKey && <button type="button" onClick={() => setMapSurface('google')}>Google Map</button>}
-                {mapSurface === 'twin' && <button type="button" onClick={() => cameraControlBus.triggerResetView()} aria-label="Reset 3D map view"><RotateCcw size={15} /> Reset</button>}
+                {mapSurface === 'twin' && <button type="button" onClick={() => flyToPark(selected)} aria-label="Reset 3D map view"><RotateCcw size={15} /> Reset</button>}
               </div>
             </div>
             <div className="atlas-map-bottom">
