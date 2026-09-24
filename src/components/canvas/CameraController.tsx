@@ -13,7 +13,6 @@ import {
   resolveWalkPosition,
   resolveWalkStart,
   MARATHAHALLI_OVERVIEW_BOUNDS,
-  MARATHAHALLI_WALK_BOUNDS,
   resolveWalkEyeHeight,
   getNearestSourceWalkPoint,
   registerSnapshotWalkRoutes
@@ -1038,12 +1037,12 @@ export const CameraController: React.FC<CameraControllerProps> = ({
         Math.min(MARATHAHALLI_OVERVIEW_BOUNDS.maxZ, camera.position.z)
       );
       controls.target.x = Math.max(
-        MARATHAHALLI_WALK_BOUNDS.minX,
-        Math.min(MARATHAHALLI_WALK_BOUNDS.maxX, controls.target.x)
+        MARATHAHALLI_OVERVIEW_BOUNDS.minX,
+        Math.min(MARATHAHALLI_OVERVIEW_BOUNDS.maxX, controls.target.x)
       );
       controls.target.z = Math.max(
-        MARATHAHALLI_WALK_BOUNDS.minZ,
-        Math.min(MARATHAHALLI_WALK_BOUNDS.maxZ, controls.target.z)
+        MARATHAHALLI_OVERVIEW_BOUNDS.minZ,
+        Math.min(MARATHAHALLI_OVERVIEW_BOUNDS.maxZ, controls.target.z)
       );
       controls.target.y = Math.max(-6, Math.min(32, controls.target.y));
       camera.lookAt(controls.target);
