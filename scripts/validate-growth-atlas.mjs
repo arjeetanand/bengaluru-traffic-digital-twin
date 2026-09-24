@@ -38,6 +38,9 @@ assert.deepEqual(
   true,
   'requested parks must be present'
 );
+assert.ok(['prestige_tech_park', 'rmz_ecospace', 'bagmane_world_technology_centre', 'google_ananta']
+  .every((id) => GROWTH_PARKS.find((park) => park.id === id)?.mapCoverage === 'corridor'),
+  'requested parks need the 3D corridor view');
 assert.ok(
   GROWTH_PARKS.find((park) => park.id === 'bagmane_world_technology_centre')?.featuredCompanies.every((company) => company.logoUrl),
   'Bagmane occupiers need the sourced park logo wall'

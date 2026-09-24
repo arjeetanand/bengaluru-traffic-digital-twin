@@ -320,7 +320,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
 
         <section className="atlas-explorer" id="explore" aria-label="Bengaluru tech park explorer">
           <div className="atlas-map-panel">
-            <div className={`atlas-map-canvas${mapInteractive ? ' is-interactive' : ''}`} role="region" tabIndex={mapSurface === 'twin' && mapInteractive ? 0 : undefined} aria-describedby="atlas-map-help" aria-label={mapSurface === 'twin' ? 'Interactive 3D map from Marathahalli to Mahadevapura' : `${mapSurface === 'osm' ? 'Street map' : 'Google Map'} of ${selected.name}`}>
+            <div className={`atlas-map-canvas${mapInteractive ? ' is-interactive' : ''}`} role="region" tabIndex={mapSurface === 'twin' && mapInteractive ? 0 : undefined} aria-describedby="atlas-map-help" aria-label={mapSurface === 'twin' ? 'Interactive 3D map from Bellandur to Mahadevapura' : `${mapSurface === 'osm' ? 'Street map' : 'Google Map'} of ${selected.name}`}>
               {mapSurface === 'twin' ? children : mapSurface === 'osm' && selected.lat !== undefined && selected.lng !== undefined ? <iframe
                 title={`Street map of ${selected.name}`}
                 src={streetMapUrl(selected.lat, selected.lng)}
@@ -346,7 +346,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
               <button className="atlas-map-gesture-toggle" type="button" aria-pressed={mapInteractive} onClick={() => setMapInteractive(!mapInteractive)}>{mapInteractive ? 'Scroll page' : 'Move map'}</button>
             </div>
             <div className="atlas-map-head">
-                <div className="atlas-map-heading"><span className="atlas-live-dot" /><strong>{selected.name.toUpperCase()}</strong><small>{mapSurface === 'twin' ? 'OSM 3D TWIN · MARATHAHALLI → MAHADEVAPURA' : mapSurface === 'osm' ? 'OPENSTREETMAP · DRAG TO EXPLORE' : 'GOOGLE MAPS · PLACE PREVIEW'}</small></div>
+                <div className="atlas-map-heading"><span className="atlas-live-dot" /><strong>{selected.name.toUpperCase()}</strong><small>{mapSurface === 'twin' ? 'OSM 3D TWIN · BELLANDUR → MAHADEVAPURA' : mapSurface === 'osm' ? 'OPENSTREETMAP · DRAG TO EXPLORE' : 'GOOGLE MAPS · PLACE PREVIEW'}</small></div>
               <div className="atlas-map-actions">
                 {mapSurface !== 'twin' && selected.mapCoverage === 'corridor' && <button type="button" onClick={() => setMapSurface('twin')}>3D twin</button>}
                 {mapSurface !== 'osm' && <button type="button" onClick={() => setMapSurface('osm')}>Street map</button>}

@@ -92,7 +92,7 @@ export const GROWTH_PARKS: GrowthPark[] = [
     // Approximate OSM feature centre from bellandur-marathahalli-corridor.json.
     lat: 12.9241373,
     lng: 77.6805212,
-    mapCoverage: 'context',
+    mapCoverage: 'corridor',
     description: 'Turn the Bellandur office cluster into a workplace mobility prospect list with location-specific search intent.',
     painHypothesis: 'Hypothesis: workers and visitors may find the right campus entrance or shuttle pickup point hard to identify.',
     seoQuery: 'office shuttle RMZ Ecospace Bellandur',
