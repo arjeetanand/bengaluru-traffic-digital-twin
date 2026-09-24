@@ -38,6 +38,10 @@ assert.ok(
   GROWTH_PARKS.find((park) => park.id === 'bagmane_world_technology_centre')?.featuredCompanies.every((company) => company.logoUrl),
   'Bagmane occupiers need the sourced park logo wall'
 );
+assert.ok(
+  ['rmz_ecospace', 'google_ananta'].every((id) => GROWTH_PARKS.find((park) => park.id === id)?.featuredCompanies.every((company) => company.logoUrl)),
+  'Ecospace and Ananta occupiers need sourced marks'
+);
 
 for (const park of GROWTH_PARKS) {
   assert.ok(park.name && park.area && park.description && park.painHypothesis && park.seoQuery && park.leadAngle);

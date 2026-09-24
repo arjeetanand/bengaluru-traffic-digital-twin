@@ -55,8 +55,8 @@ const preferredSurface = (park: GrowthPark) => park.mapCoverage === 'context' ||
 function CompanyMark({ company }: { company: GrowthCompany }) {
   const [failed, setFailed] = useState(false);
   const domain = company.website ? new URL(company.website).hostname : null;
-  // Juniper's site icon now resolves to HPE, so keep the sourced tenant name's initials.
-  const hasMatchingIcon = !!company.logoUrl || (!!domain && company.name !== 'Juniper Networks');
+  // These site icons resolve to a parent or generic mark, so show tenant initials.
+  const hasMatchingIcon = !!company.logoUrl || (!!domain && !['Juniper Networks', 'Nexusnow.ai', 'Adobe', 'Oracle'].includes(company.name));
   return (
     <span className={`atlas-company-mark${company.logoUrl ? ' has-logo' : ''}`} aria-hidden="true">
       {company.name.slice(0, 2).toUpperCase()}
