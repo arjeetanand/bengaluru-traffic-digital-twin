@@ -4,7 +4,7 @@ import {
   Download, ExternalLink, Globe2, Linkedin, MapPin, RotateCcw, Search
 } from 'lucide-react';
 import { gpsTo3D } from '../../data/GoogleMapsStoreRegistry';
-import { GROWTH_PARKS, GrowthCompany, GrowthPark, quoteAtlasCsvCell } from '../../data/growthAtlas';
+import { GROWTH_PARKS, GrowthCompany, GrowthPark, nearestParkForTarget, quoteAtlasCsvCell } from '../../data/growthAtlas';
 import { cameraControlBus } from '../../services/cameraControlBus';
 import { fetchTrafficFlow } from '../../services/tomtomService';
 import { SimulationMode, TrafficFlowData } from '../../types';
@@ -51,15 +51,18 @@ const streetMapUrl = (lat: number, lng: number) => {
 };
 const initialPark = GROWTH_PARKS.find((park) => park.id === new URLSearchParams(window.location.search).get('park')) || GROWTH_PARKS[0];
 const preferredSurface = (park: GrowthPark) => park.mapCoverage === 'context' || window.matchMedia('(max-width: 850px)').matches ? 'osm' : 'twin';
+const corridorAnchors = GROWTH_PARKS.filter((park) => park.mapCoverage === 'corridor' && park.lat !== undefined && park.lng !== undefined)
+  .map((park) => { const [x, , z] = gpsTo3D(park.lat!, park.lng!); return { id: park.id, x, z }; });
 
 function CompanyMark({ company }: { company: GrowthCompany }) {
   const [failed, setFailed] = useState(false);
   const domain = company.website ? new URL(company.website).hostname : null;
-  // These site icons resolve to a parent or generic mark, so show tenant initials.
-  const hasMatchingIcon = !!company.logoUrl || (!!domain && !['Juniper Networks', 'Nexusnow.ai', 'Adobe', 'Oracle'].includes(company.name));
+  // These site icons resolve to a parent or generic mark, so show the company name.
+  const hasMatchingIcon = !!company.logoUrl || (!!domain && !['Adobe', 'Oracle'].includes(company.name));
+  const showName = failed || !hasMatchingIcon;
   return (
-    <span className={`atlas-company-mark${company.logoUrl ? ' has-logo' : ''}`} aria-hidden="true">
-      {company.name.slice(0, 2).toUpperCase()}
+    <span className={`atlas-company-mark${company.logoUrl ? ' has-logo' : ''}${showName ? ' name-mark' : ''}`} aria-hidden="true">
+      {showName ? company.name : company.name.slice(0, 2).toUpperCase()}
       {!failed && hasMatchingIcon && (
         <img
           src={company.logoUrl || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain || '')}&sz=64`}
@@ -108,7 +111,8 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
   const [selectedId, setSelectedId] = useState(initialPark.id);
   const [mapSurface, setMapSurface] = useState<'twin' | 'google' | 'osm'>(() => preferredSurface(initialPark));
   const [mapReady, setMapReady] = useState(false);
-  const [mapInteractive, setMapInteractive] = useState(false);
+  const [mapInteractive, setMapInteractive] = useState(() => preferredSurface(initialPark) === 'twin');
+  const skipNextFlyTo = useRef(false);
   const [query, setQuery] = useState('');
   const [service, setService] = useState('corporate shuttle');
   const [saved, setSaved] = useState<string[]>(() => {
@@ -200,12 +204,23 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
 
   useEffect(() => {
     if (!active || mapSurface !== 'twin' || selected.mapCoverage !== 'corridor') return;
+    if (skipNextFlyTo.current) { skipNextFlyTo.current = false; return; }
     const frame = requestAnimationFrame(() => flyToPark(selected));
     return () => cancelAnimationFrame(frame);
   }, [active, selected, mapSurface]);
 
+  useEffect(() => {
+    if (!active || mapSurface !== 'twin' || !mapInteractive) return;
+    return cameraControlBus.onUserPan((view) => {
+      const id = nearestParkForTarget(corridorAnchors, view);
+      if (!id || id === selectedId) return;
+      skipNextFlyTo.current = true;
+      setSelectedId(id);
+    });
+  }, [active, mapSurface, mapInteractive, selectedId]);
+
   useEffect(() => setMapReady(false), [selectedId, mapSurface]);
-  useEffect(() => setMapInteractive(false), [selectedId, mapSurface]);
+  useEffect(() => setMapInteractive(mapSurface === 'twin' && !window.matchMedia('(max-width: 850px)').matches), [mapSurface]);
   useEffect(() => {
     if (!mapInteractive) return;
     const onEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setMapInteractive(false); };
@@ -214,6 +229,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
   }, [mapInteractive]);
 
   const selectPark = (park: GrowthPark) => {
+    skipNextFlyTo.current = false;
     if (park.id === selectedId && mapSurface === 'twin') flyToPark(park);
     setSelectedId(park.id);
     setMapSurface(preferredSurface(park));

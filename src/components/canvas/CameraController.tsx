@@ -134,17 +134,22 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const gestureSpherical = useRef(new THREE.Spherical());
   const overviewZoomTarget = useRef<number | null>(null);
   const userPanActive = useRef(false);
-  const lastUserPan = useRef({ x: 0, z: 0, at: 0 });
+  const lastUserPan = useRef({ x: 0, z: 0, distance: 0, at: 0 });
 
   cameraPresetRef.current = cameraPreset;
   cameraModeRef.current = cameraMode;
 
   const beginUserPan = () => {
     if (cameraModeRef.current !== 'overview' || userPanActive.current) return;
-    const target = controlsRef.current?.target;
-    if (!target) return;
+    const controls = controlsRef.current;
+    if (!controls) return;
     userPanActive.current = true;
-    lastUserPan.current = { x: target.x, z: target.z, at: performance.now() };
+    lastUserPan.current = {
+      x: controls.target.x,
+      z: controls.target.z,
+      distance: camera.position.distanceTo(controls.target),
+      at: performance.now()
+    };
   };
 
   const setWalkOrientationFromDirection = (direction: THREE.Vector3) => {
@@ -1064,13 +1069,17 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       if (userPanActive.current) {
         const last = lastUserPan.current;
         const now = performance.now();
-        if (now - last.at >= 180 && Math.hypot(controls.target.x - last.x, controls.target.z - last.z) >= 20) {
+        const distance = camera.position.distanceTo(controls.target);
+        if (now - last.at >= 180 && (
+          Math.hypot(controls.target.x - last.x, controls.target.z - last.z) >= 20 ||
+          (last.distance > 1200 && distance <= 1200)
+        )) {
           cameraControlBus.emitUserPan({
             x: controls.target.x,
             z: controls.target.z,
-            distance: camera.position.distanceTo(controls.target)
+            distance
           });
-          lastUserPan.current = { x: controls.target.x, z: controls.target.z, at: now };
+          lastUserPan.current = { x: controls.target.x, z: controls.target.z, distance, at: now };
         }
       }
     }

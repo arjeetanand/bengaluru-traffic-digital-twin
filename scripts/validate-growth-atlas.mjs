@@ -8,10 +8,14 @@ const source = await readFile(new URL('../src/data/growthAtlas.ts', import.meta.
 const code = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext }
 }).outputText;
-const { GROWTH_PARKS, quoteAtlasCsvCell } = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`);
+const { GROWTH_PARKS, nearestParkForTarget, quoteAtlasCsvCell } = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`);
 
 assert.equal(quoteAtlasCsvCell('ordinary'), '"ordinary"');
 assert.equal(quoteAtlasCsvCell('=HYPERLINK("x")'), '"\'=HYPERLINK(""x"")"', 'CSV cells must not execute as formulas');
+const testAnchors = [{ id: 'bagmane', x: 0, z: 0 }, { id: 'ananta', x: 354, z: 0 }];
+assert.equal(nearestParkForTarget(testAnchors, { x: 10, z: 0, distance: 770 }), 'bagmane');
+assert.equal(nearestParkForTarget(testAnchors, { x: 177, z: 0, distance: 770 }), undefined, 'overlapping campus views must not flicker');
+assert.equal(nearestParkForTarget(testAnchors, { x: 10, z: 0, distance: 1300 }), undefined, 'wide views must not change the dossier');
 
 const roadSource = await readFile(new URL('../src/services/roadSampleGeometry.ts', import.meta.url), 'utf8');
 const roadCode = ts.transpileModule(roadSource, {

@@ -54,7 +54,7 @@ html, body, #root {
 .atlas-intro {
   max-width: 1760px;
   margin: auto;
-  padding: clamp(28px, 4.5vw, 64px) clamp(20px, 4.2vw, 76px) clamp(26px, 3.5vw, 50px);
+  padding: clamp(20px, 2.5vw, 36px) clamp(20px, 4.2vw, 76px) clamp(20px, 2.5vw, 36px);
   display: flex;
   align-items: end;
   justify-content: space-between;
@@ -66,7 +66,7 @@ html, body, #root {
 }
 .atlas-kicker { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
 .atlas-kicker span { width: 8px; height: 8px; background: #d97650; border-radius: 50%; }
-.atlas-intro h1 { font-size: clamp(42px, 5.1vw, 84px); line-height: .98; letter-spacing: -.073em; font-weight: 800; }
+.atlas-intro h1 { font-size: clamp(42px, 4.4vw, 70px); line-height: .98; letter-spacing: -.073em; font-weight: 800; }
 .atlas-intro h1 em, .atlas-growth-head h2 em { font-family: Georgia, serif; font-weight: 400; letter-spacing: -.06em; }
 .atlas-intro-side { width: min(360px, 34vw); padding-bottom: 3px; }
 .atlas-intro-side p { color: #42515a; font-size: 15px; line-height: 1.55; }
@@ -74,8 +74,8 @@ html, body, #root {
 .atlas-intro-side a svg { transition: transform .2s; }
 .atlas-intro-side a:hover svg { transform: translate(3px, 3px); }
 
-.atlas-explorer { max-width: 1760px; margin: 0 auto; padding: 0 clamp(20px, 4.2vw, 76px); display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(340px, .82fr); align-items: stretch; }
-.atlas-map-panel { --map-height: 555px; position: relative; min-width: 0; background: #14232a; color: #f4f7f2; }
+.atlas-explorer { max-width: 1760px; margin: 0 auto; padding: 0 clamp(20px, 4.2vw, 76px); display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(300px, .8fr); align-items: stretch; }
+.atlas-map-panel { --map-height: 620px; position: relative; min-width: 0; background: #14232a; color: #f4f7f2; }
 .atlas-map-canvas { position: relative; height: var(--map-height); overflow: hidden; isolation: isolate; }
 .atlas-map-canvas canvas { user-select: none; }
 .atlas-scene-loading { position: absolute; inset: 0; display: grid; place-items: center; background: #6f8a7e; color: #f8fbf7; font: 700 12px 'IBM Plex Mono', monospace; letter-spacing: .06em; }
@@ -126,12 +126,13 @@ html, body, #root {
 .atlas-logo-wall { padding: 17px 18px 21px; border-top: 1px solid #34444b; background: #172932; }
 .atlas-logo-wall-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #b5c6bf; font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .11em; }
 .atlas-logo-wall-head small { color: #849994; font: inherit; font-size: 8px; }
-.atlas-logo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 7px; margin-top: 12px; }
-.atlas-logo-grid a { min-width: 0; min-height: 82px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid #3d5358; border-radius: 6px; background: #21353d; text-align: center; transition: background .2s, border-color .2s; }
+.atlas-logo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 7px; margin-top: 12px; }
+.atlas-logo-grid a { min-width: 0; min-height: 94px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid #3d5358; border-radius: 6px; background: #21353d; text-align: center; transition: background .2s, border-color .2s; }
 .atlas-logo-grid a:hover { background: #30464b; border-color: var(--lime); }
 .atlas-logo-grid .atlas-company-mark { width: 35px; height: 35px; }
-.atlas-logo-grid .atlas-company-mark.has-logo { width: 76px; height: 36px; border: 0; }
-.atlas-logo-grid .atlas-company-mark.has-logo img { inset: 2px; width: 72px; height: 32px; }
+.atlas-logo-grid .atlas-company-mark.has-logo { width: 104px; height: 46px; border: 0; }
+.atlas-logo-grid .atlas-company-mark.has-logo img { inset: 2px; width: 100px; height: 42px; }
+.atlas-logo-grid .atlas-company-mark.name-mark { width: 104px; height: 46px; font-size: 13px; }
 .atlas-logo-grid a > span:last-child { max-width: 95%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e7efea; font-size: 9px; font-weight: 700; }
 
 .atlas-inspector { min-width: 0; padding: 25px 25px 19px; background: #f9f8f3; border: 1px solid var(--line); border-left: none; }
@@ -165,6 +166,7 @@ html, body, #root {
 .atlas-company-list li { min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 7px; border: 1px solid #e2e5dd; border-radius: 7px; background: white; }
 .atlas-company-mark { position: relative; flex: none; display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid #e0e4de; border-radius: 9px; background: #f1f4f0; color: #547473; font-size: 12px; font-weight: 800; }
 .atlas-company-mark img { position: absolute; inset: 5px; display: block; width: 27px; height: 27px; object-fit: contain; }
+.atlas-company-mark.name-mark { width: 55px; padding: 3px; overflow: hidden; text-align: center; word-break: break-word; font-size: 10px; line-height: 1.1; }
 .atlas-company-list .atlas-company-mark.has-logo { width: 51px; }
 .atlas-company-list .atlas-company-mark.has-logo img { width: 43px; left: 4px; }
 .atlas-company-info { min-width: 0; flex: 1; }
@@ -224,7 +226,7 @@ html, body, #root {
 .simulator-exit { position: absolute; z-index: 60; top: 72px; right: 24px; padding: 9px 14px; border: 1px solid #b7d4d8; border-radius: 6px; background: #f4f2eb; color: #18242b; font: 700 11px 'DM Sans', sans-serif; cursor: pointer; }
 
 @media (max-width: 1200px) {
-  .atlas-explorer { grid-template-columns: minmax(0, 1.4fr) minmax(320px, .9fr); }
+  .atlas-explorer { grid-template-columns: minmax(0, 1.7fr) minmax(300px, .8fr); }
   .atlas-park-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .atlas-park-list button { min-height: 64px; }
   .atlas-map-heading small { display: none; }
@@ -267,6 +269,9 @@ html, body, #root {
   .atlas-rail-search { width: 56%; right: 12px; }
   .atlas-park-list button { grid-template-columns: 18px minmax(0, 1fr); }
   .atlas-park-list svg { display: none; }
+  .atlas-logo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .atlas-logo-grid .atlas-company-mark.has-logo, .atlas-logo-grid .atlas-company-mark.name-mark { max-width: calc(100% - 8px); }
+  .atlas-logo-grid .atlas-company-mark.has-logo img { max-width: calc(100% - 4px); }
   .atlas-inspector { padding: 20px 16px; }
   .atlas-place-links a { padding: 8px; }
   .atlas-lead-bar { align-items: stretch; flex-direction: column; }

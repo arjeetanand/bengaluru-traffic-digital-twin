@@ -8,6 +8,20 @@ export interface GrowthCompany {
 
 export const quoteAtlasCsvCell = (value: string) => `"${(/^[\s]*[=+\-@]/.test(value) ? `'${value}` : value).replace(/"/g, '""')}"`;
 
+export const nearestParkForTarget = (
+  anchors: readonly { id: string; x: number; z: number }[],
+  view: { x: number; z: number; distance: number }
+) => {
+  if (view.distance > 1200) return undefined;
+  const nearest = anchors.map((anchor) => ({
+    id: anchor.id,
+    meters: Math.hypot(anchor.x - view.x, anchor.z - view.z)
+  })).sort((a, b) => a.meters - b.meters);
+  return nearest[0]?.meters <= 280 && (!nearest[1] || nearest[1].meters - nearest[0].meters >= 100)
+    ? nearest[0].id
+    : undefined;
+};
+
 export interface GrowthPark {
   id: string;
   name: string;
@@ -47,7 +61,7 @@ export const GROWTH_PARKS: GrowthPark[] = [
     leadAngle: 'Approach occupier workplace teams with an entrance-aware employee shuttle proposal; verify their routes and current needs first.',
     sourceUrl: prestigeSource,
     featuredCompanies: [
-      { name: 'Juniper Networks', website: 'https://www.juniper.net/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/juniper-networks/' },
+      { name: 'Juniper Networks', website: 'https://www.juniper.net/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/juniper-networks/', logoUrl: 'https://juniper-prod.scene7.com/is/image/junipernetworks/wordmark?fmt=png8-alpha&network=on' },
       { name: 'JPMorganChase', website: 'https://www.jpmorganchase.com/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/jpmorganchase/', logoUrl: 'https://www.jpmorganchase.com/content/dam/jpmorganchase/images/logos/jpmc-logo.svg' },
       { name: 'Oracle', website: 'https://www.oracle.com/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/oracle/' },
       { name: '[24]7.ai', website: 'https://www.247.ai/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/24-7-ai/', logoUrl: 'https://www.247.ai/wp-content/uploads/2021/07/247ai-Black.svg' },
@@ -61,11 +75,11 @@ export const GROWTH_PARKS: GrowthPark[] = [
       { name: 'WeWork India (Jupiter)', website: 'https://wework.co.in/', sourceUrl: 'https://wework.co.in/office-space/bangalore/marathahalli/jupiter-prestige-tech-park/', linkedin: 'https://www.linkedin.com/company/wework-india/', logoUrl: 'https://d15ity06jx8bil.cloudfront.net/media/weworkindia_black-595e132f/v1/480.webp' },
       { name: 'KnowBe4', website: 'https://www.knowbe4.com/', sourceUrl: 'https://www.knowbe4.com/careers/blogs/culture/new-bangalore-office-2025', linkedin: 'https://www.linkedin.com/company/knowbe4', logoUrl: 'https://www.knowbe4.com/hubfs/knowbe4-logo-blk-orange-cropped-rgb_fixed.svg' },
       { name: 'Tredence', website: 'https://www.tredence.com/', sourceUrl: 'https://www.tredence.com/contact-us', linkedin: 'https://www.linkedin.com/company/tredence/', logoUrl: 'https://www.tredence.com/assets/favicon.ico' },
-      { name: 'Nexusnow.ai', website: 'https://www.nexusnow.ai/', sourceUrl: 'https://www.linkedin.com/posts/nexusnow-ai_nexusnowai-officeinauguration-newbeginnings-activity-7466126562405449728-NXqz', linkedin: 'https://www.linkedin.com/company/nexusnow-ai' },
+      { name: 'Nexusnow.ai', website: 'https://www.nexusnow.ai/', sourceUrl: 'https://www.linkedin.com/posts/nexusnow-ai_nexusnowai-officeinauguration-newbeginnings-activity-7466126562405449728-NXqz', linkedin: 'https://www.linkedin.com/company/nexusnow-ai', logoUrl: 'https://static.wixstatic.com/media/e9252e_13ea20363ee14adcb2365dbeb2149f32%7Emv2.png/v1/fill/w_192%2Ch_192%2Clg_1%2Cusm_0.66_1.00_0.01/e9252e_13ea20363ee14adcb2365dbeb2149f32%7Emv2.png' },
       { name: 'Sodexo', website: 'https://www.sodexo.com/', sourceUrl: 'https://www.linkedin.com/posts/sodexo_sodexoindia-bengaluru-officelaunch-activity-7420411897704972288-oD10', linkedin: 'https://www.linkedin.com/company/sodexo/', logoUrl: 'https://edge.sitecorecloud.io/sodexofrance1-sodexocorpsites-prod-e74c/media/Project/Sodexo-Corp/Global/Media-prod/Images/Logos/Sodexo_Logotype_Blue.png?h=42&iar=0&w=131' },
       { name: 'Altair', website: 'https://altair.com/', sourceUrl: 'https://www.linkedin.com/posts/altair-engineering_teamaltair-onlyforward-activity-7282600397624483840-O0ce', linkedin: 'https://www.linkedin.com/company/altair-engineering/', logoUrl: 'https://assets.new.siemens.com/dam-asset/42075b90-56b0-458b-a75c-495796ff4647/digital-industries-altair-brandmark-white-background-mhero-1280x720.png?auto=format%2Ccompress&w=1280&h=720&fit=crop&crop=faces%2Cedges&q=60' },
       { name: 'DataSutram.ai', website: 'https://www.datasutram.ai/', sourceUrl: 'https://www.linkedin.com/posts/datasutram_datasutram-newoffice-bengaluru-activity-7400084961992560640-9SrZ', linkedin: 'https://www.linkedin.com/company/datasutram/', logoUrl: 'https://www.datasutram.ai/icons/icon-48x48.png' },
-      { name: 'Khyath Tech', sourceUrl: 'https://in.linkedin.com/company/khyath-tech', linkedin: 'https://in.linkedin.com/company/khyath-tech' },
+      { name: 'Khyath Tech', sourceUrl: 'https://in.linkedin.com/company/khyath-tech', linkedin: 'https://in.linkedin.com/company/khyath-tech', logoUrl: 'https://media.licdn.com/dms/image/v2/D560BAQGpBOsisb59Kg/company-logo_200_200/company-logo_200_200/0/1719025096623?e=2147483647&v=beta&t=jeZf-bIYkRy8oMgP5_z6n05HGAlgWprZnmAkHzKwTn0' },
       { name: 'Innov8 (Platina 2)', website: 'https://www.innov8.work/', sourceUrl: 'https://www.linkedin.com/posts/innov8-workspaces_innov8-prestige-launch-activity-7320074005896380416-WYsC', linkedin: 'https://www.linkedin.com/company/innov8-workspaces/', logoUrl: 'https://assets.oyoroomscdn.com/innov8/assets/images/innov8Icon.png' },
       { name: 'Awfis', website: 'https://www.awfis.com/', sourceUrl: 'https://www.linkedin.com/posts/awfis_awfis-coworking-activity-7165306621655556096-GAUc', linkedin: 'https://www.linkedin.com/company/awfis/', logoUrl: 'https://www.awfis.com/images/logo_black.png' }
     ]
@@ -83,7 +97,7 @@ export const GROWTH_PARKS: GrowthPark[] = [
     painHypothesis: 'Hypothesis: workers and visitors may find the right campus entrance or shuttle pickup point hard to identify.',
     seoQuery: 'office shuttle RMZ Ecospace Bellandur',
     leadAngle: 'Approach occupier facilities teams with a clear pickup-point and last-mile shuttle concept; confirm actual demand before pitching.',
-    sourceUrl: 'https://www.brookfieldindiareit.in/files/stock-exchange-filing/Intimation_of_Pro_forma_financials__4dec2025.pdf',
+    sourceUrl: 'https://www.brookfieldproperties.com/en/our-properties/ecospace-1910',
     featuredCompanies: [
       { name: 'Capgemini', website: 'https://www.capgemini.com/', sourceUrl: capgeminiSource, linkedin: 'https://www.linkedin.com/company/capgemini/', logoUrl: capgeminiLogo },
       { name: 'Northern Trust', website: 'https://www.northerntrust.com/', sourceUrl: 'https://www.northerntrust.com/content/dam/northerntrust/corporate/global/en/documents/web/legal-privacy/binding-corporate-rules/binding-corporate-rules-controller.pdf', linkedin: 'https://www.linkedin.com/company/northern-trust/', logoUrl: 'https://www.northerntrust.com/assets/apple-touch-icon.png' },
