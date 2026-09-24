@@ -7,6 +7,7 @@ const inputPath = process.argv[2];
 if (!inputPath) throw new Error(`Download ${sourceUrl} and pass the XML file path to this compiler`);
 const xml = await readFile(inputPath, 'utf8');
 const existing = JSON.parse(await readFile(new URL('public/data/marathahalli-demo.json', root), 'utf8'));
+const existingRoadIds = new Set(existing.roads.map((road) => road.id));
 const attr = (text, key) => text.match(new RegExp(`\\b${key}="([^"]*)"`))?.[1];
 const boundsTag = xml.match(/<bounds\b([^>]*)\/>/)?.[1];
 if (!boundsTag) throw new Error('Bellandur OSM extract has no bounds');
@@ -46,7 +47,10 @@ for (const match of xml.matchAll(/<way\b([^>]*)>([\s\S]*?)<\/way>/g)) {
     .map((node) => nodes.get(attr(node[1], 'ref')))
     .filter(Boolean);
   if (points.length < 2) continue;
-  if (tags.highway && tags.highway !== 'construction' && tags.highway !== 'proposed') {
+  // This ground mesh excludes structures and ways owned by the existing layer.
+  const nonGround = (tags.bridge && tags.bridge !== 'no') || (tags.tunnel && tags.tunnel !== 'no') ||
+    (tags.layer && Number(tags.layer) !== 0);
+  if (tags.highway && !existingRoadIds.has(id) && !nonGround && tags.highway !== 'construction' && tags.highway !== 'proposed') {
     const runs = [];
     let run = [];
     for (const [lat, lon] of points) {
@@ -67,8 +71,7 @@ for (const match of xml.matchAll(/<way\b([^>]*)>([\s\S]*?)<\/way>/g)) {
   if (points[0][0] !== points.at(-1)[0] || points[0][1] !== points.at(-1)[1]) continue;
   const lat = points.reduce((total, point) => total + point[0], 0) / points.length;
   const lon = points.reduce((total, point) => total + point[1], 0) / points.length;
-  // Existing source layer already owns the northeast overlap. Keep its
-  // buildings as the single visual authority there while roads overlap below.
+  // Existing source layer already owns the northeast overlap.
   if (tags.building && lat >= existing.bounds.minLat - existing.clipMarginDegrees && lon >= existing.bounds.minLon - existing.clipMarginDegrees) continue;
   const geometry = points.slice(0, -1).map(([vertexLat, vertexLon]) => local(vertexLat, vertexLon));
   if (geometry.length < 3) continue;

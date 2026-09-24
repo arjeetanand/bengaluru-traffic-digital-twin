@@ -16,6 +16,8 @@ assert.equal(slice.source.license, 'ODbL-1.0');
 assert.equal(slice.source.attribution, '© OpenStreetMap contributors');
 assert.equal(slice.source.attributionUrl, 'https://www.openstreetmap.org/copyright');
 assert.deepEqual(slice.origin, existing.origin);
+const existingRoadIds = new Set(existing.roads.map((road) => road.id));
+assert.ok(slice.roads.every((road) => !existingRoadIds.has(road.id)), 'existing 3D layer owns overlapping roads and structures');
 assert.ok(slice.buildings.length > 100 && slice.buildings.length <= 550, 'Ecospace massing must remain bounded');
 assert.ok(slice.bounds.minLat < existing.bounds.minLat && slice.bounds.maxLat > existing.bounds.minLat);
 assert.ok(slice.bounds.minLon < existing.bounds.minLon && slice.bounds.maxLon > existing.bounds.minLon);
