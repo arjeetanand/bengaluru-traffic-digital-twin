@@ -200,6 +200,12 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
 
   useEffect(() => setMapReady(false), [selectedId, mapSurface]);
   useEffect(() => setMapInteractive(false), [selectedId, mapSurface]);
+  useEffect(() => {
+    if (!mapInteractive) return;
+    const onEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setMapInteractive(false); };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [mapInteractive]);
 
   const selectPark = (park: GrowthPark) => {
     if (park.id === selectedId && mapSurface === 'twin') flyToPark(park);
@@ -277,7 +283,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
 
         <section className="atlas-explorer" id="explore" aria-label="Bengaluru tech park explorer">
           <div className="atlas-map-panel">
-            <div className={`atlas-map-canvas${mapInteractive ? ' is-interactive' : ''}`} role="region" tabIndex={mapSurface === 'twin' ? 0 : undefined} aria-describedby="atlas-map-help" aria-label={mapSurface === 'twin' ? 'Interactive 3D map from Marathahalli to Mahadevapura' : `${mapSurface === 'osm' ? 'Street map' : 'Google Map'} of ${selected.name}`}>
+            <div className={`atlas-map-canvas${mapInteractive ? ' is-interactive' : ''}`} role="region" tabIndex={mapSurface === 'twin' && mapInteractive ? 0 : undefined} aria-describedby="atlas-map-help" aria-label={mapSurface === 'twin' ? 'Interactive 3D map from Marathahalli to Mahadevapura' : `${mapSurface === 'osm' ? 'Street map' : 'Google Map'} of ${selected.name}`}>
               {mapSurface === 'twin' ? children : mapSurface === 'osm' && selected.lat !== undefined && selected.lng !== undefined ? <iframe
                 title={`Street map of ${selected.name}`}
                 src={streetMapUrl(selected.lat, selected.lng)}
@@ -312,7 +318,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
               </div>
             </div>
             <div className="atlas-map-bottom">
-              <p id="atlas-map-help">{mapSurface === 'twin' ? <>Drag to pan <span>·</span> Scroll to zoom <span>·</span> Right drag to rotate <span>·</span> Reset button to return</> : <>{mapSurface === 'osm' && <>Drag to pan <span>·</span> +/− to zoom <span>·</span> </>}<a href={mapsUrl(selected)} target="_blank" rel="noopener noreferrer">Open place and reviews on Google Maps <ArrowUpRight size={13} /></a></>}</p>
+              <p id="atlas-map-help">{!mapInteractive ? <>Scroll page normally <span>·</span> Choose Move map to pan or zoom</> : mapSurface === 'twin' ? <>Drag to pan <span>·</span> Scroll to zoom <span>·</span> Right drag to rotate <span>·</span> Escape or Scroll page to leave map</> : <>Drag to pan <span>·</span> Use map controls to zoom <span>·</span> Escape or Scroll page to leave map</>}{mapSurface !== 'twin' && <> <span>·</span> <a href={mapsUrl(selected)} target="_blank" rel="noopener noreferrer">Open place and reviews on Google Maps <ArrowUpRight size={13} /></a></>}</p>
               {selected.mapCoverage === 'context' && <span className="atlas-context-note">Wider-area context · exact 3D detail unavailable</span>}
             </div>
             <a className="atlas-map-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors · ODbL</a>

@@ -23,7 +23,7 @@ export interface GrowthPark {
   featuredCompanies: GrowthCompany[];
 }
 
-const prestigeSource = 'https://www.juniper.net/us/en/training/education-centers/juniper-locations.html';
+const prestigeSource = 'https://bsmedia.business-standard.com/_media/bs/data/announcements/bse/14112025/9501fc65-6028-42cf-ba97-4567ddb2d1e8.pdf';
 const capgeminiSource = 'https://www.capgemini.com/in-en/careers/lets-connect/our-offices/capgemini-bengaluru/';
 const bagmaneSource = 'https://www.bagmanegroup.com/portfolio/world-technology-centre';
 const anantaSource = 'https://blog.google/intl/en-in/company-news/welcome-to-ananta-google-indias-new-campus-in-bengaluru/';
@@ -45,6 +45,11 @@ export const GROWTH_PARKS: GrowthPark[] = [
     sourceUrl: prestigeSource,
     featuredCompanies: [
       { name: 'Juniper Networks', website: 'https://www.juniper.net/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/juniper-networks/' },
+      { name: 'JPMorganChase', website: 'https://www.jpmorganchase.com/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/jpmorganchase/' },
+      { name: 'Oracle', website: 'https://www.oracle.com/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/oracle/' },
+      { name: '[24]7.ai', website: 'https://www.247.ai/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/24-7-ai/' },
+      { name: 'Guidewire', website: 'https://www.guidewire.com/', sourceUrl: 'https://www.guidewire.com/about/press-center/press-releases/20250916/guidewire-celebrates-expansion-in-india-with-new-bengaluru-office', linkedin: 'https://www.linkedin.com/company/guidewire-software/' },
+      { name: 'Amadeus', website: 'https://amadeus.com/', sourceUrl: 'https://www.linkedin.com/company/prestige-office-ventures', linkedin: 'https://www.linkedin.com/company/amadeus/' },
       { name: 'Capgemini', website: 'https://www.capgemini.com/', sourceUrl: capgeminiSource, linkedin: 'https://www.linkedin.com/company/capgemini/' },
       { name: 'CoinSwitch', website: 'https://coinswitch.co/', sourceUrl: 'https://creatorlabs.coinswitch.co/privacy', linkedin: 'https://www.linkedin.com/company/coinswitch/' },
       { name: 'Adobe', website: 'https://www.adobe.com/', sourceUrl: 'https://www.adobe.com/about-adobe/contact/offices.html', linkedin: 'https://www.linkedin.com/company/adobe/' },
