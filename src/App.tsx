@@ -29,6 +29,7 @@ import {
 } from './simulation/scenarioEngine';
 import { useSimulationClock } from './simulation/useSimulationClock';
 import { ScenarioControlRoom } from './components/ui/ScenarioControlRoom';
+import { GrowthAtlas } from './components/ui/GrowthAtlas';
 
 export const App: React.FC = () => {
   // ── Simulation Controls Mode ──
@@ -38,7 +39,7 @@ export const App: React.FC = () => {
     simSpeed: 1,
     isCinematic: false,
     vehicleCount: SIMULATION_CONFIG.defaultVehicleCount,
-    cameraPreset: 'overview',
+    cameraPreset: 'corridor',
     cameraMode: 'overview',
     footpathAuditMode: false,
     buildingMode: 'osm',
@@ -54,6 +55,9 @@ export const App: React.FC = () => {
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const [isJunctionModalOpen, setIsJunctionModalOpen] = useState(false);
   const [isScenarioRoomOpen, setIsScenarioRoomOpen] = useState(false);
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const simulatorExitRef = useRef<HTMLButtonElement>(null);
+  const wasSimulatorOpenRef = useRef(false);
   const [isSketchfabLabOpen, setIsSketchfabLabOpen] = useState(false);
   const [viewMode, setViewMode] = useState<SimulationViewMode>('explore');
   const [selectedScenarioId, setSelectedScenarioId] = useState(DEFAULT_SCENARIO_ID);
@@ -287,28 +291,50 @@ export const App: React.FC = () => {
     if (isScenarioRoomOpen) scenarioRoomRef.current?.focus();
   }, [isScenarioRoomOpen]);
 
-  return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-      {/* ── 3D Scene Viewport ── */}
-      <Scene
+  useEffect(() => {
+    if (isSimulatorOpen) simulatorExitRef.current?.focus();
+    else if (wasSimulatorOpenRef.current) document.querySelector<HTMLButtonElement>('.atlas-header-nav button')?.focus();
+    wasSimulatorOpenRef.current = isSimulatorOpen;
+  }, [isSimulatorOpen]);
+
+  const scene = (
+    <Scene
         isNight={mode.isNight}
         isRaining={mode.isRaining}
         simSpeed={mode.simSpeed}
-        isCinematic={mode.isCinematic}
+        isCinematic={isSimulatorOpen && mode.isCinematic}
         cameraPreset={mode.cameraPreset}
         cameraMode={mode.cameraMode}
         footpathAuditMode={mode.footpathAuditMode}
-        buildingMode={mode.buildingMode}
+        buildingMode={isSimulatorOpen ? mode.buildingMode : 'osm'}
         googleMapsApiKey={mode.googleMapsApiKey}
         signalStatus={signalStatus}
         congestionRatio={scenarioVisualState.congestionRatio}
-        vehicleCount={mode.vehicleCount}
+        vehicleCount={isSimulatorOpen ? mode.vehicleCount : Math.min(mode.vehicleCount, 60)}
         scenarioVisualState={scenarioVisualState}
         onInspectJunction={() => setIsJunctionModalOpen(true)}
-      />
+        cleanView={!isSimulatorOpen}
+    />
+  );
 
-      {/* ── Docked Dark Monospace HUD Overlay ── */}
-      <HUD
+  return (
+    <div className={isSimulatorOpen ? 'simulator-shell' : 'atlas-app'}>
+      <div hidden={isSimulatorOpen}>
+        <GrowthAtlas
+          mode={mode}
+          active={!isSimulatorOpen}
+          onOpenSimulator={() => {
+            setIsSimulatorOpen(true);
+            handleUpdateMode({ cameraPreset: 'overview', cameraMode: 'overview' });
+          }}
+        >{isSimulatorOpen ? null : scene}</GrowthAtlas>
+      </div>
+      {isSimulatorOpen && <>{scene}<button ref={simulatorExitRef} className="simulator-exit" type="button" onClick={() => {
+        setIsSimulatorOpen(false);
+        handleUpdateMode({ cameraPreset: 'corridor', cameraMode: 'overview' });
+      }}>← Back to atlas</button></>}
+
+      {isSimulatorOpen && <HUD
         flowData={flowData}
         metrics={metrics}
         mode={mode}
@@ -328,7 +354,7 @@ export const App: React.FC = () => {
         onOpenScenarioRoom={handleOpenScenarioRoom}
         isSketchfabLabOpen={isSketchfabLabOpen}
         onToggleSketchfabLab={handleToggleSketchfabLab}
-      />
+      />}
 
       {/* ── Junction Telemetry & Detail Modal ── */}
       <JunctionDetailModal

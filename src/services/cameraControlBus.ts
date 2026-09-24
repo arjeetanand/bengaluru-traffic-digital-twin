@@ -40,6 +40,7 @@ class CameraControlBus {
 
   private resetListeners: Set<ResetCallback> = new Set();
   private flyToListeners: Set<FlyToCallback> = new Set();
+  private pendingFlyTo: Parameters<FlyToCallback> | null = null;
 
   public setInput(input: Partial<CameraInputState>) {
     Object.assign(this.state, input);
@@ -63,6 +64,7 @@ class CameraControlBus {
   }
 
   public triggerResetView() {
+    this.pendingFlyTo = null;
     this.resetListeners.forEach((cb) => {
       try {
         cb();
@@ -83,6 +85,10 @@ class CameraControlBus {
     position: [number, number, number],
     target: [number, number, number]
   ) {
+    if (this.flyToListeners.size === 0) {
+      this.pendingFlyTo = [position, target];
+      return;
+    }
     this.flyToListeners.forEach((cb) => {
       try {
         cb(position, target);
@@ -94,6 +100,15 @@ class CameraControlBus {
 
   public onFlyTo(callback: FlyToCallback): () => void {
     this.flyToListeners.add(callback);
+    if (this.pendingFlyTo) {
+      const [position, target] = this.pendingFlyTo;
+      this.pendingFlyTo = null;
+      try {
+        callback(position, target);
+      } catch (err) {
+        console.error('Error in camera flyTo listener', err);
+      }
+    }
     return () => {
       this.flyToListeners.delete(callback);
     };

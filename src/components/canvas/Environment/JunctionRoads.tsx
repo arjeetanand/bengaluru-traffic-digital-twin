@@ -16,13 +16,15 @@ interface JunctionRoadsProps {
   isNight: boolean;
   congestionRatio: number;
   sourceBacked?: boolean;
+  cleanView?: boolean;
 }
 
 export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
   isRaining,
   isNight,
   congestionRatio,
-  sourceBacked = true
+  sourceBacked = true,
+  cleanView = false
 }) => {
   const asphaltProps = useMemo(() => {
     return {
@@ -144,10 +146,10 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
           envelope. Keep one broad, low-cost ground tile under that same
           extent so source roads, footways and building massing do not float
           against the background in the corridor bird view. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -800]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -800]} receiveShadow={!cleanView}>
         <planeGeometry args={[12000, 14000]} />
         <meshStandardMaterial
-          color={isRaining ? '#1a221a' : '#263326'}
+          color={cleanView ? '#60796e' : (isRaining ? '#1a221a' : '#263326')}
           roughness={0.96}
           metalness={0.02}
         />

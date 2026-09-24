@@ -26,6 +26,8 @@ interface OsmSnapshotLayerProps {
   buildingOpacity?: number;
   buildingOutlineOpacity?: number;
   labelDistanceFactor?: number;
+  showLabels?: boolean;
+  selectionRoadLimit?: number;
 }
 
 function createPolylineGeometry(
@@ -814,7 +816,8 @@ function getBuildingUseScore(feature: OSMPolylineFeature) {
 function selectBuildingFeatures(
   features: OSMPolylineFeature[],
   limit: number,
-  contextRoadFeatures: readonly OSMPolylineFeature[] = []
+  contextRoadFeatures: readonly OSMPolylineFeature[] = [],
+  roadLimit = 220
 ) {
   if (limit <= 0 || features.length === 0) return [];
 
@@ -832,7 +835,7 @@ function selectBuildingFeatures(
         && (isNamed || Number.isFinite(lanes) || road.geometry.length > 4);
     })
     .sort((left, right) => right.geometry.length - left.geometry.length)
-    .slice(0, 220)
+    .slice(0, roadLimit)
     .map((road) => ({ ...road, bounds: getFeatureBounds(road) }));
 
   const candidates = features.map((feature) => {
@@ -1253,7 +1256,9 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   buildingLimit = 500,
   buildingOpacity = 0.5,
   buildingOutlineOpacity = 0.32,
-  labelDistanceFactor = 65
+  labelDistanceFactor = 65,
+  showLabels = true,
+  selectionRoadLimit = 220
 }) => {
   const [snapshot, setSnapshot] = useState<MarathahalliDemoSnapshot | null>(null);
   const isLongRange = labelDistanceFactor > 1000;
@@ -1343,13 +1348,13 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [snapshot]
   );
   const sourceUnverifiedStructureLabelFeatures = useMemo(
-    () => (snapshot && !isLongRange
+    () => (showLabels && snapshot && !isLongRange
       ? [
         ...sourceBridgeFeatures.filter(isSourceUnverifiedStructure),
         ...sourceUnverifiedFootwayFeatures
       ].slice(0, 28)
       : []),
-    [isLongRange, snapshot, sourceBridgeFeatures, sourceUnverifiedFootwayFeatures]
+    [isLongRange, showLabels, snapshot, sourceBridgeFeatures, sourceUnverifiedFootwayFeatures]
   );
   const footwayGeometry = useMemo(
     () => (snapshot
@@ -1395,9 +1400,9 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
   );
   const selectedBuildingFeatures = useMemo(
     () => (snapshot && showBuildings
-      ? selectBuildingFeatures(snapshot.buildings, buildingLimit, snapshot.roads)
+      ? selectBuildingFeatures(snapshot.buildings, buildingLimit, snapshot.roads, selectionRoadLimit)
       : []),
-    [buildingLimit, showBuildings, snapshot]
+    [buildingLimit, selectionRoadLimit, showBuildings, snapshot]
   );
   const selectedBuildingRenderFeatures = useMemo(
     () => (showBuildings
@@ -1422,8 +1427,10 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     [buildingLimit, selectedBuildingFeatures, showBuildings, snapshot]
   );
   const buildingOutlineRenderFeatures = useMemo(
-    () => buildingOutlineSourceFeatures.map((feature) => getBuildingRenderFeature(feature, buildingRoadClearanceIndex)),
-    [buildingOutlineSourceFeatures, buildingRoadClearanceIndex]
+    () => (buildingLimit < SOURCE_BUILDING_OUTLINE_COVERAGE_MIN_LIMIT
+      ? selectedBuildingRenderFeatures
+      : buildingOutlineSourceFeatures.map((feature) => getBuildingRenderFeature(feature, buildingRoadClearanceIndex))),
+    [buildingLimit, buildingOutlineSourceFeatures, buildingRoadClearanceIndex, selectedBuildingRenderFeatures]
   );
   const buildingOutlineGeometry = useMemo(
     () => (showBuildings ? createBuildingOutlineGeometry(buildingOutlineRenderFeatures) : null),
@@ -1498,7 +1505,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     // available as instanced POIs, while a ranked, spatially distributed label
     // set makes the actual frontage legible without turning the corridor into
     // a wall of HTML billboards.
-    if (!snapshot || labelDistanceFactor > 1000) return [];
+    if (!showLabels || !snapshot || labelDistanceFactor > 1000) return [];
     const labelLimit = labelDistanceFactor < 40 ? 20 : 48;
     const landmarkShopPattern = /spice garden|pizza hut|village hypermart|holly flames|sweet chariot|kalamandir|nalli|tanishq|kalyan|brand factory|multiplex/i;
     const named = snapshot.shops.filter((shop) => shop.name || shop.tags.name);
@@ -1538,7 +1545,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       selectedIds.add(bestShop.id);
     }
     return selected;
-  }, [labelDistanceFactor, snapshot]);
+  }, [labelDistanceFactor, showLabels, snapshot]);
   // Person presets use a compact but non-zero source label factor (currently
   // 24) so the landmark name remains legible at eye level. Treat that range
   // as street scale too; the bird presets start at 65 and keep their larger
@@ -1551,7 +1558,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
     ? Math.min(15, Math.max(8, labelDistanceFactor * 0.55))
     : Math.max(45, labelDistanceFactor * 0.82);
   const sourceRoadLabelFeatures = useMemo(() => {
-    if (!snapshot || isLongRange) return [];
+    if (!showLabels || !snapshot || isLongRange) return [];
     const priority = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'service']);
     const seen = new Set<string>();
     return snapshot.roads
@@ -1566,7 +1573,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
         (a.centroid[0] ** 2 + a.centroid[1] ** 2) - (b.centroid[0] ** 2 + b.centroid[1] ** 2)
       ))
       .slice(0, 12);
-  }, [isLongRange, snapshot]);
+  }, [isLongRange, showLabels, snapshot]);
   const noUTurnSource = useMemo(
     () => (snapshot ? getRestrictionFeatures(snapshot, 'no_u_turn') : null),
     [snapshot]
@@ -1930,7 +1937,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
         ))}
       </group>
 
-      <group name="OSMSourceLandmarkLabels">
+      {showLabels && <group name="OSMSourceLandmarkLabels">
         {sourceShopLabelFeatures.map((shop) => (
           <Html
             key={`source-shop-label-${shop.id}`}
@@ -2119,7 +2126,7 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
             </div>
           </Html>
         )}
-      </group>
+      </group>}
     </group>
   );
 };

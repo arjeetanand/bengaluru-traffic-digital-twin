@@ -42,6 +42,7 @@ interface SceneProps {
   cameraPreset: CameraPreset;
   cameraMode: 'walk' | 'overview';
   footpathAuditMode: boolean;
+  cleanView?: boolean;
   buildingMode?: 'osm' | 'google-tiles';
   googleMapsApiKey?: string;
   signalStatus: SignalStatus;
@@ -65,13 +66,14 @@ const CANVAS_CAMERA = {
 };
 
 export const Scene: React.FC<SceneProps> = ({
-  isNight,
-  isRaining,
+  isNight: requestedNight,
+  isRaining: requestedRain,
   simSpeed,
   isCinematic,
   cameraPreset,
   cameraMode,
   footpathAuditMode,
+  cleanView = false,
   buildingMode = 'osm',
   googleMapsApiKey,
   signalStatus,
@@ -80,14 +82,16 @@ export const Scene: React.FC<SceneProps> = ({
   scenarioVisualState,
   onInspectJunction
 }) => {
+  const isNight = requestedNight && !cleanView;
+  const isRaining = requestedRain && !cleanView;
   const [googleTilesFailed, setGoogleTilesFailed] = React.useState(false);
 
   const canvasGl = React.useMemo(() => ({
     antialias: true,
     toneMapping: THREE.ACESFilmicToneMapping,
-    toneMappingExposure: isNight ? 1.25 : (isRaining ? 0.95 : 1.08),
+    toneMappingExposure: cleanView ? 1.22 : (isNight ? 1.25 : (isRaining ? 0.95 : 1.08)),
     outputColorSpace: THREE.SRGBColorSpace
-  }), [isNight, isRaining]);
+  }), [cleanView, isNight, isRaining]);
 
   React.useEffect(() => {
     setGoogleTilesFailed(false);
@@ -101,14 +105,14 @@ export const Scene: React.FC<SceneProps> = ({
   const isLongCorridorView = cameraPreset === 'corridor' || cameraPreset === 'bellandur';
   const sunPosition: [number, number, number] = isRaining ? SUN_POSITION_OVERCAST : SUN_POSITION_DAY;
   const sunIntensity = isNight ? 0.05 : (isRaining ? 1.2 : (isLongCorridorView ? 4.1 : 3.2));
-  const sunColor = isNight ? '#1e293b' : (isRaining ? '#cbd5e1' : '#fff1d6');
+  const sunColor = cleanView ? '#ffffff' : (isNight ? '#1e293b' : (isRaining ? '#cbd5e1' : '#fff1d6'));
 
-  const hemiSkyColor = isNight ? '#0b1329' : (isRaining ? '#475569' : '#e0f2fe');
-  const hemiGroundColor = isNight ? '#020617' : (isRaining ? '#1e293b' : '#334155');
-  const hemiIntensity = isNight ? 0.2 : (isRaining ? 0.6 : (isLongCorridorView ? 1.1 : 0.85));
+  const hemiSkyColor = cleanView ? '#f1faff' : (isNight ? '#0b1329' : (isRaining ? '#475569' : '#e0f2fe'));
+  const hemiGroundColor = cleanView ? '#a8c4d0' : (isNight ? '#020617' : (isRaining ? '#1e293b' : '#334155'));
+  const hemiIntensity = cleanView ? 1.25 : (isNight ? 0.2 : (isRaining ? 0.6 : (isLongCorridorView ? 1.1 : 0.85)));
 
   const isCrossoverFocusView = cameraPreset === 'crossover';
-  const isSourceGeometryFocusView = [
+  const isSourceGeometryFocusView = cleanView || [
     'corridor',
     'crossover',
     'flyover',
@@ -126,8 +130,8 @@ export const Scene: React.FC<SceneProps> = ({
   // footprints. Show them only at their named stop so a close inspection can
   // read the landmark frontage while the OSM snapshot remains the authority
   // for surrounding roads, footways, and building plan geometry.
-  const isSourceAnchoredLandmarkFocus = ['multiplex', 'kalamandir', 'brandfactory'].includes(cameraPreset);
-  const sourceBuildingLimit = cameraPreset === 'corridor'
+  const isSourceAnchoredLandmarkFocus = !cleanView && ['multiplex', 'kalamandir', 'brandfactory'].includes(cameraPreset);
+  const sourceBuildingLimit = cleanView ? 450 : cameraPreset === 'corridor'
     ? 3000
     : (isCrossoverFocusView ? 850 : (isSourceGeometryFocusView ? 1600 : 1000));
   // The compiled source snapshot is the canonical road graph. Keep the full
@@ -139,10 +143,10 @@ export const Scene: React.FC<SceneProps> = ({
     ? Math.max(12, Math.round(vehicleCount * 0.02))
     : 0;
   const corridorVehicleCount = Math.max(0, vehicleCount - junctionVehicleCount);
-  const fogDensity = isLongCorridorView
+  const fogDensity = cleanView ? 0.000035 : isLongCorridorView
     ? (isNight ? 0.00006 : (isRaining ? 0.00012 : 0.00004))
     : (isNight ? FOG_DENSITY_NIGHT : (isRaining ? FOG_DENSITY_RAIN : FOG_DENSITY_DAY));
-  const fogColor = isNight ? '#030712' : (isRaining ? '#334155' : '#a9b8c8');
+  const fogColor = cleanView ? '#e4f2f7' : (isNight ? '#030712' : (isRaining ? '#334155' : '#a9b8c8'));
   const sourceLabelDistanceFactor = cameraMode === 'overview'
     ? ((cameraPreset === 'corridor' || cameraPreset === 'bellandur') ? 2400 : (cameraPreset === 'oraclehub' ? 260 : (cameraPreset === 'spicegarden' ? 120 : 65)))
     : (cameraPreset === 'spicegarden' ? 24 : 3);
@@ -150,8 +154,8 @@ export const Scene: React.FC<SceneProps> = ({
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, overflow: 'hidden' }}>
       <Canvas
-        dpr={CANVAS_DPR}
-        shadows={CANVAS_SHADOWS}
+        dpr={cleanView ? 1 : CANVAS_DPR}
+        shadows={cleanView ? false : CANVAS_SHADOWS}
         camera={CANVAS_CAMERA}
         gl={canvasGl}
         style={{ touchAction: 'none' }}
@@ -159,7 +163,7 @@ export const Scene: React.FC<SceneProps> = ({
         {/* Background & Subtle Fog */}
         <color attach="background" args={[fogColor]} />
         <fogExp2 attach="fog" args={[fogColor, fogDensity]} />
-        {!isNight && (
+        {!isNight && !cleanView && (
           <Sky
             distance={4500}
             sunPosition={sunPosition}
@@ -199,7 +203,7 @@ export const Scene: React.FC<SceneProps> = ({
           position={sunPosition}
           intensity={sunIntensity}
           color={sunColor}
-          castShadow
+          castShadow={!cleanView}
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-camera-near={10}
@@ -251,7 +255,8 @@ export const Scene: React.FC<SceneProps> = ({
             <meshBasicMaterial color="#1e40af" transparent opacity={0.3} />
           </mesh>
         }>
-          {/* Source-backed roads, footways, crossings, signals and shop POIs. */}
+          {/* Source-backed roads, footways, crossings, signals and shop POIs.
+              ponytail: atlas scores buildings against 32 major roads; use a spatial road index if wider facade coverage matters. */}
           <OsmSnapshotLayer
             isNight={isNight}
             showBuildings={buildingMode !== 'google-tiles' || googleTilesFailed}
@@ -259,6 +264,8 @@ export const Scene: React.FC<SceneProps> = ({
             buildingOpacity={isCrossoverFocusView ? 0.28 : (isLongCorridorView ? 0.68 : (isSourceAnchoredLandmarkFocus ? 0.24 : 0.5))}
             buildingOutlineOpacity={isCrossoverFocusView ? 0.2 : (isLongCorridorView ? 0.46 : 0.32)}
             labelDistanceFactor={sourceLabelDistanceFactor}
+            showLabels={!cleanView}
+            selectionRoadLimit={cleanView ? 32 : 220}
           />
 
           {buildingMode !== 'google-tiles' && (
@@ -270,9 +277,9 @@ export const Scene: React.FC<SceneProps> = ({
 
           <CorridorAttractorLayer
             isNight={isNight}
-            showStops={isLongCorridorView}
-            showAdjacentContext={isLongCorridorView}
-            labelDistanceFactor={cameraPreset === 'bellandur' ? 2600 : (isLongCorridorView ? 1800 : 260)}
+            showStops={!cleanView && isLongCorridorView}
+            showAdjacentContext={!cleanView && isLongCorridorView}
+            labelDistanceFactor={cleanView ? 350 : cameraPreset === 'bellandur' ? 2600 : (isLongCorridorView ? 1800 : 260)}
           />
 
           {/* ── 3D Stylized Realistic Ground & Underpass Network ── */}
@@ -281,6 +288,7 @@ export const Scene: React.FC<SceneProps> = ({
             isNight={isNight}
             congestionRatio={congestionRatio}
             sourceBacked
+            cleanView={cleanView}
           />
 
           {isCrossoverFocusView && (
@@ -290,13 +298,13 @@ export const Scene: React.FC<SceneProps> = ({
           <ScenarioImpactOverlay visualState={scenarioVisualState} />
 
           {/* ── Realistic Pedestrian Footpaths (Paved, Missing, Encroached, Metro-Blocked) ── */}
-          <Footpaths
+          {!cleanView && <Footpaths
             auditMode={footpathAuditMode}
             isNight={isNight}
             cameraMode={cameraMode}
             cameraPreset={cameraPreset}
             showModeledNetwork={!isSourceGeometryFocusView}
-          />
+          />}
 
           {/* ── Indian Roadside Commercial Showrooms, Bakeries, Chai Stalls & Bus Stops ── */}
           {!isSourceGeometryFocusView && (
@@ -355,14 +363,14 @@ export const Scene: React.FC<SceneProps> = ({
           />
 
           {/* ── High-Performance Instanced Traffic Fleet ── */}
-          <TrafficSystem
+          {!cleanView && <TrafficSystem
             signalStatus={signalStatus}
             congestionRatio={congestionRatio}
             simSpeedMultiplier={simSpeed}
             isNight={isNight}
             vehicleTotalCount={junctionVehicleCount}
             scenarioOnly={isCrossoverFocusView}
-          />
+          />}
 
           {/* Source-road vehicles extend the configured modelled fleet across
               the widened Oracle → junction → Spice Garden OSM envelope. */}
@@ -374,7 +382,7 @@ export const Scene: React.FC<SceneProps> = ({
           />
 
           {/* ── Interactive Junction Beacon / Clickable Trigger ── */}
-          <group
+          {!cleanView && <group
             position={[
               MARATHAHALLI_SOURCE_ANCHORS.junction.roadCenter[0],
               0.4,
@@ -400,14 +408,16 @@ export const Scene: React.FC<SceneProps> = ({
                 side={THREE.DoubleSide}
               />
             </mesh>
-          </group>
+          </group>}
         </Suspense>
 
         {/* ── Post-Processing Pipeline (Bloom, Vignette, ToneMapping, AO) ── */}
-        <PostProcessingPipeline
-          isNight={isNight}
-          isRaining={isRaining}
-        />
+        {!cleanView && (
+          <PostProcessingPipeline
+            isNight={isNight}
+            isRaining={isRaining}
+          />
+        )}
       </Canvas>
     </div>
   );

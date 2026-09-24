@@ -133,6 +133,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const gestureForward = useRef(new THREE.Vector3());
   const gestureOffset = useRef(new THREE.Vector3());
   const gestureSpherical = useRef(new THREE.Spherical());
+  const overviewZoomTarget = useRef<number | null>(null);
 
   cameraPresetRef.current = cameraPreset;
   cameraModeRef.current = cameraMode;
@@ -167,6 +168,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   };
 
   const cancelCameraTransition = () => {
+    overviewZoomTarget.current = null;
     if (!isTransitioning.current) return;
     isTransitioning.current = false;
     transitionElapsed.current = transitionDuration.current;
@@ -191,6 +193,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     target: [number, number, number]
   ) => {
     const controls = controlsRef.current;
+    overviewZoomTarget.current = null;
     targetCamPos.current.set(...position);
     targetLookAt.current.set(...target);
 
@@ -593,14 +596,19 @@ export const CameraController: React.FC<CameraControllerProps> = ({
     const handleOverviewWheel = (event: WheelEvent) => {
       if (cameraModeRef.current !== 'overview') return;
 
-      cancelCameraTransition();
+      if (isTransitioning.current) cancelCameraTransition();
+      const controls = controlsRef.current;
+      if (!controls) return;
       const normalizedDelta = event.deltaMode === 1
         ? event.deltaY * 16
         : event.deltaMode === 2
           ? event.deltaY * canvas.clientHeight
           : event.deltaY;
-      applyOverviewZoom(normalizedDelta);
-      controlsRef.current?.update();
+      overviewZoomTarget.current = clamp(
+        (overviewZoomTarget.current ?? camera.position.distanceTo(controls.target)) * Math.exp(normalizedDelta * 0.001),
+        OVERVIEW_MIN_DISTANCE,
+        OVERVIEW_MAX_DISTANCE
+      );
       event.preventDefault();
       event.stopImmediatePropagation();
     };
@@ -990,6 +998,21 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       controls.autoRotateSpeed = 0.5 * Math.min(2, Math.max(0.4, simSpeedMultiplier * 0.2 + 0.3));
     } else {
       controls.autoRotate = false;
+    }
+
+    // Ease wheel input toward its accumulated distance without changing the
+    // drag and touch paths owned by MapControls.
+    if (cameraMode === 'overview' && overviewZoomTarget.current !== null && !isTransitioning.current) {
+      cameraOffset.current.subVectors(camera.position, controls.target);
+      const distance = cameraOffset.current.length();
+      if (distance > 0.001) {
+        const nextDistance = THREE.MathUtils.damp(distance, overviewZoomTarget.current, 14, safeDelta);
+        cameraOffset.current.multiplyScalar(nextDistance / distance);
+        camera.position.copy(controls.target).add(cameraOffset.current);
+        if (Math.abs(nextDistance - overviewZoomTarget.current) < 0.02) overviewZoomTarget.current = null;
+      } else {
+        overviewZoomTarget.current = null;
+      }
     }
 
     // Ensure map controls update every settled frame for smooth damping.

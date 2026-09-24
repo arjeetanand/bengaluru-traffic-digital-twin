@@ -7,6 +7,8 @@ Simulates **1,000–2,000 vehicles** moving at a silky **60 FPS** across Bengalu
 
 The demo map is source-backed rather than an invented city block: the committed `marathahalli_osm.xml` extract is compiled into a local snapshot covering Oracle Tech Hub → Marathahalli signal → Innovative Multiplex → Kalamandir → Spice Garden. It is an engineering demo, not survey-grade photogrammetry; exact facade and elevation fidelity requires an authorized imagery/3D-tiles source or a field survey.
 
+The default screen is the Bengaluru Growth Atlas: a workplace mobility lead explorer for four east Bengaluru tech parks. It shows sourced example occupiers, public website/social links, a saved company CSV, place-specific search briefs, and links to live Google Maps listings and reviews. The local 3D twin covers the mapped Bellandur–Marathahalli corridor; wider-area places have a pannable OpenStreetMap view, an optional Google Maps preview, and direct Google Maps links. The tenant lists and movement opportunities are examples to verify before outreach.
+
 ---
 
 ## 📸 Key Features
@@ -88,7 +90,7 @@ The demo map is source-backed rather than an invented city block: the committed 
    ```
    *(If omitted or blank, the simulator automatically runs in realistic baked DEMO mode).*
 
-   Google Photorealistic 3D Tiles are also optional. Add `VITE_GOOGLE_MAPS_KEY` only when a Google Maps Platform project has the Map Tiles API enabled; the local OSM twin remains the default without it.
+   Google Maps previews and Photorealistic 3D Tiles are optional. Add `VITE_GOOGLE_MAPS_KEY` from a browser-restricted Google Maps Platform project with the Maps Embed API enabled for the atlas preview, and the Map Tiles API enabled for the simulator's Google 3D mode. Without it, the atlas has a pannable OpenStreetMap view and links to live Google Maps listings.
 
 3. **Install Dependencies**:
    ```bash
@@ -116,6 +118,7 @@ The demo map is source-backed rather than an invented city block: the committed 
    npm run crossover:validate
    npm run corridor:validate
    npm run scenario:validate
+   npm run atlas:validate
    ```
    `metro:validate` confirms both source Namma Metro ways and reports conservative proximity warnings without treating the modelled fallback pier grid as surveyed. `metro:placement:validate` verifies XML lineage, reverse track pairing, crossover road/footway context, and support provenance. `pedestrian:validate` verifies the two modelled missing-link endpoints attach to distinct source footway components; `crossover:validate` checks the U-turn replay, source road ribbons, lane margins, and person anchor. The current scenario milestone is a deterministic browser-side modelled engine. A SUMO/TraCI/libsumo adapter is intentionally not claimed until the network conversion, route legality, microscopic state stream, and calibration contracts are implemented.
 
