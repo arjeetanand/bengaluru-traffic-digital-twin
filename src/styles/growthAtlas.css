@@ -105,6 +105,7 @@ html, body, #root {
 .atlas-map-bottom a { display: inline-flex; align-items: center; gap: 5px; pointer-events: auto; }
 .atlas-map-bottom a:hover { text-decoration: underline; }
 .atlas-map-credit { position: absolute; z-index: 4; top: calc(var(--map-height) - 24px); right: 20px; color: #eef4ef; font: 600 9px 'IBM Plex Mono', monospace; text-shadow: 0 1px 4px #12232b; }
+.atlas-map-panel:has(.atlas-map-canvas iframe) > .atlas-map-credit { display: none; }
 .atlas-map-credit:hover { text-decoration: underline; }
 .atlas-context-note { color: var(--lime); text-align: right; }
 .atlas-park-rail { position: relative; z-index: 2; padding: 18px 18px 22px; border-top: 1px solid #34444b; background: #12232b; }
@@ -129,6 +130,8 @@ html, body, #root {
 .atlas-logo-grid a { min-width: 0; min-height: 82px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid #3d5358; border-radius: 6px; background: #21353d; text-align: center; transition: background .2s, border-color .2s; }
 .atlas-logo-grid a:hover { background: #30464b; border-color: var(--lime); }
 .atlas-logo-grid .atlas-company-mark { width: 35px; height: 35px; }
+.atlas-logo-grid .atlas-company-mark.has-logo { width: 76px; height: 36px; border: 0; }
+.atlas-logo-grid .atlas-company-mark.has-logo img { inset: 2px; width: 72px; height: 32px; }
 .atlas-logo-grid a > span:last-child { max-width: 95%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e7efea; font-size: 9px; font-weight: 700; }
 
 .atlas-inspector { min-width: 0; padding: 25px 25px 19px; background: #f9f8f3; border: 1px solid var(--line); border-left: none; }
@@ -162,6 +165,8 @@ html, body, #root {
 .atlas-company-list li { min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 7px; border: 1px solid #e2e5dd; border-radius: 7px; background: white; }
 .atlas-company-mark { position: relative; flex: none; display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid #e0e4de; border-radius: 9px; background: #f1f4f0; color: #547473; font-size: 12px; font-weight: 800; }
 .atlas-company-mark img { position: absolute; inset: 5px; display: block; width: 27px; height: 27px; object-fit: contain; }
+.atlas-company-list .atlas-company-mark.has-logo { width: 51px; }
+.atlas-company-list .atlas-company-mark.has-logo img { width: 43px; left: 4px; }
 .atlas-company-info { min-width: 0; flex: 1; }
 .atlas-company-info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 800; }
 .atlas-company-info a { display: inline-flex; align-items: center; gap: 2px; margin-top: 4px; color: #697973; font-size: 9px; font-weight: 600; }
@@ -183,6 +188,13 @@ html, body, #root {
 .atlas-growth-grid h3 { margin-top: 23px; font-size: 23px; font-weight: 800; letter-spacing: -.05em; }
 .atlas-growth-grid p { margin-top: 13px; max-width: 410px; color: #4d5d62; font-size: 14px; line-height: 1.55; }
 .atlas-growth-grid .atlas-review-insight { border-left: 2px solid #b76242; padding-left: 10px; font-size: 12px; }
+.atlas-road-sample { margin: 15px 0; }
+.atlas-road-sample > button { border: 1px solid #a5b69c; border-radius: 5px; padding: 9px 11px; background: #eaf5d9; color: var(--ink); font: 800 11px 'DM Sans', sans-serif; cursor: pointer; }
+.atlas-road-sample > button:disabled { opacity: .6; cursor: wait; }
+.atlas-road-sample strong { display: block; margin-top: 12px; font-size: 18px; }
+.atlas-road-sample strong span { color: #677671; font-size: 12px; font-weight: 600; }
+.atlas-growth-grid .atlas-road-sample p { margin: 7px 0; font-size: 11px; }
+.atlas-road-sample small { display: block; margin-top: 7px; }
 .atlas-growth-grid small { margin-top: auto; color: #7b8985; font: 500 10px/1.4 'IBM Plex Mono', monospace; }
 .atlas-example-query { font-style: italic; }
 .atlas-growth-grid label { margin-top: 20px; color: #677671; font: 700 10px 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: .08em; }
@@ -245,6 +257,7 @@ html, body, #root {
   .atlas-map-head { top: 10px; left: 10px; right: 10px; }
   .atlas-map-heading { padding: 8px; }
   .atlas-map-heading strong { font-size: 9px; }
+  .atlas-map-actions { position: absolute; top: 42px; left: 0; }
   .atlas-map-actions button { padding: 8px; font-size: 10px; }
   .atlas-map-bottom { left: 10px; right: 10px; top: calc(var(--map-height) - 96px); }
   .atlas-map-credit { right: 10px; font-size: 8px; }

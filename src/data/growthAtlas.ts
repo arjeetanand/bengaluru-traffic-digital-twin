@@ -3,6 +3,7 @@ export interface GrowthCompany {
   website: string;
   sourceUrl: string;
   linkedin?: string;
+  logoUrl?: string;
 }
 
 export const quoteAtlasCsvCell = (value: string) => `"${(/^[\s]*[=+\-@]/.test(value) ? `'${value}` : value).replace(/"/g, '""')}"`;
@@ -49,11 +50,11 @@ export const GROWTH_PARKS: GrowthPark[] = [
       { name: 'Oracle', website: 'https://www.oracle.com/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/oracle/' },
       { name: '[24]7.ai', website: 'https://www.247.ai/', sourceUrl: prestigeSource, linkedin: 'https://www.linkedin.com/company/24-7-ai/' },
       { name: 'Guidewire', website: 'https://www.guidewire.com/', sourceUrl: 'https://www.guidewire.com/about/press-center/press-releases/20250916/guidewire-celebrates-expansion-in-india-with-new-bengaluru-office', linkedin: 'https://www.linkedin.com/company/guidewire-software/' },
-      { name: 'Amadeus', website: 'https://amadeus.com/', sourceUrl: 'https://www.linkedin.com/company/prestige-office-ventures', linkedin: 'https://www.linkedin.com/company/amadeus/' },
-      { name: 'Capgemini', website: 'https://www.capgemini.com/', sourceUrl: capgeminiSource, linkedin: 'https://www.linkedin.com/company/capgemini/' },
+      { name: 'Amadeus', website: 'https://amadeus.com/', sourceUrl: 'https://corporate.amadeus.com/documents/en/investors/2025/cnmv/q1/fy2024-individual-accounts-cnmv.pdf', linkedin: 'https://www.linkedin.com/company/amadeus/' },
+      { name: 'Capgemini', website: 'https://www.capgemini.com/', sourceUrl: 'https://www.capgemini.com/in-en/about-us/locations/', linkedin: 'https://www.linkedin.com/company/capgemini/' },
       { name: 'CoinSwitch', website: 'https://coinswitch.co/', sourceUrl: 'https://creatorlabs.coinswitch.co/privacy', linkedin: 'https://www.linkedin.com/company/coinswitch/' },
       { name: 'Adobe', website: 'https://www.adobe.com/', sourceUrl: 'https://www.adobe.com/about-adobe/contact/offices.html', linkedin: 'https://www.linkedin.com/company/adobe/' },
-      { name: 'BlackLine', website: 'https://www.blackline.com/', sourceUrl: 'https://blacklinesystemsinc.gcs-web.com/shareholder-services/investor-faqs', linkedin: 'https://www.linkedin.com/company/blackline/' },
+      { name: 'BlackLine', website: 'https://www.blackline.com/', sourceUrl: 'https://investors.blackline.com/corporate-profile', linkedin: 'https://www.linkedin.com/company/blackline/' },
       { name: 'Sandhata Technologies', website: 'https://sandhata.com/', sourceUrl: 'https://sandhata.com/contact-us/', linkedin: 'https://www.linkedin.com/company/sandhata-technologies-limited' },
       { name: 'WeWork India (Jupiter)', website: 'https://wework.co.in/', sourceUrl: 'https://wework.co.in/office-space/bangalore/marathahalli/jupiter-prestige-tech-park/', linkedin: 'https://www.linkedin.com/company/wework-india/' },
       { name: 'KnowBe4', website: 'https://www.knowbe4.com/', sourceUrl: 'https://www.knowbe4.com/careers/blogs/culture/new-bangalore-office-2025', linkedin: 'https://www.linkedin.com/company/knowbe4' },
@@ -107,18 +108,18 @@ export const GROWTH_PARKS: GrowthPark[] = [
     leadAngle: 'Prioritize occupier workplace teams that may need building-specific pickup directions and employee shuttle coverage.',
     sourceUrl: bagmaneSource,
     featuredCompanies: [
-      { name: 'Google', website: 'https://about.google/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/google/' },
-      { name: 'NVIDIA', website: 'https://www.nvidia.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/nvidia/' },
-      { name: 'Samsung', website: 'https://www.samsung.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/samsung-electronics/' },
-      { name: 'Visa', website: 'https://www.visa.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/visa/' },
-      { name: 'Boeing', website: 'https://www.boeing.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/boeing/' },
-      { name: 'Accenture', website: 'https://www.accenture.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/accenture/' },
-      { name: 'Ericsson', website: 'https://www.ericsson.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/ericsson/' },
-      { name: 'Ernst & Young (EY)', website: 'https://www.ey.com/', sourceUrl: bagmaneSource },
-      { name: 'Mphasis', website: 'https://www.mphasis.com/', sourceUrl: bagmaneSource },
-      { name: 'Arm', website: 'https://www.arm.com/', sourceUrl: bagmaneSource },
-      { name: 'AB InBev', website: 'https://www.ab-inbev.com/', sourceUrl: bagmaneSource },
-      { name: 'EMC (Dell)', website: 'https://www.dell.com/', sourceUrl: bagmaneSource }
+      { name: 'Google', website: 'https://about.google/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/google/', logoUrl: 'https://www.bagmanegroup.com/media/filer_public/7c/b1/7cb1d250-d355-4625-af5b-6df328155e54/google.png' },
+      { name: 'NVIDIA', website: 'https://www.nvidia.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/nvidia/', logoUrl: 'https://www.bagmanegroup.com/media/filer_public/84/e5/84e56d04-8de4-45ca-8bc7-bfb272576c74/nvidia.png' },
+      { name: 'Samsung', website: 'https://www.samsung.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/samsung-electronics/', logoUrl: 'https://www.bagmanegroup.com/media/filer_public/45/4d/454d6e83-91c5-4f60-beba-0da8aeb2ed0a/samsung.webp' },
+      { name: 'Visa', website: 'https://www.visa.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/visa/', logoUrl: 'https://www.bagmanegroup.com/media/filer_public/e0/fc/e0fc9f5a-a784-4a67-99a3-f85da0516296/visa.png' },
+      { name: 'Boeing', website: 'https://www.boeing.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/boeing/', logoUrl: 'https://www.bagmanegroup.com/media/filer_public/93/c7/93c7368c-b3e5-4e2e-9996-b185eae27665/boieng_1.png' },
+      { name: 'Accenture', website: 'https://www.accenture.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/accenture/', logoUrl: 'https://www.bagmanegroup.com/media/filer_public/65/df/65df74aa-7e18-46de-917b-7cf33a840fe3/accenture.png' },
+      { name: 'Ericsson', website: 'https://www.ericsson.com/', sourceUrl: bagmaneSource, linkedin: 'https://www.linkedin.com/company/ericsson/', logoUrl: 'https://www.bagmanegroup.com/media/filer_public/36/ea/36eabc39-4f16-4f95-805b-b707f0d130a4/erricson.png' },
+      { name: 'Ernst & Young (EY)', website: 'https://www.ey.com/', sourceUrl: bagmaneSource, logoUrl: 'https://www.bagmanegroup.com/media/filer_public/3b/94/3b941319-5c88-4fd0-8f83-055610be664a/ey.png' },
+      { name: 'Mphasis', website: 'https://www.mphasis.com/', sourceUrl: bagmaneSource, logoUrl: 'https://www.bagmanegroup.com/media/filer_public/4f/07/4f07ee63-8fb7-4f53-a606-24683ebbc068/mphasis.png' },
+      { name: 'Arm', website: 'https://www.arm.com/', sourceUrl: bagmaneSource, logoUrl: 'https://www.bagmanegroup.com/media/filer_public/2e/e6/2ee6cf82-ec32-4bc4-a888-210db2bf8172/arm.png' },
+      { name: 'AB InBev', website: 'https://www.ab-inbev.com/', sourceUrl: bagmaneSource, logoUrl: 'https://www.bagmanegroup.com/media/filer_public/bd/07/bd0773e3-0fe5-4ba3-af39-40a342fdefba/abin.png' },
+      { name: 'EMC (Dell)', website: 'https://www.dell.com/', sourceUrl: bagmaneSource, logoUrl: 'https://www.bagmanegroup.com/media/filer_public/4b/16/4b16f336-0f96-42be-8ff7-ba446e800999/dellemc.png' }
     ]
   },
   {

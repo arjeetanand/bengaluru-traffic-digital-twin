@@ -2,6 +2,7 @@ import { TrafficFlowData, ApiUsageStats } from '../types';
 import { ACTIVE_COORDINATES } from '../config/location';
 import { SIMULATION_CONFIG } from '../config/simulation';
 import { getBakedDemoTrafficData } from './demoTrafficData';
+import { nearestRoadVertexMeters } from './roadSampleGeometry';
 
 const STORAGE_KEY = 'tomtom_api_usage_metrics';
 
@@ -91,10 +92,11 @@ export function resetApiUsage(): ApiUsageStats {
  * Never stores or leaks live coordinates/keys.
  * Silently falls back to demo mode if key missing, network fails, or 30% safety cap is reached.
  */
-export async function fetchTrafficFlow(forceDemo: boolean = false): Promise<{
+export async function fetchTrafficFlow(forceDemo: boolean = false, point?: { lat: number; lng: number }): Promise<{
   data: TrafficFlowData;
   usage: ApiUsageStats;
   notice?: string;
+  roadDistanceMeters?: number;
 }> {
   const currentUsage = getApiUsageStats();
 
@@ -126,8 +128,8 @@ export async function fetchTrafficFlow(forceDemo: boolean = false): Promise<{
     };
   }
 
-  const { lat, lng } = ACTIVE_COORDINATES;
-  const url = `https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key=${encodeURIComponent(
+  const { lat, lng } = point ?? ACTIVE_COORDINATES;
+  const url = `https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/${point ? 14 : 10}/json?key=${encodeURIComponent(
     apiKey.trim()
   )}&point=${lat},${lng}`;
 
@@ -153,7 +155,7 @@ export async function fetchTrafficFlow(forceDemo: boolean = false): Promise<{
 
     // Strict null-guards for all expected fields
     const flow = json?.flowSegmentData;
-    if (!flow || typeof flow.currentSpeed !== 'number') {
+    if (!flow || typeof flow.currentSpeed !== 'number' || !Number.isFinite(flow.currentSpeed) || (point && (flow.currentSpeed < 0 || [flow.freeFlowSpeed, flow.currentTravelTime, flow.freeFlowTravelTime, flow.confidence].some((value) => typeof value !== 'number' || !Number.isFinite(value)) || flow.freeFlowSpeed <= 0))) {
       return {
         data: getBakedDemoTrafficData(),
         usage: newUsage,
@@ -161,8 +163,17 @@ export async function fetchTrafficFlow(forceDemo: boolean = false): Promise<{
       };
     }
 
-    const currentSpeed = Math.max(1, flow.currentSpeed);
-    const freeFlowSpeed = Math.max(currentSpeed, flow.freeFlowSpeed ?? 48);
+    const roadDistanceMeters = point && nearestRoadVertexMeters(point, flow.coordinates?.coordinate);
+    if (point && (roadDistanceMeters === undefined || roadDistanceMeters > 1000)) {
+      return {
+        data: getBakedDemoTrafficData(),
+        usage: newUsage,
+        notice: 'No nearby TomTom road segment was returned for this park anchor.'
+      };
+    }
+
+    const currentSpeed = Math.max(0, flow.currentSpeed);
+    const freeFlowSpeed = point ? flow.freeFlowSpeed : Math.max(1, currentSpeed, flow.freeFlowSpeed ?? 48);
     const currentTravelTime = flow.currentTravelTime ?? 300;
     const freeFlowTravelTime = flow.freeFlowTravelTime ?? Math.round((currentTravelTime * currentSpeed) / freeFlowSpeed);
     const confidence = typeof flow.confidence === 'number' ? flow.confidence : 1.0;
@@ -184,7 +195,8 @@ export async function fetchTrafficFlow(forceDemo: boolean = false): Promise<{
         congestionRatio,
         networkHealth
       },
-      usage: newUsage
+      usage: newUsage,
+      roadDistanceMeters
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Network error';

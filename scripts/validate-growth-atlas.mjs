@@ -13,6 +13,15 @@ const { GROWTH_PARKS, quoteAtlasCsvCell } = await import(`data:text/javascript;c
 assert.equal(quoteAtlasCsvCell('ordinary'), '"ordinary"');
 assert.equal(quoteAtlasCsvCell('=HYPERLINK("x")'), '"\'=HYPERLINK(""x"")"', 'CSV cells must not execute as formulas');
 
+const roadSource = await readFile(new URL('../src/services/roadSampleGeometry.ts', import.meta.url), 'utf8');
+const roadCode = ts.transpileModule(roadSource, {
+  compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext }
+}).outputText;
+const { nearestRoadVertexMeters } = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(roadCode)}`);
+assert.equal(nearestRoadVertexMeters({ lat: 12.94, lng: 77.69 }, [{ latitude: 12.94, longitude: 77.69 }]), 0);
+assert.ok(nearestRoadVertexMeters({ lat: 12.94, lng: 77.69 }, [{ latitude: 12.96, longitude: 77.69 }]) > 1000);
+assert.equal(nearestRoadVertexMeters({ lat: 12.94, lng: 77.69 }, [{ latitude: 'bad', longitude: 77.69 }]), undefined);
+
 assert.deepEqual(
   new Set(GROWTH_PARKS.map((park) => park.id)).size,
   GROWTH_PARKS.length,
@@ -25,6 +34,10 @@ assert.deepEqual(
   true,
   'requested parks must be present'
 );
+assert.ok(
+  GROWTH_PARKS.find((park) => park.id === 'bagmane_world_technology_centre')?.featuredCompanies.every((company) => company.logoUrl),
+  'Bagmane occupiers need the sourced park logo wall'
+);
 
 for (const park of GROWTH_PARKS) {
   assert.ok(park.name && park.area && park.description && park.painHypothesis && park.seoQuery && park.leadAngle);
@@ -35,7 +48,7 @@ for (const park of GROWTH_PARKS) {
   assert.ok(Number.isFinite(park.lat) && Number.isFinite(park.lng), `${park.name} needs a map anchor`);
   for (const company of park.featuredCompanies) {
     assert.ok(company.name, `${park.name} has an unnamed company`);
-    for (const url of [company.website, company.sourceUrl, company.linkedin].filter(Boolean)) {
+    for (const url of [company.website, company.sourceUrl, company.linkedin, company.logoUrl].filter(Boolean)) {
       assert.equal(new URL(url).protocol, 'https:', `${company.name} needs a safe public link`);
     }
   }

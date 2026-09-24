@@ -6,7 +6,8 @@ import {
 import { gpsTo3D } from '../../data/GoogleMapsStoreRegistry';
 import { GROWTH_PARKS, GrowthCompany, GrowthPark, quoteAtlasCsvCell } from '../../data/growthAtlas';
 import { cameraControlBus } from '../../services/cameraControlBus';
-import { SimulationMode } from '../../types';
+import { fetchTrafficFlow } from '../../services/tomtomService';
+import { SimulationMode, TrafficFlowData } from '../../types';
 
 interface GrowthAtlasProps {
   children: React.ReactNode;
@@ -20,13 +21,14 @@ const leadDetailsKey = 'bengaluru-growth-atlas-lead-details';
 const reviewNotesKey = 'bengaluru-growth-atlas-review-notes';
 type LeadStage = 'Research' | 'Contacted' | 'Qualified';
 type LeadDetails = { stage: LeadStage; note: string };
+type RoadSample = { status: 'loading' | 'unavailable' } | { status: 'ready'; data: TrafficFlowData; distanceMeters: number };
 const leadStages: LeadStage[] = ['Research', 'Contacted', 'Qualified'];
 const companyKey = (park: GrowthPark, company: GrowthCompany) => `${park.id}:${company.name}`;
 const mapsUrl = (park: GrowthPark) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${park.name}, ${park.area}, Bengaluru`)}&query_place_id=${encodeURIComponent(park.googlePlaceId)}`;
 const directionsUrl = (park: GrowthPark) =>
   `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${park.name}, ${park.area}, Bengaluru`)}&destination_place_id=${encodeURIComponent(park.googlePlaceId)}`;
-const areaGuideUrl = (park: GrowthPark) => `/parks/${park.id.replace(/_/g, '-')}/index.html`;
+const areaGuideUrl = (park: GrowthPark) => `/parks/${park.id.replace(/_/g, '-')}/`;
 let placesLibrary: Promise<void> | undefined;
 const loadPlacesLibrary = (key: string) => {
   if (!placesLibrary) placesLibrary = new Promise<void>((resolve, reject) => {
@@ -53,12 +55,14 @@ const preferredSurface = (park: GrowthPark) => park.mapCoverage === 'context' ||
 function CompanyMark({ company }: { company: GrowthCompany }) {
   const [failed, setFailed] = useState(false);
   const domain = new URL(company.website).hostname;
+  // Juniper's site icon now resolves to HPE, so keep the sourced tenant name's initials.
+  const hasMatchingIcon = company.name !== 'Juniper Networks';
   return (
-    <span className="atlas-company-mark" aria-hidden="true">
+    <span className={`atlas-company-mark${company.logoUrl ? ' has-logo' : ''}`} aria-hidden="true">
       {company.name.slice(0, 2).toUpperCase()}
-      {!failed && (
+      {!failed && hasMatchingIcon && (
         <img
-          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
+          src={company.logoUrl || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}
@@ -138,7 +142,9 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
     }
   });
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [roadSamples, setRoadSamples] = useState<Record<string, RoadSample>>({});
   const selected = GROWTH_PARKS.find((park) => park.id === selectedId) || GROWTH_PARKS[0];
+  const roadSample = roadSamples[selected.id];
   const reviewNote = reviewNotes[selected.id] || '';
   const selectedIndex = GROWTH_PARKS.indexOf(selected);
   const matchingParks = useMemo(() => GROWTH_PARKS.filter((park) => {
@@ -213,6 +219,20 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
     setMapSurface(preferredSurface(park));
   };
 
+  const checkNearbyRoad = async () => {
+    const park = selected;
+    if (park.lat === undefined || park.lng === undefined) return;
+    setRoadSamples((samples) => ({ ...samples, [park.id]: { status: 'loading' } }));
+    try {
+      const result = await fetchTrafficFlow(false, { lat: park.lat, lng: park.lng });
+      setRoadSamples((samples) => ({ ...samples, [park.id]: result.data.isDemo || result.roadDistanceMeters === undefined
+        ? { status: 'unavailable' }
+        : { status: 'ready', data: result.data, distanceMeters: result.roadDistanceMeters } }));
+    } catch {
+      setRoadSamples((samples) => ({ ...samples, [park.id]: { status: 'unavailable' } }));
+    }
+  };
+
   const toggleSaved = (park: GrowthPark, company: GrowthCompany) => {
     const key = companyKey(park, company);
     setSaved((previous) => previous.includes(key)
@@ -243,6 +263,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
       `Offer: ${service.trim() || 'your service'}`,
       `Search intent: ${service.trim() || 'your service'} near ${selected.name}, Bengaluru`,
       `Movement hypothesis: ${selected.painHypothesis}`,
+      ...(roadSample?.status === 'ready' ? [`Nearby TomTom road segment sampled at ${new Date(roadSample.data.timestamp).toLocaleString()}: ${roadSample.data.currentSpeed} km/h, ${roadSample.data.freeFlowSpeed} km/h free flow. One road fragment, not a route or park average.`] : []),
       ...(reviewNote.trim() ? [`Review observation (your note): ${reviewNote.trim()}`, `Review source: ${mapsUrl(selected)}`] : []),
       `Lead angle: ${selected.leadAngle}`,
       `Maps: ${mapsUrl(selected)}`
@@ -387,7 +408,24 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
         <section className="atlas-growth" id="growth" aria-labelledby="growth-title">
           <div className="atlas-growth-head"><p>FROM MOVEMENT TO MARKET</p><h2 id="growth-title">Make the place <em>useful.</em></h2><span>Current focus <ArrowRight size={14} /> {selected.name}</span></div>
           <div className="atlas-growth-grid">
-            <article><span className="atlas-section-no">01 / OBSERVE</span><h3>Movement friction</h3><p>{selected.painHypothesis}</p>{reviewNote.trim() && <p className="atlas-review-insight">Your review insight: {reviewNote.trim()}</p>}<small>Opportunity hypothesis · validate with local interviews and current reviews</small></article>
+            <article>
+              <span className="atlas-section-no">01 / OBSERVE</span>
+              <h3>Movement friction</h3>
+              <p>{selected.painHypothesis}</p>
+              {reviewNote.trim() && <p className="atlas-review-insight">Your review insight: {reviewNote.trim()}</p>}
+              <div className="atlas-road-sample">
+                <button type="button" onClick={checkNearbyRoad} disabled={roadSample?.status === 'loading'}>
+                  {roadSample?.status === 'loading' ? 'Checking nearby road…' : roadSample?.status === 'ready' ? 'Refresh road sample' : 'Check nearby road now'}
+                </button>
+                {roadSample?.status === 'unavailable' && <p role="status">Live road sample unavailable. Check the connection or TomTom setup.</p>}
+                {roadSample?.status === 'ready' && <div role="status">
+                  <strong>{roadSample.data.currentSpeed} km/h sampled <span>/ {roadSample.data.freeFlowSpeed} km/h free flow</span></strong>
+                  <p>{roadSample.data.roadClosure ? 'Road closure reported for this segment.' : roadSample.data.currentSpeed < roadSample.data.freeFlowSpeed ? `${Math.max(0, roadSample.data.currentTravelTime - roadSample.data.freeFlowTravelTime)} seconds above free-flow travel time on this segment.` : roadSample.data.currentSpeed > roadSample.data.freeFlowSpeed ? 'Sampled speed was above free flow on this segment.' : 'Sampled speed matched free flow on this segment.'}</p>
+                  <small>TomTom · sampled {new Date(roadSample.data.timestamp).toLocaleString()} · {roadSample.data.frc} · confidence {Math.round(roadSample.data.confidence * 100)}% · geometry point within {Math.ceil(roadSample.distanceMeters / 100) * 100} m of approximate park centre. One nearby road direction, not a campus or route average.</small>
+                </div>}
+              </div>
+              <small>Opportunity hypothesis · validate with local interviews and current reviews</small>
+            </article>
             <article><span className="atlas-section-no">02 / GET FOUND</span><h3>Local search angle</h3><p className="atlas-example-query">“{selected.seoQuery}”</p><label htmlFor="atlas-service">Your offer</label><input id="atlas-service" value={service} onChange={(event) => setService(event.target.value)} maxLength={70} placeholder="e.g. corporate shuttle" /><div className="atlas-keyword">{service.trim() || 'your service'} near {selected.name}, Bengaluru</div></article>
             <article><span className="atlas-section-no">03 / WIN A LEAD</span><h3>Outreach hook</h3><p>{selected.leadAngle}</p><button className="atlas-copy" type="button" onClick={copyBrief}>{copyState === 'copied' ? <Check size={15} /> : <Copy size={15} />}{copyState === 'copied' ? 'Brief copied' : copyState === 'failed' ? 'Copy unavailable' : 'Copy area brief'}</button></article>
           </div>
