@@ -489,8 +489,8 @@ export const MARATHAHALLI_WALK_BOUNDS = {
   maxZ: 520
 };
 
-// Overview cameras need more room than a person camera to frame the full
-// Oracle-to-Spice-Garden corridor. These bounds still prevent pan/keyboard
+// Overview cameras need more room than a person camera to frame the wider
+// Marathahalli-to-Mahadevapura map. These bounds still prevent pan/keyboard
 // drift into an unbounded empty scene.
 export const MARATHAHALLI_OVERVIEW_BOUNDS = {
   minX: -4200,
@@ -498,7 +498,7 @@ export const MARATHAHALLI_OVERVIEW_BOUNDS = {
   minY: 0.75,
   maxY: 3000,
   minZ: -4200,
-  maxZ: 1000
+  maxZ: 4600
 };
 
 // Coarse, named landmark footprints prevent the person camera from walking

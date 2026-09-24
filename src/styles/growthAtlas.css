@@ -102,6 +102,8 @@ html, body, #root {
 .atlas-map-bottom p span { color: var(--lime); margin: 0 4px; }
 .atlas-map-bottom a { display: inline-flex; align-items: center; gap: 5px; pointer-events: auto; }
 .atlas-map-bottom a:hover { text-decoration: underline; }
+.atlas-map-credit { position: absolute; z-index: 4; top: calc(var(--map-height) - 24px); right: 20px; color: #eef4ef; font: 600 9px 'IBM Plex Mono', monospace; text-shadow: 0 1px 4px #12232b; }
+.atlas-map-credit:hover { text-decoration: underline; }
 .atlas-context-note { color: var(--lime); text-align: right; }
 .atlas-park-rail { position: relative; z-index: 2; padding: 18px 18px 22px; border-top: 1px solid #34444b; background: #12232b; }
 .atlas-park-rail-label { display: flex; align-items: center; gap: 9px; color: #a8bdbc; line-height: 1.35; }
@@ -141,6 +143,15 @@ html, body, #root {
 .atlas-place-links a:first-child { background: var(--ink); border-color: var(--ink); color: white; }
 .atlas-place-links a:hover { background: var(--lime); color: var(--ink); border-color: var(--lime); }
 .atlas-review-note { margin-top: 10px; color: #7d8a88; font-size: 10px; line-height: 1.35; }
+.atlas-google-reviews { margin-top: 11px; }
+.atlas-google-reviews > button { border: 0; border-radius: 6px; padding: 10px 12px; background: #dff88a; color: var(--ink); font-size: 11px; font-weight: 800; cursor: pointer; }
+.atlas-google-reviews > p { color: #61706e; font-size: 11px; line-height: 1.45; }
+.atlas-google-reviews a { text-decoration: underline; }
+.atlas-google-reviews gmp-place-details { display: block; width: 100%; height: 330px; border: 1px solid var(--line); border-radius: 7px; overflow: auto; }
+.atlas-review-observation { display: grid; gap: 7px; margin-top: 14px; }
+.atlas-review-observation label { color: #5f6f6a; font: 700 10px 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: .07em; }
+.atlas-review-observation textarea { min-height: 70px; width: 100%; resize: vertical; border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: #fff; color: var(--ink); font: 12px/1.5 'DM Sans', sans-serif; }
+.atlas-review-observation small { color: #7d8a88; font-size: 10px; line-height: 1.4; }
 .atlas-companies-heading { margin-top: 25px; border-top: 1px solid var(--line); padding-top: 19px; display: flex; justify-content: space-between; align-items: end; gap: 12px; }
 .atlas-companies-heading span { color: #ba714f; font-size: 9px; }
 .atlas-companies-heading h3 { margin-top: 5px; font-size: 18px; letter-spacing: -.04em; }
@@ -169,6 +180,7 @@ html, body, #root {
 .atlas-section-no { color: #a65d40; }
 .atlas-growth-grid h3 { margin-top: 23px; font-size: 23px; font-weight: 800; letter-spacing: -.05em; }
 .atlas-growth-grid p { margin-top: 13px; max-width: 410px; color: #4d5d62; font-size: 14px; line-height: 1.55; }
+.atlas-growth-grid .atlas-review-insight { border-left: 2px solid #b76242; padding-left: 10px; font-size: 12px; }
 .atlas-growth-grid small { margin-top: auto; color: #7b8985; font: 500 10px/1.4 'IBM Plex Mono', monospace; }
 .atlas-example-query { font-style: italic; }
 .atlas-growth-grid label { margin-top: 20px; color: #677671; font: 700 10px 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: .08em; }
@@ -177,6 +189,12 @@ html, body, #root {
 .atlas-copy { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: fit-content; margin-top: auto; border: 1px solid var(--ink); border-radius: 5px; background: transparent; color: var(--ink); padding: 11px 14px; font-size: 11px; font-weight: 800; }
 .atlas-copy:hover { background: var(--ink); color: white; }
 .atlas-lead-bar { margin-top: 14px; padding: 22px 25px; background: #dceccf; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.atlas-lead-queue { display: grid; gap: 7px; margin-top: 8px; }
+.atlas-lead-queue > div { display: grid; grid-template-columns: minmax(170px, 1fr) 130px minmax(170px, 1.5fr); align-items: center; gap: 12px; padding: 11px 14px; border: 1px solid #cdd6c9; background: #f8faf5; }
+.atlas-lead-queue span { display: grid; line-height: 1.35; }
+.atlas-lead-queue strong { font-size: 12px; }
+.atlas-lead-queue small { color: #697875; font-size: 10px; }
+.atlas-lead-queue select, .atlas-lead-queue input { width: 100%; border: 1px solid #bfcbbd; border-radius: 4px; padding: 8px; background: white; color: var(--ink); font: 11px 'DM Sans', sans-serif; }
 .atlas-lead-bar span { display: block; color: #61764b; font-size: 9px; }
 .atlas-lead-bar strong { display: block; margin-top: 3px; font-size: 18px; letter-spacing: -.03em; }
 .atlas-lead-bar small { display: block; margin-top: 4px; color: #596d59; font-size: 11px; }
@@ -230,6 +248,7 @@ html, body, #root {
   .atlas-map-heading strong { font-size: 9px; }
   .atlas-map-actions button { padding: 8px; font-size: 10px; }
   .atlas-map-bottom { left: 10px; right: 10px; top: calc(var(--map-height) - 96px); }
+  .atlas-map-credit { right: 10px; font-size: 8px; }
   .atlas-map-bottom p { font-size: 8px; max-width: 255px; line-height: 1.4; }
   .atlas-context-note { display: none; }
   .atlas-park-rail { padding: 15px 12px; }
@@ -240,6 +259,8 @@ html, body, #root {
   .atlas-place-links a { padding: 8px; }
   .atlas-lead-bar { align-items: stretch; flex-direction: column; }
   .atlas-lead-bar button { justify-content: center; }
+  .atlas-lead-queue > div { grid-template-columns: 1fr 1fr; }
+  .atlas-lead-queue input { grid-column: 1 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

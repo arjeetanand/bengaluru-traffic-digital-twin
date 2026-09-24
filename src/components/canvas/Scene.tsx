@@ -28,6 +28,7 @@ import { RainParticles } from './Environment/RainParticles';
 import { TrafficSystem } from './traffic/TrafficSystem';
 import { SourceCorridorTraffic } from './traffic/SourceCorridorTraffic';
 import { OsmSnapshotLayer } from './Environment/OsmSnapshotLayer';
+import { MahadevapuraSourceLayer } from './Environment/MahadevapuraSourceLayer';
 import { CrossoverFocusOverlay } from './Environment/CrossoverFocusOverlay';
 import { ScenarioImpactOverlay } from './Environment/ScenarioImpactOverlay';
 import { CorridorAttractorLayer } from './Environment/CorridorAttractorLayer';
@@ -267,6 +268,7 @@ export const Scene: React.FC<SceneProps> = ({
             showLabels={!cleanView}
             selectionRoadLimit={cleanView ? 32 : 220}
           />
+          {(buildingMode !== 'google-tiles' || googleTilesFailed) && <MahadevapuraSourceLayer />}
 
           {buildingMode !== 'google-tiles' && (
             <SourceLandmarkMassings

@@ -5,10 +5,13 @@ export interface GrowthCompany {
   linkedin?: string;
 }
 
+export const quoteAtlasCsvCell = (value: string) => `"${(/^[\s]*[=+\-@]/.test(value) ? `'${value}` : value).replace(/"/g, '""')}"`;
+
 export interface GrowthPark {
   id: string;
   name: string;
   area: string;
+  googlePlaceId: string;
   lat?: number;
   lng?: number;
   mapCoverage: 'corridor' | 'context';
@@ -30,6 +33,7 @@ export const GROWTH_PARKS: GrowthPark[] = [
     id: 'prestige_tech_park',
     name: 'Prestige Tech Park',
     area: 'Kadubeesanahalli, Marathahalli–Sarjapur Outer Ring Road',
+    googlePlaceId: 'ChIJ7-Cgk7MTrjsRpYr_lkVDiM8',
     // Approximate OSM feature centre from bellandur-marathahalli-corridor.json.
     lat: 12.9422614,
     lng: 77.6928369,
@@ -62,6 +66,7 @@ export const GROWTH_PARKS: GrowthPark[] = [
     id: 'rmz_ecospace',
     name: 'RMZ Ecospace',
     area: 'Bellandur, Sarjapur Outer Ring Road',
+    googlePlaceId: 'ChIJYeuQoKATrjsRRurpuUR0KP4',
     // Approximate OSM feature centre from bellandur-marathahalli-corridor.json.
     lat: 12.9241373,
     lng: 77.6805212,
@@ -70,13 +75,13 @@ export const GROWTH_PARKS: GrowthPark[] = [
     painHypothesis: 'Hypothesis: workers and visitors may find the right campus entrance or shuttle pickup point hard to identify.',
     seoQuery: 'office shuttle RMZ Ecospace Bellandur',
     leadAngle: 'Approach occupier facilities teams with a clear pickup-point and last-mile shuttle concept; confirm actual demand before pitching.',
-    sourceUrl: 'https://www.brookfieldproperties.com/en/our-properties/ecospace-1910',
+    sourceUrl: 'https://www.brookfieldindiareit.in/files/stock-exchange-filing/Intimation_of_Pro_forma_financials__4dec2025.pdf',
     featuredCompanies: [
       { name: 'Capgemini', website: 'https://www.capgemini.com/', sourceUrl: capgeminiSource, linkedin: 'https://www.linkedin.com/company/capgemini/' },
       { name: 'Northern Trust', website: 'https://www.northerntrust.com/', sourceUrl: 'https://www.northerntrust.com/content/dam/northerntrust/corporate/global/en/documents/web/legal-privacy/binding-corporate-rules/binding-corporate-rules-controller.pdf', linkedin: 'https://www.linkedin.com/company/northern-trust/' },
       { name: 'Microland', website: 'https://www.microland.com/', sourceUrl: 'https://www.microland.com/contact', linkedin: 'https://www.linkedin.com/company/microland/' },
       { name: 'EY', website: 'https://www.ey.com/', sourceUrl: 'https://www.ey.com/content/dam/ey-unified-site/ey-com/en-in/technical/alerts-hub/documents/2026/03/kerala-hc-holds-banks-eligibility-of-50pc-itc-cannot-be-denied-where-it.pdf', linkedin: 'https://www.linkedin.com/company/ernstandyoung/' },
-      { name: 'BDO RISE', website: 'https://www.bdo.com/careers/bdo-rise', sourceUrl: 'https://www.linkedin.com/company/bdo-rise-private-limited', linkedin: 'https://www.linkedin.com/company/bdo-rise-private-limited' },
+      { name: 'BDO RISE', website: 'https://www.bdo.com/careers/bdo-rise', sourceUrl: 'https://www.bdo.com/careers/bdo-rise', linkedin: 'https://www.linkedin.com/company/bdo-rise-private-limited' },
       { name: 'COWRKS (Ecospace 3B)', website: 'https://www.cowrks.com/', sourceUrl: 'https://www.cowrks.com/coworking-space-bengaluru/cowrks-ecospace-3b', linkedin: 'https://www.linkedin.com/company/cowrks/' },
       { name: 'Deloitte', website: 'https://www.deloitte.com/', sourceUrl: 'https://www.deloitte.com/in/en/offices/bengaluru-ecospace.html', linkedin: 'https://www.linkedin.com/company/deloitte' },
       { name: 'Synaptics', website: 'https://www.synaptics.com/', sourceUrl: 'https://www.synaptics.com/contact', linkedin: 'https://www.linkedin.com/company/synaptics' }
@@ -86,10 +91,11 @@ export const GROWTH_PARKS: GrowthPark[] = [
     id: 'bagmane_world_technology_centre',
     name: 'Bagmane World Technology Centre',
     area: 'Garudachar Palya, Mahadevapura',
+    googlePlaceId: 'ChIJNdZMZXcRrjsRtjpyISavKB4',
     // Approximate OSM commercial-way centre: https://www.openstreetmap.org/way/91237236.
     lat: 12.9843034,
     lng: 77.6946207,
-    mapCoverage: 'context',
+    mapCoverage: 'corridor',
     description: 'Use the verified occupier mix to plan employee transport outreach across the Mahadevapura employment cluster.',
     painHypothesis: 'Hypothesis: first-time visitors may need clearer last-mile directions to individual campus buildings.',
     seoQuery: 'employee transport Bagmane World Technology Centre Mahadevapura',
@@ -114,10 +120,11 @@ export const GROWTH_PARKS: GrowthPark[] = [
     id: 'google_ananta',
     name: 'Google Ananta',
     area: 'Mahadevapura',
+    googlePlaceId: 'ChIJcQgRXwARrjsRCJNOvPpSetM',
     // Approximate OSM office-way centre: https://www.openstreetmap.org/way/1087930060.
     lat: 12.9828270,
     lng: 77.6917293,
-    mapCoverage: 'context',
+    mapCoverage: 'corridor',
     description: 'Build a campus-specific mobility brief for the Google Ananta area in Mahadevapura.',
     painHypothesis: 'K.R. Puram Metro is about 2.5 km from Ananta according to the venue guide; test whether a last-mile shuttle would help.',
     seoQuery: 'corporate shuttle Google Ananta Mahadevapura',
