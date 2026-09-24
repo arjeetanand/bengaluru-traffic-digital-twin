@@ -44,7 +44,7 @@ for (const park of GROWTH_PARKS) {
 const titles = [];
 for (const park of GROWTH_PARKS) {
   const slug = park.id.replaceAll('_', '-');
-  const html = await readFile(new URL(`../public/parks/${slug}/index.html`, import.meta.url), 'utf8');
+  const html = await readFile(new URL(`../parks/${slug}/index.html`, import.meta.url), 'utf8');
   const title = html.match(/<title>([^<]+)<\/title>/)?.[1];
   titles.push(title);
   assert.ok(title?.includes(park.name), `${slug} needs its own title`);
@@ -57,7 +57,7 @@ for (const park of GROWTH_PARKS) {
   assert.ok(html.includes(`query_place_id=${park.googlePlaceId}`), `${slug} needs the correct Maps listing`);
   for (const other of GROWTH_PARKS.filter((item) => item.id !== park.id)) {
     const otherSlug = other.id.replaceAll('_', '-');
-    assert.ok(html.includes(`href="/parks/${otherSlug}/index.html"`), `${slug} needs a working link to ${otherSlug}`);
+    assert.ok(html.includes(`href="/parks/${otherSlug}/"`), `${slug} needs a working link to ${otherSlug}`);
   }
 }
 assert.equal(new Set(titles).size, GROWTH_PARKS.length, 'park page titles must be unique');
