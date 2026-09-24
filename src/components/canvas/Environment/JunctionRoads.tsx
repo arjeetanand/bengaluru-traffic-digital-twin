@@ -149,7 +149,7 @@ export const JunctionRoads: React.FC<JunctionRoadsProps> = ({
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -800]} receiveShadow={!cleanView}>
         <planeGeometry args={[12000, 14000]} />
         <meshStandardMaterial
-          color={cleanView ? '#60796e' : (isRaining ? '#1a221a' : '#263326')}
+          color={cleanView ? '#8aa595' : (isRaining ? '#1a221a' : '#263326')}
           roughness={0.96}
           metalness={0.02}
         />

@@ -1703,13 +1703,11 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       )}
 
       {roadSurfaceGeometry && (
-        <mesh geometry={roadSurfaceGeometry} renderOrder={0}>
+        <mesh geometry={roadSurfaceGeometry} renderOrder={0} receiveShadow>
           <meshStandardMaterial
-            color={isNight ? '#111827' : '#273449'}
-            roughness={0.94}
-            metalness={0.02}
-            transparent
-            opacity={0.82}
+            color={isNight ? '#111827' : '#34404a'}
+            roughness={0.92}
+            metalness={0.01}
           />
         </mesh>
       )}
@@ -1725,9 +1723,9 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
           userData={{ source: 'OSM', detail: 'road-edge-hints', tags: 'highway/lanes', rendering: 'merged' }}
         >
           <lineBasicMaterial
-            color={isNight ? '#e2e8f0' : '#94a3b8'}
+            color={isNight ? '#e2e8f0' : '#d8e0d9'}
             transparent
-            opacity={isNight ? 0.74 : 0.62}
+            opacity={isNight ? 0.74 : 0.76}
             depthWrite={false}
           />
         </lineSegments>
@@ -1806,13 +1804,11 @@ export const OsmSnapshotLayer: React.FC<OsmSnapshotLayerProps> = ({
       </group>
 
       {footwaySurfaceGeometry && (
-        <mesh geometry={footwaySurfaceGeometry} renderOrder={1}>
+        <mesh geometry={footwaySurfaceGeometry} renderOrder={1} receiveShadow>
           <meshStandardMaterial
-            color={isNight ? '#a16207' : '#cbd5e1'}
+            color={isNight ? '#a16207' : '#d8ddd0'}
             roughness={0.9}
             metalness={0.02}
-            transparent
-            opacity={0.78}
           />
         </mesh>
       )}

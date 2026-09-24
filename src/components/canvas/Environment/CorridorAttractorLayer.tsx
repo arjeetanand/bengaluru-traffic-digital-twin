@@ -123,16 +123,26 @@ export const CorridorAttractorLayer: React.FC<CorridorAttractorLayerProps> = ({
             <mesh position={[0, dimensions.height / 2, 0]} castShadow receiveShadow>
               <boxGeometry args={[dimensions.width, dimensions.height, dimensions.depth]} />
               <meshStandardMaterial
-                color={isNight ? '#122331' : '#264957'}
-                roughness={0.5}
-                metalness={0.45}
+                color={isNight ? '#24424d' : '#a9c1bd'}
+                roughness={0.72}
+                metalness={0.08}
                 emissive={isNight ? accent : '#000000'}
-                emissiveIntensity={isNight ? 0.18 : 0}
-                transparent
-                opacity={0.88}
+                emissiveIntensity={isNight ? 0.06 : 0}
               />
             </mesh>
-            <mesh position={[0, dimensions.height * 0.48, dimensions.depth / 2 + 0.06]}>
+            {/* One tinted band reads as office glazing from any camera angle;
+                the registry supplies only a coarse anchor, not a facade. */}
+            <mesh position={[0, dimensions.height * 0.53, 0]}>
+              <boxGeometry args={[dimensions.width + 0.24, dimensions.height * 0.48, dimensions.depth + 0.24]} />
+              <meshStandardMaterial
+                color={isNight ? '#173948' : '#345e6c'}
+                roughness={0.28}
+                metalness={0.38}
+                emissive={isNight ? accent : '#000000'}
+                emissiveIntensity={isNight ? 0.1 : 0}
+              />
+            </mesh>
+            <mesh position={[0, dimensions.height * 0.8, dimensions.depth / 2 + 0.16]}>
               <boxGeometry args={[dimensions.width * 0.74, 0.18, 0.08]} />
               <meshBasicMaterial color={accent} transparent opacity={0.7} />
             </mesh>
