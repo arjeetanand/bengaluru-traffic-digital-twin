@@ -305,6 +305,20 @@ export const ScenarioControlRoom: React.FC<ScenarioControlRoomProps> = ({
   const scenarioWindowStartProgress = clamp((selectedScenario ? selectedScenario.window.startSeconds : timelineStartSeconds) - timelineStartSeconds, 0, timelineDuration) / timelineDuration;
   const scenarioWindowEndProgress = clamp((selectedScenario ? selectedScenario.window.endSeconds : timelineEndSeconds) - timelineStartSeconds, 0, timelineDuration) / timelineDuration;
   const provenanceEntries = provenance ?? selectedScenario?.provenance ?? {};
+  const delaySaved = counterfactualMetrics
+    ? baselineMetrics.averageDelayMinutes - counterfactualMetrics.averageDelayMinutes
+    : null;
+  const delayChangePercent = delaySaved === null || baselineMetrics.averageDelayMinutes <= 0
+    ? 0
+    : Math.round(Math.abs(delaySaved / baselineMetrics.averageDelayMinutes) * 100);
+  const challengeTone = delaySaved === null ? '' : delaySaved > 0 ? 'is-better' : 'is-worse';
+  const challengeHeadline = delaySaved === null
+    ? 'Can you beat the rush?'
+    : delaySaved > 0
+      ? `Nice move — ${delayChangePercent}% less estimated delay`
+      : delaySaved < 0
+        ? `The rush got tougher — delay rose ${delayChangePercent}%`
+        : 'Delay stayed the same — try another idea';
 
   useEffect(() => {
     if (!counterfactualMetrics) return undefined;
@@ -363,6 +377,14 @@ export const ScenarioControlRoom: React.FC<ScenarioControlRoomProps> = ({
             </span>
           </div>
         </div>
+      </div>
+
+      <div className={`scenario-challenge${challengeTone ? ` ${challengeTone}` : ''}`} aria-live="polite">
+        <span className="scenario-challenge__label"><Zap size={14} aria-hidden="true" /> QUICK CHALLENGE</span>
+        <strong>{challengeHeadline}</strong>
+        <p>{counterfactualMetrics
+          ? 'Pick another traffic idea to compare its modelled impact. These results use local demo data.'
+          : 'Choose a traffic idea, run it, and see whether the modelled average delay goes down. No account or API key needed.'}</p>
       </div>
 
       <div className="scenario-control-room__layout">

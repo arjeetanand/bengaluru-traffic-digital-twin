@@ -12,6 +12,7 @@ import { SIMULATION_CONFIG } from './config/simulation';
 import {
   fetchTrafficFlow,
   getApiUsageStats,
+  hasTomTomApiKey,
   resetApiUsage
 } from './services/tomtomService';
 import { getBakedDemoTrafficData } from './services/demoTrafficData';
@@ -47,8 +48,8 @@ export const App: React.FC = () => {
     googleMapsApiKey: (import.meta.env.VITE_GOOGLE_MAPS_KEY as string) || ''
   });
 
-  // ── Force Demo Toggle State: Default to TRUE as requested for developer 3D model perfection ──
-  const [forceDemo, setForceDemo] = useState(true);
+  // Use live traffic on startup when a valid provider key is configured.
+  const [forceDemo, setForceDemo] = useState(!hasTomTomApiKey());
 
   // ── Telemetry & Live Data State ──
   const [flowData, setFlowData] = useState<TrafficFlowData>(() => getBakedDemoTrafficData());
@@ -58,6 +59,7 @@ export const App: React.FC = () => {
   const [isScenarioRoomOpen, setIsScenarioRoomOpen] = useState(false);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const simulatorExitRef = useRef<HTMLButtonElement>(null);
+  const scenarioReturnFocusRef = useRef<HTMLElement | null>(null);
   const wasSimulatorOpenRef = useRef(false);
   const [isSketchfabLabOpen, setIsSketchfabLabOpen] = useState(false);
   const [viewMode, setViewMode] = useState<SimulationViewMode>('explore');
@@ -227,6 +229,7 @@ export const App: React.FC = () => {
   };
 
   const handleOpenScenarioRoom = useCallback(() => {
+    scenarioReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setIsScenarioRoomOpen(true);
     setViewMode('simulate');
   }, []);
@@ -242,6 +245,15 @@ export const App: React.FC = () => {
     setIsScenarioPlaying(false);
     restartSimulation();
   }, [restartSimulation]);
+
+  const handleOpenChallenge = useCallback(() => {
+    scenarioReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    forceDemoRef.current = true;
+    setForceDemo(true);
+    setIsScenarioRoomOpen(true);
+    handleSelectScenario('marathahalli_signal_plan_01');
+    void loadTraffic(true);
+  }, [handleSelectScenario, loadTraffic]);
 
   const handleRunScenario = useCallback((scenarioId: string) => {
     const scenario = getScenarioDefinition(scenarioId);
@@ -290,13 +302,14 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     if (isScenarioRoomOpen) scenarioRoomRef.current?.focus();
-  }, [isScenarioRoomOpen]);
-
-  useEffect(() => {
-    if (isSimulatorOpen) simulatorExitRef.current?.focus();
+    else if (scenarioReturnFocusRef.current?.isConnected) {
+      scenarioReturnFocusRef.current.focus();
+      scenarioReturnFocusRef.current = null;
+    }
+    else if (isSimulatorOpen) simulatorExitRef.current?.focus();
     else if (wasSimulatorOpenRef.current) document.querySelector<HTMLButtonElement>('.atlas-header-nav button')?.focus();
     wasSimulatorOpenRef.current = isSimulatorOpen;
-  }, [isSimulatorOpen]);
+  }, [isScenarioRoomOpen, isSimulatorOpen]);
 
   const scene = (
     <React.Suspense fallback={<div className="atlas-scene-loading" role="status">Loading 3D map…</div>}>
@@ -312,7 +325,7 @@ export const App: React.FC = () => {
         googleMapsApiKey={mode.googleMapsApiKey}
         signalStatus={signalStatus}
         congestionRatio={scenarioVisualState.congestionRatio}
-        vehicleCount={isSimulatorOpen ? mode.vehicleCount : Math.min(mode.vehicleCount, 60)}
+        vehicleCount={isSimulatorOpen && !isScenarioRoomOpen ? mode.vehicleCount : Math.min(mode.vehicleCount, 60)}
         scenarioVisualState={scenarioVisualState}
         onInspectJunction={() => setIsJunctionModalOpen(true)}
         cleanView={!isSimulatorOpen}
@@ -326,16 +339,17 @@ export const App: React.FC = () => {
         <GrowthAtlas
           mode={mode}
           active={!isSimulatorOpen}
+          onOpenChallenge={handleOpenChallenge}
           onOpenSimulator={() => {
             setIsSimulatorOpen(true);
             handleUpdateMode({ cameraPreset: 'overview', cameraMode: 'overview' });
           }}
         >{isSimulatorOpen ? null : scene}</GrowthAtlas>
       </div>
-      {isSimulatorOpen && <>{scene}<button ref={simulatorExitRef} className="simulator-exit" type="button" onClick={() => {
+      {isSimulatorOpen && <>{scene}{!isScenarioRoomOpen && <button ref={simulatorExitRef} className="simulator-exit" type="button" onClick={() => {
         setIsSimulatorOpen(false);
         handleUpdateMode({ cameraPreset: 'corridor', cameraMode: 'overview' });
-      }}>← Back to atlas</button></>}
+      }}>← Back to atlas</button>}</>}
 
       {isSimulatorOpen && <HUD
         flowData={flowData}
@@ -377,10 +391,25 @@ export const App: React.FC = () => {
             role="dialog"
             aria-modal="true"
             aria-label="Scenario control room"
+            aria-keyshortcuts="Enter Escape"
             ref={scenarioRoomRef}
             tabIndex={-1}
             onKeyDown={(event) => {
-              if (event.key === 'Escape') setIsScenarioRoomOpen(false);
+              if (event.key === 'Tab') {
+                const focusable = Array.from(scenarioRoomRef.current?.querySelectorAll<HTMLElement>(
+                  'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+                ) ?? []).filter((element) => element.getClientRects().length > 0);
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (event.shiftKey && (document.activeElement === first || document.activeElement === scenarioRoomRef.current)) {
+                  event.preventDefault();
+                  last?.focus();
+                } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === scenarioRoomRef.current)) {
+                  event.preventDefault();
+                  first?.focus();
+                }
+              } else if (event.key === 'Escape') setIsScenarioRoomOpen(false);
+              else if (event.key === 'Enter' && event.target === event.currentTarget) handleRunScenario(selectedScenarioId);
             }}
           >
             <div className="scenario-room-toolbar">

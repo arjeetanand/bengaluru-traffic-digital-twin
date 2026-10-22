@@ -73,6 +73,9 @@ html, body, #root {
 .atlas-intro-side a { margin-top: 20px; display: inline-flex; align-items: center; gap: 14px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--ink); padding-bottom: 7px; }
 .atlas-intro-side a svg { transition: transform .2s; }
 .atlas-intro-side a:hover svg { transform: translate(3px, 3px); }
+.atlas-challenge-button { margin-top: 16px; display: inline-flex; align-items: center; gap: 10px; border: 0; border-radius: 999px; padding: 12px 16px; background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 800; transition: transform .2s, background .2s; }
+.atlas-challenge-button:hover { transform: translateY(-2px); background: #30464b; }
+.atlas-challenge-note { display: block; margin-top: 7px; color: var(--muted); font: 600 9px 'IBM Plex Mono', monospace; }
 
 .atlas-explorer { max-width: 1760px; margin: 0 auto; padding: 0 clamp(20px, 4.2vw, 76px); display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(300px, .8fr); align-items: stretch; }
 .atlas-map-panel { --map-height: 620px; position: relative; min-width: 0; background: #14232a; color: #f4f7f2; }
@@ -201,7 +204,13 @@ html, body, #root {
 .atlas-example-query { font-style: italic; }
 .atlas-growth-grid label { margin-top: 20px; color: #677671; font: 700 10px 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: .08em; }
 .atlas-growth-grid input { margin-top: 6px; border: 0; border-bottom: 1px solid #849388; outline: 0; width: 100%; max-width: 260px; padding: 7px 0; background: transparent; color: var(--ink); font: 700 14px 'DM Sans', sans-serif; }
-.atlas-keyword { margin-top: 13px; color: #a55537; font-size: 11px; line-height: 1.4; font-weight: 700; }
+.atlas-seo-output { display: grid; gap: 9px; margin-top: 15px; padding: 12px; border: 1px solid #d7ddd3; border-radius: 6px; background: #f8f8f2; }
+.atlas-seo-output > div + div { border-top: 1px solid #e0e4dc; padding-top: 8px; }
+.atlas-seo-output > div > small { display: block; margin: 0; color: #a65d40; font: 700 9px/1.4 'IBM Plex Mono', monospace; letter-spacing: .08em; }
+.atlas-seo-output strong { display: block; margin-top: 4px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.atlas-seo-output p { margin: 4px 0 0; color: #4d5d62; font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+.atlas-seo-output a { display: inline-flex; width: fit-content; align-items: center; gap: 5px; color: #a55537; font-size: 10px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.atlas-growth-grid .atlas-target-role { border-left: 2px solid #b7ca88; padding-left: 10px; font-size: 12px; }
 .atlas-copy { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: fit-content; margin-top: auto; border: 1px solid var(--ink); border-radius: 5px; background: transparent; color: var(--ink); padding: 11px 14px; font-size: 11px; font-weight: 800; }
 .atlas-copy:hover { background: var(--ink); color: white; }
 .atlas-lead-bar { margin-top: 14px; padding: 22px 25px; background: #dceccf; display: flex; align-items: center; justify-content: space-between; gap: 24px; }

@@ -1873,7 +1873,7 @@ input:focus-visible {
 
 /* ── Scenario control room integration layer ── */
 .scenario-room-backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 40;
   display: grid;

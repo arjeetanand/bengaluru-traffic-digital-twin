@@ -4,6 +4,11 @@ import { SIMULATION_CONFIG } from '../config/simulation';
 import { getBakedDemoTrafficData } from './demoTrafficData';
 import { nearestRoadVertexMeters } from './roadSampleGeometry';
 
+export const hasTomTomApiKey = () => {
+  const apiKey = import.meta.env.VITE_TOMTOM_KEY?.trim();
+  return Boolean(apiKey && apiKey !== 'your_tomtom_api_key_here');
+};
+
 const STORAGE_KEY = 'tomtom_api_usage_metrics';
 
 export function getApiUsageStats(): ApiUsageStats {
@@ -118,9 +123,9 @@ export async function fetchTrafficFlow(forceDemo: boolean = false, point?: { lat
     };
   }
 
-  const apiKey = import.meta.env.VITE_TOMTOM_KEY;
+  const apiKey = import.meta.env.VITE_TOMTOM_KEY?.trim();
 
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_tomtom_api_key_here') {
+  if (!hasTomTomApiKey() || !apiKey) {
     return {
       data: getBakedDemoTrafficData(),
       usage: currentUsage,
@@ -130,7 +135,7 @@ export async function fetchTrafficFlow(forceDemo: boolean = false, point?: { lat
 
   const { lat, lng } = point ?? ACTIVE_COORDINATES;
   const url = `https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/${point ? 14 : 10}/json?key=${encodeURIComponent(
-    apiKey.trim()
+    apiKey
   )}&point=${lat},${lng}`;
 
   try {

@@ -8,6 +8,10 @@ export interface GrowthCompany {
 
 export const quoteAtlasCsvCell = (value: string) => `"${(/^[\s]*[=+\-@]/.test(value) ? `'${value}` : value).replace(/"/g, '""')}"`;
 
+export const truncateAtWord = (text: string, limit: number) => text.length <= limit
+  ? text
+  : text.slice(0, limit - 1).replace(/\s+\S*$/, '') + '…';
+
 export const nearestParkForTarget = (
   anchors: readonly { id: string; x: number; z: number }[],
   view: { x: number; z: number; distance: number }

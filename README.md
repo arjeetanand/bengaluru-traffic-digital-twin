@@ -7,7 +7,7 @@ Simulates **1,000–2,000 vehicles** moving at a silky **60 FPS** across Bengalu
 
 The demo map is source-backed rather than an invented city block: the committed `marathahalli_osm.xml` extract is compiled into a local snapshot covering Oracle Tech Hub → Marathahalli signal → Innovative Multiplex → Kalamandir → Spice Garden. It is an engineering demo, not survey-grade photogrammetry; exact facade and elevation fidelity requires an authorized imagery/3D-tiles source or a field survey.
 
-The default screen is the Bengaluru Growth Atlas: a workplace mobility lead explorer for four east Bengaluru tech parks. It shows sourced example occupiers, public website/social links, a saved company CSV, place-specific search briefs, and links to live Google Maps listings and reviews. The local 3D twin covers the mapped Bellandur–Marathahalli corridor; wider-area places have a pannable OpenStreetMap view, an optional Google Maps preview, and direct Google Maps links. The tenant lists and movement opportunities are examples to verify before outreach.
+The default screen is the Bengaluru Growth Atlas: a workplace mobility prospecting workspace for four east Bengaluru tech parks. It combines a pannable local 3D corridor, visible company marks and public references, live Google Maps reviews when configured, a generated local SEO pack, a saved lead list with CSV export, and an optional nearby TomTom road sample. Company entries and movement opportunities are research examples; verify current occupancy and commute needs before outreach.
 
 ---
 
@@ -94,19 +94,21 @@ The default screen is the Bengaluru Growth Atlas: a workplace mobility lead expl
 
 3. **Install Dependencies**:
    ```bash
-   npm install
+   npm ci
    ```
 
 4. **Launch the Development Server**:
    ```bash
-   npm run dev
+   ./run.sh
    ```
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
+   Open [http://localhost:4003](http://localhost:4003) in your browser. `./run.sh` restarts only this project's verified Vite process tree and refuses an unverified listener on port 4003. Direct `npm run dev` uses the same port.
+
+   Port mapping: main app `4003`; preview/test `5003`; secondary test `6003`.
 
 5. **Build for Production**:
    ```bash
    npm run build
-   npm run preview
+   npm run preview -- --host 127.0.0.1 --port 5003 --strictPort
    ```
 
 6. **Validate the source and scenario milestones**:

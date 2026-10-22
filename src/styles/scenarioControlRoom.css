@@ -147,6 +147,24 @@
   color: var(--scenario-positive);
 }
 
+.scenario-challenge {
+  display: grid;
+  gap: 6px;
+  margin: 16px clamp(18px, 3vw, 42px) 0;
+  padding: 14px 17px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 5px;
+  background: linear-gradient(100deg, rgba(251, 191, 36, 0.11), rgba(56, 189, 248, 0.06));
+}
+
+.scenario-challenge.is-better { border-color: rgba(74, 222, 128, 0.45); }
+.scenario-challenge.is-worse { border-color: rgba(251, 113, 133, 0.45); }
+.scenario-challenge__label { display: flex; align-items: center; gap: 7px; color: var(--scenario-amber); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.scenario-challenge.is-better .scenario-challenge__label { color: var(--scenario-positive); }
+.scenario-challenge.is-worse .scenario-challenge__label { color: var(--scenario-negative); }
+.scenario-challenge > strong { color: var(--scenario-text); font-size: 15px; }
+.scenario-challenge > p { color: var(--scenario-muted); font: 11px/1.5 'DM Sans', sans-serif; }
+
 .scenario-status-label {
   color: var(--scenario-dim);
 }

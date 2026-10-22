@@ -4,7 +4,7 @@ import {
   Download, ExternalLink, Globe2, Linkedin, MapPin, RotateCcw, Search
 } from 'lucide-react';
 import { gpsTo3D } from '../../data/GoogleMapsStoreRegistry';
-import { GROWTH_PARKS, GrowthCompany, GrowthPark, nearestParkForTarget, quoteAtlasCsvCell } from '../../data/growthAtlas';
+import { GROWTH_PARKS, GrowthCompany, GrowthPark, nearestParkForTarget, quoteAtlasCsvCell, truncateAtWord } from '../../data/growthAtlas';
 import { cameraControlBus } from '../../services/cameraControlBus';
 import { fetchTrafficFlow } from '../../services/tomtomService';
 import { SimulationMode, TrafficFlowData } from '../../types';
@@ -13,6 +13,7 @@ interface GrowthAtlasProps {
   children: React.ReactNode;
   mode: SimulationMode;
   active: boolean;
+  onOpenChallenge: () => void;
   onOpenSimulator: () => void;
 }
 
@@ -31,18 +32,29 @@ const directionsUrl = (park: GrowthPark) =>
 const areaGuideUrl = (park: GrowthPark) => `/parks/${park.id.replace(/_/g, '-')}/`;
 let placesLibrary: Promise<void> | undefined;
 const loadPlacesLibrary = (key: string) => {
-  if (!placesLibrary) placesLibrary = new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&libraries=places`;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Google Maps could not load'));
-    document.head.append(script);
-  }).then(async () => {
-    const maps = (window as unknown as { google?: { maps?: { importLibrary: (name: string) => Promise<unknown> } } }).google?.maps;
+  if (!placesLibrary) placesLibrary = (async () => {
+    const googleWindow = window as typeof window & {
+      google?: { maps?: { importLibrary: (name: string) => Promise<unknown> } };
+      __bengaluruGrowthAtlasMapsReady?: () => void;
+    };
+    if (!googleWindow.google?.maps?.importLibrary) {
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement('script');
+        googleWindow.__bengaluruGrowthAtlasMapsReady = resolve;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&libraries=places&callback=__bengaluruGrowthAtlasMapsReady`;
+        script.async = true;
+        script.onerror = () => {
+          delete googleWindow.__bengaluruGrowthAtlasMapsReady;
+          reject(new Error('Google Maps could not load'));
+        };
+        document.head.append(script);
+      });
+      delete googleWindow.__bengaluruGrowthAtlasMapsReady;
+    }
+    const maps = googleWindow.google?.maps;
     if (!maps) throw new Error('Google Maps did not initialize');
     await maps.importLibrary('places');
-  }).catch((error) => { placesLibrary = undefined; throw error; });
+  })().catch((error) => { placesLibrary = undefined; throw error; });
   return placesLibrary;
 };
 const streetMapUrl = (lat: number, lng: number) => {
@@ -99,7 +111,6 @@ function GoogleReviews({ park, apiKey }: { park: GrowthPark; apiKey: string }) {
     {status === 'ready' && React.createElement('gmp-place-details', { key: park.googlePlaceId, ref: widget },
       React.createElement('gmp-place-details-place-request', { place: park.googlePlaceId }),
       React.createElement('gmp-place-content-config', null,
-        React.createElement('gmp-place-name'),
         React.createElement('gmp-place-rating'),
         React.createElement('gmp-place-reviews')
       )
@@ -107,7 +118,7 @@ function GoogleReviews({ park, apiKey }: { park: GrowthPark; apiKey: string }) {
   </div>;
 }
 
-export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active, onOpenSimulator }) => {
+export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active, onOpenChallenge, onOpenSimulator }) => {
   const [selectedId, setSelectedId] = useState(initialPark.id);
   const [mapSurface, setMapSurface] = useState<'twin' | 'google' | 'osm'>(() => preferredSurface(initialPark));
   const [mapReady, setMapReady] = useState(false);
@@ -151,6 +162,11 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
   const roadSample = roadSamples[selected.id];
   const reviewNote = reviewNotes[selected.id] || '';
   const selectedIndex = GROWTH_PARKS.indexOf(selected);
+  const offer = service.trim() || 'corporate shuttle';
+  const seoOffer = truncateAtWord(offer, 25);
+  const seoTitle = truncateAtWord(offer + ' near ' + selected.name + ' | Bengaluru', 60);
+  const seoDescription = truncateAtWord('Explore ' + seoOffer + ' near ' + selected.name + ', ' + selected.area.split(',')[0] + ', Bengaluru. Check company links, Google reviews and pickup access.', 160);
+  const seoQueries = [selected.seoQuery, offer + ' ' + selected.area, 'employee transport ' + selected.name];
   const matchingParks = useMemo(() => GROWTH_PARKS.filter((park) => {
     const haystack = `${park.name} ${park.area} ${park.featuredCompanies.map((company) => company.name).join(' ')}`;
     return haystack.toLowerCase().includes(query.trim().toLowerCase());
@@ -259,9 +275,9 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
   const exportLeads = () => {
     if (savedCompanies.length === 0) return;
     const rows = [
-      ['Company', 'Tech park', 'Area', 'Stage', 'Next step', 'Movement hypothesis', 'Review observation', 'Website', 'LinkedIn', 'Occupancy source'],
+      ['Company', 'Tech park', 'Area', 'Stage', 'Next step', 'Movement hypothesis', 'Review observation', 'Website', 'LinkedIn', 'Company reference', 'Occupancy check'],
       ...savedCompanies.map(({ park, company }) => [
-        company.name, park.name, park.area, leadDetails[companyKey(park, company)]?.stage || 'Research', leadDetails[companyKey(park, company)]?.note || '', park.painHypothesis, reviewNotes[park.id] || '', company.website || '', company.linkedin || '', company.sourceUrl
+        company.name, park.name, park.area, leadDetails[companyKey(park, company)]?.stage || 'Research', leadDetails[companyKey(park, company)]?.note || '', park.painHypothesis, reviewNotes[park.id] || '', company.website || '', company.linkedin || '', company.sourceUrl, 'Verify current campus and building with company'
       ])
     ];
     const csv = rows.map((row) => row.map(quoteAtlasCsvCell).join(',')).join('\r\n');
@@ -275,6 +291,9 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
 
   const copyBrief = async () => {
     const brief = [
+      'SEO title: ' + seoTitle,
+      'Meta description: ' + seoDescription,
+      'Target searches: ' + seoQueries.join(' | '),
       `Area: ${selected.name}, ${selected.area}, Bengaluru`,
       `Offer: ${service.trim() || 'your service'}`,
       `Search intent: ${service.trim() || 'your service'} near ${selected.name}, Bengaluru`,
@@ -282,6 +301,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
       ...(roadSample?.status === 'ready' ? [`Nearby TomTom road segment sampled at ${new Date(roadSample.data.timestamp).toLocaleString()}: ${roadSample.data.currentSpeed} km/h, ${roadSample.data.freeFlowSpeed} km/h free flow. One road fragment, not a route or park average.`] : []),
       ...(reviewNote.trim() ? [`Review observation (your note): ${reviewNote.trim()}`, `Review source: ${mapsUrl(selected)}`] : []),
       `Lead angle: ${selected.leadAngle}`,
+      'Target role: workplace operations, facilities, or employee transport',
       `Maps: ${mapsUrl(selected)}`
     ].join('\n');
     try {
@@ -309,12 +329,16 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
       <main>
         <section className="atlas-intro" aria-labelledby="atlas-title">
           <div>
-            <p className="atlas-kicker"><span /> EAST BENGALURU / OUTER RING ROAD</p>
-            <h1 id="atlas-title">A city of offices.<br /><em>A map of opportunity.</em></h1>
+            <p className="atlas-kicker"><span /> BENGALURU ORR / MOBILITY PROSPECTING</p>
+            <h1 id="atlas-title">Find corporate shuttle leads.<br /><em>From Ecospace to Mahadevapura.</em></h1>
           </div>
           <div className="atlas-intro-side">
-            <p>Find workplace mobility prospects from Ecospace to Marathahalli and Mahadevapura. See who works where, check the place on Google Maps, then build an area-specific search and outreach brief.</p>
-            <a href="#explore">Start exploring <ArrowDownRight size={18} /></a>
+            <p>Choose a tech park, check its public company links and live place reviews, then turn local access signals into a search plan and a prospect list you can export.</p>
+            <a href="#explore">Choose a tech park <ArrowDownRight size={18} /></a>
+            <button className="atlas-challenge-button" type="button" onClick={onOpenChallenge}>
+              Can you beat the morning rush? <ArrowRight size={16} />
+            </button>
+            <small className="atlas-challenge-note">Free to play · local demo data · no API key</small>
           </div>
         </section>
 
@@ -373,7 +397,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
               </div>
             </div>
             <div className="atlas-logo-wall">
-              <div className="atlas-logo-wall-head"><span>AT THIS PLACE</span><small>SOURCED COMPANIES & WORKSPACES</small></div>
+              <div className="atlas-logo-wall-head"><span>COMPANIES TO RESEARCH</span><small>PUBLIC LOGOS & LINKS</small></div>
               <div className="atlas-logo-grid">
                 {selected.featuredCompanies.map((company) => <a key={company.name} href={company.website || company.linkedin || company.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} ${company.website ? 'website' : 'company profile'}`} title={company.name}>
                   <CompanyMark company={company} /><span>{company.name}</span>
@@ -389,7 +413,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
             <p className="atlas-coverage"><span>{selected.mapCoverage === 'corridor' ? '3D area anchor' : 'Wider-area place'}</span> · {selected.lat === undefined ? 'Open Google Maps for exact location' : 'Approximate point anchor'}</p>
             <div className="atlas-place-links">
               <a href={mapsUrl(selected)} target="_blank" rel="noopener noreferrer"><MapPin size={15} /> Google Maps <ExternalLink size={13} /></a>
-              <a href={mapsUrl(selected)} target="_blank" rel="noopener noreferrer">Google reviews <ExternalLink size={13} /></a>
+              <a href={mapsUrl(selected)} target="_blank" rel="noopener noreferrer">Reviews on Google <ExternalLink size={13} /></a>
               <a href={directionsUrl(selected)} target="_blank" rel="noopener noreferrer">Directions <ExternalLink size={13} /></a>
               <a href={areaGuideUrl(selected)}>Area guide <ArrowRight size={13} /></a>
             </div>
@@ -400,14 +424,14 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
               <textarea id="atlas-review-note" value={reviewNote} maxLength={400} onChange={(event) => setReviewNotes((notes) => ({ ...notes, [selected.id]: event.target.value }))} placeholder="Summarize a pickup, access, parking, or commute issue you found in current reviews." />
               <small>Saved on this device and included in the area brief. Check the live listing before outreach.</small>
             </div>
-            <div className="atlas-companies-heading"><div><span>INSIDE THE PARK</span><h3>{selected.id === 'google_ananta' ? 'Campus company' : 'Featured occupiers'}</h3></div><small>{selected.featuredCompanies.length} sourced</small></div>
+            <div className="atlas-companies-heading"><div><span>COMPANIES TO RESEARCH</span><h3>{selected.id === 'google_ananta' ? 'Campus organization' : 'Featured examples'}</h3></div><small>{selected.featuredCompanies.length} examples</small></div>
             <ul className="atlas-company-list">
               {selected.featuredCompanies.map((company) => {
                 const isSaved = saved.includes(companyKey(selected, company));
                 return (
                   <li key={company.name}>
                     <CompanyMark company={company} />
-                    <div className="atlas-company-info"><strong>{company.name}</strong><a href={company.sourceUrl} target="_blank" rel="noopener noreferrer">Location source <ArrowUpRight size={12} /></a></div>
+                    <div className="atlas-company-info"><strong>{company.name}</strong><a href={company.sourceUrl} target="_blank" rel="noopener noreferrer">Public reference <ArrowUpRight size={12} /></a></div>
                     <div className="atlas-company-links">
                       {company.website && <a href={company.website} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} website`} title="Website"><Globe2 size={15} /></a>}
                       {company.linkedin && <a href={company.linkedin} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} on LinkedIn`} title="LinkedIn"><Linkedin size={15} /></a>}
@@ -417,7 +441,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
                 );
               })}
             </ul>
-            <p className="atlas-tenant-note">Featured names are sourced examples, not a complete or live tenant directory.</p>
+            <p className="atlas-tenant-note">Research examples, not a live tenant feed. Public links do not confirm current occupancy; verify the company’s campus and building before outreach.</p>
           </aside>
         </section>
 
@@ -442,8 +466,27 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
               </div>
               <small>Opportunity hypothesis · validate with local interviews and current reviews</small>
             </article>
-            <article><span className="atlas-section-no">02 / GET FOUND</span><h3>Local search angle</h3><p className="atlas-example-query">“{selected.seoQuery}”</p><label htmlFor="atlas-service">Your offer</label><input id="atlas-service" value={service} onChange={(event) => setService(event.target.value)} maxLength={70} placeholder="e.g. corporate shuttle" /><div className="atlas-keyword">{service.trim() || 'your service'} near {selected.name}, Bengaluru</div></article>
-            <article><span className="atlas-section-no">03 / WIN A LEAD</span><h3>Outreach hook</h3><p>{selected.leadAngle}</p><button className="atlas-copy" type="button" onClick={copyBrief}>{copyState === 'copied' ? <Check size={15} /> : <Copy size={15} />}{copyState === 'copied' ? 'Brief copied' : copyState === 'failed' ? 'Copy unavailable' : 'Copy area brief'}</button></article>
+            <article>
+              <span className="atlas-section-no">02 / GET FOUND</span>
+              <h3>Local SEO pack</h3>
+              <p className="atlas-example-query">Starting search: “{selected.seoQuery}”</p>
+              <label htmlFor="atlas-service">Service to rank</label>
+              <input id="atlas-service" value={service} onChange={(event) => setService(event.target.value)} maxLength={70} placeholder="e.g. corporate shuttle" />
+              <div className="atlas-seo-output" aria-live="polite">
+                <div><small>PAGE TITLE · {seoTitle.length}/60</small><strong>{seoTitle}</strong></div>
+                <div><small>META DESCRIPTION</small><p>{seoDescription}</p></div>
+                <div><small>RELATED SEARCHES</small><p>{seoQueries.join(' · ')}</p></div>
+                <a href={areaGuideUrl(selected)}>Open this area guide <ArrowUpRight size={13} /></a>
+              </div>
+              <small>Draft copy · match it to your real service area and landing page.</small>
+            </article>
+            <article>
+              <span className="atlas-section-no">03 / WIN A LEAD</span>
+              <h3>Outreach hook</h3>
+              <p>{selected.leadAngle}</p>
+              <p className="atlas-target-role">Target roles: workplace operations, facilities, or employee transport.</p>
+              <button className="atlas-copy" type="button" onClick={copyBrief}>{copyState === 'copied' ? <Check size={15} /> : <Copy size={15} />}{copyState === 'copied' ? 'Brief copied' : copyState === 'failed' ? 'Copy unavailable' : 'Copy SEO + outreach brief'}</button>
+            </article>
           </div>
           <div className="atlas-lead-bar"><div><span>YOUR PROSPECT LIST</span><strong>{savedCompanies.length} saved {savedCompanies.length === 1 ? 'company' : 'companies'}</strong><small>Save occupiers, record an outreach step, then export their public links.</small></div><button type="button" onClick={exportLeads} disabled={savedCompanies.length === 0}><Download size={16} /> Export lead list</button></div>
           {savedCompanies.length > 0 && <div className="atlas-lead-queue" role="group" aria-label="Saved prospect workspace">{savedCompanies.map(({ park, company }) => {
@@ -458,7 +501,7 @@ export const GrowthAtlas: React.FC<GrowthAtlasProps> = ({ children, mode, active
         </section>
       </main>
 
-      <footer className="atlas-footer"><span>OFFSET / BENGALURU</span><p>3D roads and buildings: © OpenStreetMap contributors. Traffic and movement opportunities are modelled or hypotheses. Company locations link to their sources; check current occupancy before outreach.</p><a href={selected.sourceUrl} target="_blank" rel="noopener noreferrer">Selected place source <ArrowUpRight size={14} /></a></footer>
+      <footer className="atlas-footer"><span>OFFSET / BENGALURU</span><p>3D roads and buildings: © OpenStreetMap contributors. Road samples are directional; movement opportunities are hypotheses. Company links are research references, so confirm current occupancy before outreach.</p><a href={selected.sourceUrl} target="_blank" rel="noopener noreferrer">Selected place source <ArrowUpRight size={14} /></a></footer>
     </div>
   );
 };

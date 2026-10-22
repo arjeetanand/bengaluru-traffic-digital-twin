@@ -8,10 +8,12 @@ const source = await readFile(new URL('../src/data/growthAtlas.ts', import.meta.
 const code = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext }
 }).outputText;
-const { GROWTH_PARKS, nearestParkForTarget, quoteAtlasCsvCell } = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`);
+const { GROWTH_PARKS, nearestParkForTarget, quoteAtlasCsvCell, truncateAtWord } = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`);
 
 assert.equal(quoteAtlasCsvCell('ordinary'), '"ordinary"');
 assert.equal(quoteAtlasCsvCell('=HYPERLINK("x")'), '"\'=HYPERLINK(""x"")"', 'CSV cells must not execute as formulas');
+assert.equal(truncateAtWord('Short title', 20), 'Short title');
+assert.equal(truncateAtWord('alpha beta gamma', 10), 'alpha…', 'SEO text must stop at a word boundary within its limit');
 const testAnchors = [{ id: 'bagmane', x: 0, z: 0 }, { id: 'ananta', x: 354, z: 0 }];
 assert.equal(nearestParkForTarget(testAnchors, { x: 10, z: 0, distance: 770 }), 'bagmane');
 assert.equal(nearestParkForTarget(testAnchors, { x: 177, z: 0, distance: 770 }), undefined, 'overlapping campus views must not flicker');
@@ -43,18 +45,18 @@ assert.ok(['prestige_tech_park', 'rmz_ecospace', 'bagmane_world_technology_centr
   'requested parks need the 3D corridor view');
 assert.ok(
   GROWTH_PARKS.find((park) => park.id === 'bagmane_world_technology_centre')?.featuredCompanies.every((company) => company.logoUrl),
-  'Bagmane occupiers need the sourced park logo wall'
+  'Bagmane company examples need the park logo wall'
 );
 assert.ok(
   ['rmz_ecospace', 'google_ananta'].every((id) => GROWTH_PARKS.find((park) => park.id === id)?.featuredCompanies.every((company) => company.logoUrl)),
-  'Ecospace and Ananta occupiers need sourced marks'
+  'Ecospace and Ananta company examples need marks'
 );
 
 for (const park of GROWTH_PARKS) {
   assert.ok(park.name && park.area && park.description && park.painHypothesis && park.seoQuery && park.leadAngle);
   assert.match(park.googlePlaceId, /^ChIJ[A-Za-z0-9_-]+$/, `${park.name} needs a Google Place ID`);
   assert.equal(new URL(park.sourceUrl).protocol, 'https:');
-  assert.ok(park.featuredCompanies.length > 0, `${park.name} needs a sourced occupier`);
+  assert.ok(park.featuredCompanies.length > 0, `${park.name} needs a company research example`);
   assert.equal(new Set(park.featuredCompanies.map((company) => company.name)).size, park.featuredCompanies.length);
   assert.ok(Number.isFinite(park.lat) && Number.isFinite(park.lng), `${park.name} needs a map anchor`);
   for (const company of park.featuredCompanies) {
@@ -106,4 +108,4 @@ userPan = null;
 cameraControlBus.emitUserPan({ x: 50, z: 60, distance: 700 });
 assert.equal(userPan, null, 'unmounted atlas must not receive user pans');
 
-console.log(`Growth atlas validation passed: ${GROWTH_PARKS.length} places, ${GROWTH_PARKS.reduce((count, park) => count + park.featuredCompanies.length, 0)} sourced company entries`);
+console.log(`Growth atlas validation passed: ${GROWTH_PARKS.length} places, ${GROWTH_PARKS.reduce((count, park) => count + park.featuredCompanies.length, 0)} company research examples`);
