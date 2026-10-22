@@ -9,8 +9,8 @@
 - [x] Install locked npm dependencies with `npm ci`; no Python environment or requirements file exists.
 - [x] Run `npm run build`, TypeScript, and the included data, geometry, scenario, atlas, and asset validators.
 - [x] Start on port 4003; verify `/` and local demo data return HTTP 200, render desktop and mobile views, and run the offline morning-rush scenario in headless Chrome.
-- [ ] Commit eligible changes, push the migration branch, and verify the remote SHA.
-- [ ] Move only the source folder and migration backups to Trash after push verification.
-- [ ] Set the local folder as the primary Codex project folder; Codex desktop is locked, so the user must make this folder primary in the project editor.
+- [x] Commit eligible changes and push `codex/migrate-3dsimulator-local`; verify the remote SHA matches local `HEAD`.
+- [blocked] Finder removed the source path, but its Trash query did not find the item. Per the cleanup stop rule, leave migration backups untouched until its recoverable location is confirmed.
+- [blocked] Set the local folder as the primary Codex project folder; the Codex app safety restriction blocks UI control and no project-path API is available. Follow the manual steps in `HANDOFF.md`.
 
 See `HANDOFF.md` for checksum scope, runtime evidence, Git status, cleanup targets, warnings, and the exact Codex project-folder step.
